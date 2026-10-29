@@ -87,6 +87,8 @@ deployment default exactly as upstream defines it.
 | `hyperai-tui` artifacts (logo art, patch, profile, skills lock) | **PASS** | `node scripts/verify.mjs` → 9/9; `node --test tests/` → 14/14 |
 | `hyperai` profile recognized and composed by dsh | **PASS** | `DSH_HOME=<home> dsh --profile hyperai --dump-config` |
 | Startup shows `HYPERAI` / `HARNESS` block title + HyperAI mark | **PASS** | PTY capture of the launchpad and chat splash |
+| Mark is generated from the local canonical `/Users/zhenhaoli/Downloads/51961168.png` | **PASS** | byte-identical copy in `brand/hyperai-logo.png`; art regenerated from it; no remote fetch in the pipeline |
+| Title gradient is pink → white, not the theme's mist blue | **PASS** | captured title cells use `#FF6096`/`#FFA6C4`/`#FFF4F8`, **0 blue-ish cells** (was `#7DA1DE`) |
 | Welcome screen no longer shows the DeepSeek whale/wordmark/tagline | **PASS** | `✦ hyperai-tui`, `HyperAI Harness` tagline, mark in the art slot |
 | Input box and base UI | **PASS** | PTY capture |
 | Model configuration loaded from the environment | **PASS** | launchpad param line showed the env model; `/model` route from `llm-pi-ai` |
@@ -98,7 +100,8 @@ deployment default exactly as upstream defines it.
 | Existing `dsh-tui` profile files untouched | **PASS** | hashes of its `package.json` / `cordis.patch.yml` / `cordis.yml` / `pnpm-workspace.yaml` unchanged; its `node_modules` copy has no HyperAI patch |
 | Existing `~/.dsh-tui` UI state not overwritten | **PASS** | the HyperAI profile writes `~/.dsh-tui-hyperai`; `model.json`/`settings.json`/`home.json` hashes in `~/.dsh-tui` unchanged after launches |
 
-Screen captures live in [`docs/screenshots/`](docs/screenshots); the exact
+Screen captures live in [`docs/screenshots/`](docs/screenshots) (colored PNGs
+plus text): `launchpad.png`, `chat-splash.png`, `chat-reply.png`. The exact
 procedure and evidence are in [`docs/verification.md`](docs/verification.md).
 
 **NOT TESTED:** live MinerU OCR API calls (no key); `playwright-browser` (no
@@ -123,13 +126,16 @@ terminal.
 
 ## Known limitations and follow-ups
 
-- The mark is a resampled copy of the **official GitHub organization avatar**
-  (`brand/PROVENANCE.md`). A designer-supplied logo pack (SVG/PNG at ≥256 px,
-  with a light-background variant if one exists) should replace it; re-run
-  `scripts/generate-logo-art.mjs`.
-- The theme palette is still upstream's mist-blue default. Recoloring the whole
-  TUI to a HyperAI palette is a data change in the patch but was left out of
-  the first version to avoid an unvalidated visual redesign.
+- The mark is a resampled copy of the **local canonical user-provided asset**
+  `/Users/zhenhaoli/Downloads/51961168.png` (60×60, stored as
+  `brand/hyperai-logo.png`; provenance in `brand/PROVENANCE.md`). The source is
+  only 60×60 — a larger official pack (SVG/PNG ≥256 px, with a light-background
+  variant if one exists) would sharpen the terminal art; re-run
+  `scripts/generate-logo-art.mjs` after replacing it.
+- The UI color theme outside the splash header is still upstream's default
+  (mist blue); only the splash title/wordmark/tagline were moved to the HyperAI
+  pink family. A full palette is a data change in the patch but needs a design
+  decision and visual review.
 - `/update` is deliberately disabled inside the HyperAI build: running the
   upstream updater would replace the branded package. Bumps go through
   `scripts/build-patch.mjs` after updating `brand/brand.json` and

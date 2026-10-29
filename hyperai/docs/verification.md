@@ -49,15 +49,30 @@ dsh --profile hyperai
 
 Evidence files:
 
-- `screenshots/launchpad.txt` — `HYPERAI`/`HARNESS` block title, official mark,
-  `hyperai-tui v0.16.1` plate, `gpt-4o-mini` deployment route.
-- `screenshots/chat-splash-and-reply.txt` — `✦ hyperai-tui`, mark, tagline
-  `HyperAI Harness`, and a live OpenAI-compatible model reply
-  (`FINAL_BRAND_OK`).
-- `screenshots/real-profile-skills-and-tool.txt` — real `~/.dsh` profile:
-  the agent listed the skill catalog (the four installed skills plus the six
-  pre-existing `~/.agents/skills` entries) and a bash tool call returned
-  `REAL_PROFILE_OK`.
+- `screenshots/launchpad.png` / `.txt` — `HYPERAI`/`HARNESS` block title in the
+  pink → white gradient, mark generated from the local canonical
+  `/Users/zhenhaoli/Downloads/51961168.png`, `hyperai-tui v0.16.1` plate,
+  `gpt-4o-mini` deployment route.
+- `screenshots/chat-splash.png` / `.txt` — `✦ hyperai-tui`, mark, tagline
+  `HyperAI Harness`, and the loaded-context line (`Skills 10`).
+- `screenshots/chat-reply.png` / `chat-splash-and-reply.txt` — live
+  OpenAI-compatible reply (`PINK_BRAND_OK`) plus a bash tool call
+  (`BRAND_TOOL_OK`) under the pink title.
+- `screenshots/real-profile-skills-and-tool.txt` — earlier real-profile capture
+  proving the agent listed the skill catalog and executed a bash tool call.
+
+## Title gradient color check
+
+The big title uses raw true-color SGR, so the captured stream is checked
+directly (pyte rebuilds the screen and exposes each cell's foreground):
+
+- `HYPERAI` rows: `#FF6096` → `#FFA3C2` (pink → light pink)
+- `HARNESS` rows: `#FFA6C4` → `#FFF4F8` (light pink → near white)
+- blue-ish title cells (`b > r + 8`): **0** (the previous mist-blue theme accent
+  was `#7DA1DE`)
+
+The light-theme ladder (`#D6336C` → `#FF6699` → `#FFB3CC`) is covered by the
+generated palette data; a live light-terminal capture was not taken.
 
 Live model calls used an environment-only OpenAI-compatible credential (an
 internal gateway reachable from this machine). No credential is stored in this

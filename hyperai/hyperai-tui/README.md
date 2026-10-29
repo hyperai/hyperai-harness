@@ -19,9 +19,9 @@ that patch through pnpm `patchedDependencies`.
 
 | Upstream file | Edit | Purpose |
 |---|---|---|
-| `lib/types/branding.js` | splash words → `HYPERAI`/`HARNESS`, tagline, `/settings` brand label | brand data |
+| `lib/types/branding.js` | splash words → `HYPERAI`/`HARNESS`, tagline, `/settings` brand label, `HYPERAI_PALETTE` (pink accent + dark/light title ladders) | brand data |
 | `lib/types/components/splashFonts.js` | the `deepseek` brand no longer short-circuits to the font table's built-in `DEEPSEEK`/`HARNESS` | the big title actually changes |
-| `lib/types/components/LogoV2.js` | art slot → `HyperAILogoArt`; mascot/portrait slots off; `✦ hyperai-tui` wordmark | splash art |
+| `lib/types/components/LogoV2.js` | art slot → `HyperAILogoArt`; mascot/portrait slots off; `✦ hyperai-tui` wordmark; title ladder pinned to the HyperAI pink palette (pink → near-white on dark, deep pink → light pink on light) | splash art + title gradient |
 | `lib/types/components/hyperaiLogo.js` (new) | splash-mark component (theme-aware rows) | renderer |
 | `lib/types/components/hyperaiLogoRows.js` (new, generated) | true-color half-block rows from the official logo | asset |
 | `lib/types/components/splashArtRows.js` | art form pinned to the mark | layout |
@@ -32,12 +32,14 @@ that patch through pnpm `patchedDependencies`.
 | `lib/types/utils/paths.js` | UI state root `~/.dsh-tui-<profile>` for non-`dsh-tui` profiles | isolation |
 | `lib/types/update.js` | updater disabled (it would replace the branded package) | safety |
 
-The splash mark is a **resampled copy of the official HyperAI logo**, never a
-redraw: `scripts/generate-logo-art.mjs` decodes `brand/hyperai-logo.png` with
-Node built-ins, box-downsamples it to a 26×26 sprite, and encodes two variants
-(official colors for dark terminals; white plate mapped to ink for light
-terminals — the pink accents are unchanged). Provenance and digest are recorded
-in `brand/brand.json` and `brand/PROVENANCE.md`.
+The splash mark is a **resampled copy of the local canonical HyperAI logo**
+(`/Users/zhenhaoli/Downloads/51961168.png`, copied byte-for-byte to
+`brand/hyperai-logo.png`), never a redraw: `scripts/generate-logo-art.mjs`
+decodes the PNG with Node built-ins, box-downsamples it to a 26×26 sprite, and
+encodes two variants (official colors for dark terminals; white plate mapped to
+ink for light terminals — the pink accents are unchanged). No remote URL is
+fetched. Provenance, source path and digest are recorded in `brand/brand.json`
+and `brand/PROVENANCE.md`.
 
 ## Build and verify
 

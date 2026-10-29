@@ -93,6 +93,26 @@ check('branding patch targets only documented upstream files', () => {
   return `${files.length} files`
 })
 
+check('title gradient uses the HyperAI pink palette, not the theme blue', () => {
+  const patch = readFileSync(join(PKG, 'patches', `dsh-tui@${brand.upstream.version}.patch`), 'utf8')
+  if (!patch.includes('HYPERAI_PALETTE')) throw new Error('HYPERAI_PALETTE is missing from the patch')
+  for (const marker of ['titleDark', 'titleLight', 'r: 255, g: 96, b: 150', 'r: 255, g: 247, b: 250']) {
+    if (!patch.includes(marker)) throw new Error(`gradient marker missing: ${marker}`)
+  }
+  if (!patch.includes('brand === \'deepseek\'')) throw new Error('LogoV2 does not special-case the default brand')
+  if (!patch.includes('HYPERAI_PALETTE.titleDark')) throw new Error('LogoV2 does not read the dark title ladder')
+  if (!patch.includes('HYPERAI_PALETTE.titleLight')) throw new Error('LogoV2 does not read the light title ladder')
+  return 'pink -> near-white (dark) / deep pink -> light pink (light)'
+})
+
+check('logo source is the local canonical asset', () => {
+  if (!/51961168\.png/u.test(brand.logo.origin)) throw new Error('brand.json does not name the local canonical source')
+  if (brand.logo.width !== 60 || brand.logo.height !== 60) throw new Error('logo dimensions mismatch')
+  const art = readFileSync(join(PKG, 'brand', 'generated', 'hyperai-logo.js'), 'utf8')
+  if (!art.includes(`(60x60 PNG`)) throw new Error('generated art does not record the 60x60 source')
+  return 'brand/hyperai-logo.png <- /Users/zhenhaoli/Downloads/51961168.png'
+})
+
 check('profile template is consistent with the brand pin', () => {
   const manifest = JSON.parse(readFileSync(join(PKG, 'profile', 'package.json'), 'utf8'))
   if (manifest.dependencies[brand.upstream.package] !== brand.upstream.version) throw new Error('profile dependency pin')

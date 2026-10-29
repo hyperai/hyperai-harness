@@ -38,8 +38,12 @@ const MARK = 26
 const X_OFFSET = Math.floor((ART_COLUMNS - MARK) / 2)
 /** Alpha at or above this is treated as covered; below it the cell stays empty. */
 const ALPHA_MIN = 128
-/** Below this spatial size the official mark is downsampled to noise, not a logo. */
-const MIN_SOURCE = 64
+/**
+ * Below this spatial size the official mark is downsampled to noise, not a logo.
+ * The canonical HyperAI asset (brand/hyperai-logo.png) is 60x60, still ~2.3x the
+ * 26x26 sprite; 48 is the floor that keeps the mark recognizable.
+ */
+const MIN_SOURCE = 48
 
 /**
  * Decode an 8-bit non-interlaced RGB/RGBA PNG into straight RGBA bytes.
@@ -325,8 +329,9 @@ export function renderModule(art) {
   return `/**
  * GENERATED FILE — do not edit by hand.
  * Terminal logo art for hyperai-tui, derived from the official HyperAI mark at
- * \`brand/hyperai-logo.png\` (${art.box.width}x${art.box.height} source, ${MARK}x${MARK} sprite,
- * ${ART_COLUMNS}x${ART_ROWS} display cells). Regenerate with:
+ * \`brand/hyperai-logo.png\` (${art.image.width}x${art.image.height} PNG, mark bbox
+ * ${art.box.width}x${art.box.height}, ${MARK}x${MARK} sprite, ${ART_COLUMNS}x${ART_ROWS} display cells).
+ * Regenerate with:
  *
  *   node scripts/generate-logo-art.mjs
  *

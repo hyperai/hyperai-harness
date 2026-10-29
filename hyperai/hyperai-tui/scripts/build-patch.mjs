@@ -106,6 +106,40 @@ function edits(version) {
     },
     {
       file: 'lib/types/branding.js',
+      why: 'HyperAI accent + title gradient palette',
+      find: `    codex: Object.freeze({ top: 'CODEX', bottom: 'HARNESS', plain: 'Codex' }),
+});`,
+      replace: `    codex: Object.freeze({ top: 'CODEX', bottom: 'HARNESS', plain: 'Codex' }),
+});
+/**
+ * HyperAI palette for the patched default (\`dsh\` backend) look. The splash
+ * title runs pink -> near-white on dark terminals; on light terminals it runs
+ * deep pink -> light pink because a white tail would disappear against the
+ * background. The wordmark and tagline reuse the mark's pink family so the
+ * header does not mix a pink title with the theme's mist-blue accents.
+ */
+export const HYPERAI_PALETTE = Object.freeze({
+    accent: Object.freeze({ r: 255, g: 96, b: 150 }),
+    accentShimmer: Object.freeze({ r: 255, g: 214, b: 230 }),
+    tagline: Object.freeze({ r: 255, g: 206, b: 224 }),
+    titleDark: Object.freeze({
+        base: Object.freeze({ r: 255, g: 96, b: 150 }),
+        start: Object.freeze({ r: 255, g: 96, b: 150 }),
+        mid: Object.freeze({ r: 255, g: 166, b: 196 }),
+        end: Object.freeze({ r: 255, g: 247, b: 250 }),
+        flash: Object.freeze({ r: 255, g: 255, b: 255 }),
+    }),
+    titleLight: Object.freeze({
+        base: Object.freeze({ r: 214, g: 51, b: 108 }),
+        start: Object.freeze({ r: 214, g: 51, b: 108 }),
+        mid: Object.freeze({ r: 255, g: 102, b: 153 }),
+        end: Object.freeze({ r: 255, g: 179, b: 204 }),
+        flash: Object.freeze({ r: 255, g: 224, b: 236 }),
+    }),
+});`,
+    },
+    {
+      file: 'lib/types/branding.js',
       why: 'welcome tagline',
       find: "    deepseek: Object.freeze({ zh: '', en: '' }),",
       replace: `    deepseek: Object.freeze({ zh: ${q(tagline.zh)}, en: ${q(tagline.en)} }),`,
@@ -151,6 +185,31 @@ function edits(version) {
       why: 'onboarding title',
       find: "    'onboarding-title': { zh: '欢迎使用 dsh-TUI', en: 'Welcome to dsh-TUI' },",
       replace: `    'onboarding-title': { zh: ${q(`欢迎使用 ${plugin}`)}, en: ${q(`Welcome to ${plugin}`)} },`,
+    },
+    {
+      file: 'lib/types/components/LogoV2.js',
+      why: 'HyperAI palette import',
+      find: "import { BRAND_SPLASH_WORDS, BRAND_TAGLINE } from '../branding.js';",
+      replace: "import { BRAND_SPLASH_WORDS, BRAND_TAGLINE, HYPERAI_PALETTE } from '../branding.js';",
+    },
+    {
+      file: 'lib/types/components/LogoV2.js',
+      why: 'wordmark uses the HyperAI accent family',
+      find: '    const wordmarkRGB = parseRGB(theme.accent) ?? BRAND;\n    const wordmarkShimmerRGB = parseRGB(theme.accentShimmer) ?? ICE;\n    const taglineRGB = parseRGB(theme.activity) ?? ICE;',
+      replace: `    // hyperai-tui: the patched default brand owns the accent family, so the
+    // wordmark/tagline share the mark's pink instead of the theme's mist blue.
+    const hyperaiLook = brand === 'deepseek';
+    const wordmarkRGB = hyperaiLook ? HYPERAI_PALETTE.accent : parseRGB(theme.accent) ?? BRAND;
+    const wordmarkShimmerRGB = hyperaiLook ? HYPERAI_PALETTE.accentShimmer : parseRGB(theme.accentShimmer) ?? ICE;
+    const taglineRGB = hyperaiLook ? HYPERAI_PALETTE.tagline : parseRGB(theme.activity) ?? ICE;`,
+    },
+    {
+      file: 'lib/types/components/LogoV2.js',
+      why: 'title gradient runs pink -> near-white instead of the theme blue',
+      find: "    const brandLadder = brand === 'claude'",
+      replace: `    const brandLadder = brand === 'deepseek'
+        ? (isLightThemeActive(themeName) ? HYPERAI_PALETTE.titleLight : HYPERAI_PALETTE.titleDark)
+        : brand === 'claude'`,
     },
     {
       file: 'lib/types/components/LogoV2.js',

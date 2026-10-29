@@ -20,10 +20,11 @@
   },
   "logo": {
     "file": "brand/hyperai-logo.png",
-    "origin": "GitHub organization avatar of https://github.com/hyperai (official HyperAI organization profile image)",
-    "originUrl": "https://avatars.githubusercontent.com/u/51961168",
-    "fetchedAt": "2026-10-29",
-    "sha256": "a8ad3ebb6f165c9d97818f091e917515e5d363742b78dc79628589feca49a101",
+    "origin": "Local canonical brand asset provided by the user: /Users/zhenhaoli/Downloads/51961168.png (HyperAI logo, 60x60 RGBA)",
+    "providedAt": "2026-10-29",
+    "sha256": "165ecb79fbad9f2bdc2f2e0aa1e259848529907e7ea7ab32069376629b269741",
+    "width": 60,
+    "height": 60,
     "treatment": "Downsampled to a 26x26 true-color half-block sprite; no redraw. The light-terminal variant maps the white plate to an ink tone for contrast; the official pink accents are unchanged."
   }
 }
