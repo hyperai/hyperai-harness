@@ -1,5 +1,5 @@
 {
-  "$comment": "Brand data for hyperai-tui. The build (scripts/build-patch.mjs) reads these values to produce the pnpm patch that rebrands the upstream @deepseek-harness-tui/dsh-tui package; the logo art is generated from brand/hyperai-logo.png by scripts/generate-logo-art.mjs.",
+  "$comment": "Brand data for hyperai-tui. The build (scripts/build-patch.mjs) reads these values to produce the pnpm patch that rebrands the upstream @deepseek-harness-tui/dsh-tui package; the logo art is generated from the canonical SVG source brand/hyperai-logo.svg by scripts/generate-logo-art.mjs.",
   "productName": "HyperAI Harness",
   "pluginName": "hyperai-tui",
   "profileName": "hyperai",
@@ -19,12 +19,11 @@
     "license": "MIT"
   },
   "logo": {
-    "file": "brand/hyperai-logo.png",
-    "origin": "Local canonical brand asset provided by the user: /Users/zhenhaoli/Downloads/51961168.png (HyperAI logo, 60x60 RGBA)",
+    "file": "brand/hyperai-logo.svg",
+    "origin": "Official HyperAI logo SVG provided by the user: /Users/zhenhaoli/Downloads/logo-icon-border-1.svg (white circle + embedded 271x267 rose icon, 120x120 viewBox)",
     "providedAt": "2026-10-29",
-    "sha256": "165ecb79fbad9f2bdc2f2e0aa1e259848529907e7ea7ab32069376629b269741",
-    "width": 60,
-    "height": 60,
-    "treatment": "Downsampled to a 26x26 letter-grid sprite in the upstream whale frame format and rendered by the whale's own renderSpriteRows (true-color half blocks, no image protocol). No redraw and no recoloring: white plate #FFFFFF, official pink #FF6096, pale edge #FFA6C4 from the source's own white-to-pink blend, transparent pixels stay transparent."
+    "sha256": "3de898089cbbcc15fd8609f2c46d9e8906ff5119a13baf949cbde1bcf7857bab",
+    "format": "SVG, 120x120 viewBox, 8-bit RGBA embedded icon (271x267 PNG data URI)",
+    "treatment": "Generated into two whale-format letter-grid sprites (40x40 main, 26x26 compact) by scripts/generate-logo-art.mjs: the SVG is composited analytically (white circle + embedded icon through its pattern mapping, 4x4 supersampling), alpha-cropped, downsampled, and quantized along the SVG's own white->rose blend line. No redraw, no recolor, transparent pixels stay transparent. Rendered at runtime by the whale's renderSpriteRows."
   }
 }

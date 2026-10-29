@@ -50,36 +50,42 @@ check('official logo source matches the recorded digest', () => {
   return brand.logo.file
 })
 
-check('logo data uses the whale letter-grid format', () => {
+check('logo data uses the whale letter-grid format (wide + compact)', () => {
   const art = readFileSync(join(PKG, 'brand', 'generated', 'hyperai-logo.js'), 'utf8')
   const parseArray = name => {
     const matched = new RegExp(`export const ${name} = \\[([\\s\\S]*?)\\n\\]`, 'u').exec(art)
     if (matched === null) throw new Error(`${name} not found`)
     return [...matched[1].matchAll(/"(?:[^"\\]|\\.)*"/gu)].map(match => JSON.parse(match[0]))
   }
-  const sprite = parseArray('HYPERAI_LOGO_SPRITE')
   const paletteMatch = /export const HYPERAI_LOGO_PALETTE = (\{[\s\S]*?\n\})/u.exec(art)
   if (paletteMatch === null) throw new Error('HYPERAI_LOGO_PALETTE not found')
   const palette = JSON.parse(paletteMatch[1])
-  if (sprite.length !== 26) throw new Error(`sprite has ${sprite.length} rows (expected 26)`)
-  for (const row of sprite) if (row.length !== 40) throw new Error(`sprite row is ${row.length} columns`)
-  const letters = new Set(Object.keys(palette))
-  const used = new Set(sprite.join('').split(''))
-  for (const letter of used) {
-    if (letter !== '.' && !letters.has(letter)) throw new Error(`sprite uses unknown letter ${letter}`)
-  }
-  // The official white plate and pink pattern must both be present, and nothing
-  // may be darker than the official pink — the old light-theme ink remap is gone.
   const colors = Object.values(palette)
-  if (!colors.some(([r, g, b]) => r === 255 && g === 255 && b === 255)) throw new Error('white plate missing from palette')
-  if (!colors.some(([r, g, b]) => r === 255 && g === 96 && b === 150)) throw new Error('official pink missing from palette')
+  if (!colors.some(([r, g, b]) => r === 255 && g === 255 && b === 255)) throw new Error('white circle missing from palette')
+  if (!colors.some(([r, g, b]) => r === 225 && g === 29 && b === 72)) throw new Error('SVG rose icon color missing from palette')
   for (const [r, g, b] of colors) {
     if (Math.max(r, g, b) < 150) throw new Error(`palette has a dark entry: ${r},${g},${b}`)
   }
-  for (const letter of ['W', 'P']) {
-    if (!used.has(letter)) throw new Error(`sprite does not use the ${letter} palette letter`)
+  const letters = new Set(Object.keys(palette))
+  const summaries = []
+  for (const [name, expectedRows, expectedLetters] of [
+    ['HYPERAI_LOGO_SPRITE_WIDE', 40, ['W', 'R']],
+    ['HYPERAI_LOGO_SPRITE_COMPACT', 26, ['W', 'R']],
+  ]) {
+    const sprite = parseArray(name)
+    if (sprite.length !== expectedRows) throw new Error(`${name} has ${sprite.length} rows (expected ${expectedRows})`)
+    for (const row of sprite) if (row.length !== 40) throw new Error(`${name} row is ${row.length} columns`)
+    const used = new Set(sprite.join('').split(''))
+    for (const letter of used) {
+      if (letter !== '.' && !letters.has(letter)) throw new Error(`${name} uses unknown letter ${letter}`)
+    }
+    for (const letter of expectedLetters) {
+      if (!used.has(letter)) throw new Error(`${name} does not use the ${letter} palette letter`)
+    }
+    if (!used.has('.')) throw new Error(`${name} has no transparent cells`)
+    summaries.push(`${expectedRows}x40`)
   }
-  return `${sprite.length}x${sprite[0].length} letter grid, ${sprite.length / 2} display rows, ${letters.size} palette colors`
+  return `${summaries.join(' + ')} letter grids, ${letters.size} palette colors (white + SVG rose)`
 })
 
 check('branding patch targets only documented upstream files', () => {
@@ -106,8 +112,12 @@ check('branding patch targets only documented upstream files', () => {
   }
   if (!patch.includes("from './Whale.js'")) throw new Error('hyperaiLogo does not reuse the whale renderer module')
   if (!patch.includes('renderSpriteRows')) throw new Error('hyperaiLogo does not call renderSpriteRows')
-  if (!patch.includes('HYPERAI_LOGO_SPRITE')) throw new Error('patched logo rows are missing the sprite data')
-  return `${files.length} files, logo rendered by the whale renderSpriteRows`
+  if (!patch.includes('HYPERAI_LOGO_SPRITE_WIDE')) throw new Error('patched logo rows are missing the wide sprite data')
+  if (!patch.includes('HYPERAI_LOGO_SPRITE_COMPACT')) throw new Error('patched logo rows are missing the compact sprite data')
+  if (!patch.includes('HYPERAI_LOGO_WIDE_MIN_ROWS')) throw new Error('patched logo rows are missing the wide/compact row threshold')
+  if (!patch.includes('hyperaiArtRows')) throw new Error('splash layout does not use the dynamic art height')
+  if (!patch.includes('splashArtRows(splashArtForm, mascotBox, rows)')) throw new Error('Launchpad layout budget ignores terminal rows')
+  return `${files.length} files, logo rendered by the whale renderSpriteRows (wide/compact)`
 })
 
 check('title gradient uses the HyperAI pink palette, not the theme blue', () => {
@@ -122,12 +132,16 @@ check('title gradient uses the HyperAI pink palette, not the theme blue', () => 
   return 'pink -> near-white (dark) / deep pink -> light pink (light)'
 })
 
-check('logo source is the local canonical asset', () => {
-  if (!/51961168\.png/u.test(brand.logo.origin)) throw new Error('brand.json does not name the local canonical source')
-  if (brand.logo.width !== 60 || brand.logo.height !== 60) throw new Error('logo dimensions mismatch')
+check('logo source is the local canonical SVG', () => {
+  if (!brand.logo.file.endsWith('.svg')) throw new Error(`logo file is not an SVG: ${brand.logo.file}`)
+  if (!/logo-icon-border-1\.svg/u.test(brand.logo.origin)) throw new Error('brand.json does not name the official SVG source')
+  const svg = readFileSync(join(PKG, brand.logo.file), 'utf8')
+  if (!svg.includes('viewBox="0 0 120 120"')) throw new Error('SVG viewBox changed')
+  if (!svg.includes('data:image/png;base64,')) throw new Error('SVG is missing the embedded icon')
   const art = readFileSync(join(PKG, 'brand', 'generated', 'hyperai-logo.js'), 'utf8')
-  if (!art.includes(`(60x60 PNG`)) throw new Error('generated art does not record the 60x60 source')
-  return 'brand/hyperai-logo.png <- /Users/zhenhaoli/Downloads/51961168.png'
+  if (!art.includes('generated from the canonical SVG source')) throw new Error('generated art does not record the SVG source')
+  if (art.includes('60x60 PNG')) throw new Error('generated art still references the retired PNG source')
+  return 'brand/hyperai-logo.svg <- /Users/zhenhaoli/Downloads/logo-icon-border-1.svg'
 })
 
 check('profile template is consistent with the brand pin', () => {

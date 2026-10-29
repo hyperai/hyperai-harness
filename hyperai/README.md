@@ -84,17 +84,19 @@ deployment default exactly as upstream defines it.
 | Check | Result | Evidence |
 |---|---|---|
 | Build the branding patch from the pinned upstream package | **PASS** | `scripts/build-patch.mjs` self-applies the patch to a fresh extraction |
-| `hyperai-tui` artifacts (logo art, patch, profile, skills lock) | **PASS** | `node scripts/verify.mjs` → 11/11; `node --test tests/` → 14/14 |
+| `hyperai-tui` artifacts (logo art, patch, profile, skills lock) | **PASS** | `node scripts/verify.mjs` → 11/11; `node --test tests/` → 16/16 |
 | `hyperai` profile recognized and composed by dsh | **PASS** | `DSH_HOME=<home> dsh --profile hyperai --dump-config` |
 | Startup shows `HYPERAI` / `HARNESS` block title + HyperAI mark | **PASS** | PTY capture of the launchpad and chat splash |
-| Mark is generated from the local canonical `/Users/zhenhaoli/Downloads/51961168.png` | **PASS** | byte-identical copy in `brand/hyperai-logo.png`; art regenerated from it; no remote fetch in the pipeline |
-| Mark uses the upstream whale's own drawing mechanism | **PASS** | letter-grid sprite + palette in `whaleFrames.js` format; rendered by the whale's `renderSpriteRows`; white plate/pink pattern preserved, **no ink/black substitution, no image protocol** |
+| Mark is generated from the canonical official SVG `/Users/zhenhaoli/Downloads/logo-icon-border-1.svg` | **PASS** | byte-identical copy in `brand/hyperai-logo.svg`; generator parses the SVG's own elements + embedded icon; no remote fetch; the old 60×60 PNG is retired |
+| Mark uses the upstream whale's own drawing mechanism | **PASS** | letter-grid sprites + palette in `whaleFrames.js` format; rendered by the whale's `renderSpriteRows`; white circle + SVG rose icon preserved, **no ink/black substitution, no image protocol** |
+| 40×40 main mark + 26×26 small-window fallback | **PASS** | wide mark on ≥44-row content; automatic degradation on shorter terminals; layout budget shares the same threshold |
+| SVG-derived logo clarity compared in the real terminal | **PASS** | `logo-clarity-svg.png`: 26/40/48 grids on the same background/box; 48×48 needs a 24-row slot and is not used in production |
 | Title gradient is pink → white, not the theme's mist blue | **PASS** | captured title cells use `#FF6096`/`#FFA6C4`/`#FFF4F8`, **0 blue-ish cells** (was `#7DA1DE`) |
 | Welcome screen no longer shows the DeepSeek whale/wordmark/tagline | **PASS** | `✦ hyperai-tui`, `HyperAI Harness` tagline, mark in the art slot |
 | Input box and base UI | **PASS** | PTY capture |
 | Model configuration loaded from the environment | **PASS** | launchpad param line showed the env model; `/model` route from `llm-pi-ai` |
-| Real model message round-trip | **PASS** | live OpenAI-compatible route answered `LOGO_WHALE_STYLE_OK` |
-| Tool call (bash) inside the TUI | **PASS** | live turn displayed the tool card and `TOOL_WHALE_STYLE_OK` |
+| Real model message round-trip | **PASS** | live OpenAI-compatible route answered `SVG_LOGO_OK` |
+| Tool call (bash) inside the TUI | **PASS** | live turn displayed the tool card and `SVG_TOOL_OK` |
 | Agent discovers the installed skills | **PASS** | real profile context line reported `技能 10` (4 installed here + 6 pre-existing `~/.agents/skills` entries); a live turn listed every name |
 | One applicable skill actually executed | **PASS (partial)** | installed `mineru-ocr` script converted a synthetic MinerU payload to xlsx with `A3:A4` merged cells; the live MinerU API path is **NOT TESTED** (no `MINERU_API_KEY`) |
 | Existing `dsh-tui` profile still starts | **PASS** | PTY launch showed the upstream launchpad, `dsh-tui v0.16.1` |
@@ -102,11 +104,12 @@ deployment default exactly as upstream defines it.
 | Existing `~/.dsh-tui` UI state not overwritten | **PASS** | the HyperAI profile writes `~/.dsh-tui-hyperai`; `model.json`/`settings.json`/`home.json` hashes in `~/.dsh-tui` unchanged after launches |
 
 Screen captures live in [`docs/screenshots/`](docs/screenshots) (colored PNGs
-plus text): `launchpad.png`, `launchpad-light.png`, `chat-splash.png`,
-`chat-reply.png`, and real Terminal.app captures `real-terminal-dark.png`,
-`real-terminal-light.png`, with the upstream whale rendered by the same
-`renderSpriteRows` as `real-terminal-whale-dark.png` for comparison. The exact
-procedure and evidence are in [`docs/verification.md`](docs/verification.md).
+plus text): `launchpad.png`, `launchpad-light.png`, `launchpad-compact.png`,
+`chat-splash.png`, `chat-reply.png`, the SVG clarity comparison
+`logo-clarity-svg.png`, and real Terminal.app captures `real-terminal-dark.png`,
+`real-terminal-light.png`, `real-terminal-small.png` (compact fallback). The
+exact procedure and evidence are in
+[`docs/verification.md`](docs/verification.md).
 
 **NOT TESTED:** live MinerU OCR API calls (no key); `playwright-browser` (no
 Playwright/Chromium in this environment); permission-approval prompt flow
@@ -128,16 +131,18 @@ Claude/Codex backends under the HyperAI profile.
 
 ## Known limitations and follow-ups
 
-- The mark is a resampled copy of the **local canonical user-provided asset**
-  `/Users/zhenhaoli/Downloads/51961168.png` (60×60, stored as
-  `brand/hyperai-logo.png`; provenance in `brand/PROVENANCE.md`), rendered with
-  the upstream whale's own mechanism: a letter-grid sprite plus palette painted
-  by `renderSpriteRows` into true-color half blocks (see
-  [`docs/branding.md`](docs/branding.md)). The 13-row splash slot caps a square
-  mark at 26×26 pixels, so the source is downsampled ≈2.3×; a larger official
-  pack would not change the terminal size but would sharpen the downsampling.
-  A layout change (taller art slot) would be needed for a bigger mark and is
-  deliberately out of scope.
+- The mark is generated from the **canonical official SVG**
+  `/Users/zhenhaoli/Downloads/logo-icon-border-1.svg` (stored as
+  `brand/hyperai-logo.svg`; provenance in `brand/PROVENANCE.md`). The generator
+  parses the SVG's white-circle path, icon rect and embedded `271×267` PNG,
+  composites them analytically, and downsamples to two whale-format letter-grid
+  sprites — `40×40` (20 half-block rows, main) and `26×26` (13 rows, small
+  windows) — painted by the whale's `renderSpriteRows` (see
+  [`docs/branding.md`](docs/branding.md)). The `40×40` main mark needs a 20-row
+  art slot, so the splash hero grew by 7 rows; terminals below 44 content rows
+  automatically fall back to the original 13-row height. The embedded icon is
+  `271×267`, so it comfortably covers the 40×40 grid; a `48×48` grid measured
+  sharper but needs a 24-row slot and is deliberately not adopted.
 - The UI color theme outside the splash header is still upstream's default
   (mist blue); only the splash title/wordmark/tagline were moved to the HyperAI
   pink family. A full palette is a data change in the patch but needs a design

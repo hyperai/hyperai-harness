@@ -2,76 +2,112 @@
 
 ## Source of truth
 
-`brand/hyperai-logo.png` is the **local canonical HyperAI logo asset provided by
-the user**: `/Users/zhenhaoli/Downloads/51961168.png`, copied byte-for-byte into
-the repository. No remote avatar URL is fetched anywhere in the build or install
-path.
+`brand/hyperai-logo.svg` is the **canonical official HyperAI logo** provided by
+the user (`/Users/zhenhaoli/Downloads/logo-icon-border-1.svg`, copied
+byte-for-byte into the repository). It is a `120x120` viewBox export: a white
+circle plus a `90x89` icon rect painted from an embedded `271x267` RGBA PNG
+through an `objectBoundingBox` pattern; the icon's own drawing color is the rose
+`#E11D48`. No remote asset is fetched anywhere in the build or install path.
 
-- sha256: `165ecb79fbad9f2bdc2f2e0aa1e259848529907e7ea7ab32069376629b269741`
-- size: 60×60 RGBA, transparent outside the circular mark
-- treatment: alpha bounding box cropped, square-padded, box-downsampled to a
-  26×26 sprite, quantized to the source's own white/pink colors and stored in
-  the **upstream whale's letter-grid format**: one palette letter per sprite
-  pixel, `.` for transparent, 26 sprite rows = 13 terminal rows, centred in the
-  40-column art slot.
+- sha256: `3de898089cbbcc15fd8609f2c46d9e8906ff5119a13baf949cbde1bcf7857bab`
+- format: SVG, `120x120` viewBox, embedded `271x267` PNG icon data URI
+- treatment: the SVG is parsed (white circle geometry, icon rect, pattern
+  matrix, embedded PNG), composited analytically at 512x512 with 4x4
+  supersampling (white circle, then the icon stretched into its rect exactly as
+  the SVG's pattern maps it), alpha-cropped, downsampled to two square grids,
+  and quantized along the SVG's own white → rose blend line. Nothing is redrawn
+  or recolored; transparent pixels stay transparent.
+- cross-check: the analytic composite matches `rsvg-convert` at 1024x1024 —
+  alpha-mask IoU **0.9996**, composited mean absolute difference **1.18/255**
+  (the remainder is edge anti-aliasing).
 
-The mark is never redrawn and never recolored: the white plate stays `#FFFFFF`,
-the pattern keeps the official `#FF6096`, the pale edge is `#FFA6C4` (the
-source's own white→pink blend) and transparent pixels stay transparent, so the
-terminal background shows through. `scripts/generate-logo-art.mjs` is a pure
-decode → crop → downsample → quantize pipeline; it requires no image library
-and is covered by `tests/logo-art.test.mjs`.
+The retired `51961168.png` source (60x60) is no longer referenced by the build,
+the profile, the tests or the docs; it only remains in git history.
+`scripts/generate-logo-art.mjs` uses Node built-ins only (no image library, no
+network) and aborts loudly if the SVG no longer has the documented composition;
+it is covered by `tests/logo-art.test.mjs`.
 
-**Resolution limit:** the splash art slot is 13 terminal rows tall and the whale
-renderer uses half-block characters, so a square mark can be at most 26×26
-pixels (26 of the 40 columns). That is the largest distortion-free rendering the
-unchanged layout allows; rendering larger would need a taller slot, i.e. a
-layout change this distribution deliberately does not make. The official source
-is 60×60, so the committed sprite is a ≈2.3× reduction of the same artwork.
+Two terminal sprites are generated from the same SVG:
 
-**Production note:** an organization avatar is an official brand resource, but
-it is not a design hand-off. If a designer supplies the official logo pack
-(SVG or PNG ≥ 256 px, ideally including a light-background variant), replace
-`brand/hyperai-logo.png`, update `brand.json` (`logo.origin`, `sha256`,
-`fetchedAt`), and re-run:
+| sprite | grid | display | when it is used |
+|---|---|---|---|
+| **wide** (main) | `40x40` | 20 half-block rows | terminal content rows ≥ `HYPERAI_LOGO_WIDE_MIN_ROWS` (44) |
+| **compact** | `26x26` | 13 half-block rows | smaller windows — automatic degradation |
 
-```sh
-node scripts/generate-logo-art.mjs
-node scripts/build-patch.mjs
-node scripts/install.mjs
-```
+**Why 40x40 is the default:** with the measured ~6x12 px cell, the old 13-row
+slot capped a square mark at 26x26 logical pixels. The SVG's vector circle plus
+`271x267` icon resolve cleanly at 40x40 — 2.4x the pixels of the compact sprite —
+so the wide mark is visibly sharper without inventing any new rendering path.
+`HYPERAI_LOGO_WIDE_MIN_ROWS = 44` is the smallest content height where the
+launchpad layout keeps the 20-row mark instead of dropping the art; below it
+`components/hyperaiLogo.js` renders the compact sprite and
+`splashArtRows()`/`Launchpad` reserve the matching height, so the logo and the
+layout budget always agree.
+
+**Resolution ceiling:** half-block characters render two vertical pixels per
+cell, so the 40-column slot can show at most 40x40 logical pixels in a 20-row
+slot. A 48x48 grid needs a 24-row slot; the clarity experiment
+(`docs/screenshots/logo-clarity-svg.png`) measures that gain but production
+keeps 40x40 so the splash layout does not grow further.
 
 ## Terminal adaptation — the whale's own renderer
 
-The upstream splash art slot is a fixed 40-column × 13-row box, and the upstream
-DeepSeek whale fills it with a pre-encoded letter-grid sprite (40×26 letters =
-13 half-block rows). The HyperAI mark deliberately reuses that exact mechanism,
+The upstream splash art slot is a fixed 40-column box, and the upstream DeepSeek
+whale fills it with pre-encoded letter-grid sprites painted by
+`renderCellRows`. The HyperAI mark deliberately reuses that exact mechanism,
 data format and renderer instead of inventing an image pipeline:
 
-- **data** — `brand/generated/hyperai-logo.js` exports
-  `HYPERAI_LOGO_SPRITE` (26 sprite rows × 40 columns of palette letters) and
-  `HYPERAI_LOGO_PALETTE` (`W` white plate, `p` pale-pink edge, `P` official
-  pink, `.` transparent) — the same shape as upstream
-  `components/whaleFrames.js` (`{ rows: string[] }` letter grids);
+- **data** — `brand/generated/hyperai-logo.js` exports two letter-grid sprites
+  (`HYPERAI_LOGO_SPRITE_WIDE`, `HYPERAI_LOGO_SPRITE_COMPACT`, each 40 columns of
+  palette letters) and `HYPERAI_LOGO_PALETTE` (`W` white circle `#FFFFFF`, `R`
+  rose icon `#E11D48`, `a`/`b`/`c` intermediate blends for anti-aliased edges,
+  `.` transparent) — the same shape as upstream `components/whaleFrames.js`;
 - **renderer** — `components/hyperaiLogo.js` calls the whale's own
   `renderSpriteRows(sprite, palette)` (imported from `components/Whale.js`) once
-  at module load and renders the resulting rows through `Text`, mirroring
-  `WhaleArt` structurally;
+  per sprite at module load and renders the resulting rows through `Text`,
+  mirroring `WhaleArt` structurally. It picks wide/compact from
+  `useTerminalSize().rows` against the same threshold the layout uses;
 - **half-block encoding** — two sprite pixels per cell: `▀` with the upper pixel
   as foreground and the lower pixel as background when both are opaque, `▄` when
   only the lower pixel is opaque, and the empty half of a half-covered cell uses
   `\x1b[49m` (terminal default background); fully transparent cells are plain
-  spaces plus an erase-to-EOL. No black is ever painted, so transparent margins
+  spaces plus an erase-to-EOL. No black is ever painted, so transparent pixels
   show the terminal background;
 - **no image protocol** — no Kitty/Sixel/inline images are involved, exactly
   like the whale (the splash works in any ANSI true-color terminal);
-- **one palette for every theme** — the previous light-theme variant that mapped
-  the white plate to ink (`#1A1A20`) is gone: it made the plate read as a black
-  disc. The mark is now identical in dark and light themes. On a light terminal
-  the white plate is inherently close to the background (white artwork on a
-  white background), but it is never darkened or recolored.
+- **one palette for every theme** — the mark is identical in dark and light
+  themes. On a light terminal the white circle is inherently close to the
+  background (white artwork on a white background), but it is never darkened or
+  recolored.
 
-The art is pre-rendered at build time, so the runtime never parses a PNG.
+The art is pre-rendered at build time, so the runtime never parses SVG or PNG.
+
+## Real-terminal evidence
+
+- `docs/screenshots/real-terminal-dark.png` — Terminal.app, background `#101014`
+  (OSC 11), 40x40 main mark, 169x55 window;
+- `docs/screenshots/real-terminal-light.png` — Terminal.app, background
+  `#FAF7F2`, same main mark;
+- `docs/screenshots/real-terminal-small.png` — Terminal.app, 139x40 window:
+  the compact 26x26 mark, automatic degradation;
+- `docs/screenshots/logo-clarity-svg.png` + `logo-clarity-svg.md` — real-terminal
+  comparison of the SVG-derived `26x26` / `40x40` / `48x48` grids in the same
+  48x24-cell box on the same background (see the table below).
+
+Clarity experiment (real Terminal.app captures; RMSE against the SVG rendered by
+`rsvg-convert` on the same background, lower = closer):
+
+| grid | display cells | mark on screen | colors | edge energy | RMSE vs SVG |
+|---|---|---|---|---|---|
+| 26x26 | 26x13 | 163x163 px | 1440 | 18.9 | 58.3 |
+| 40x40 | 40x20 | 248x248 px | 1533 | 13.6 | 46.4 |
+| 48x48 | 48x24 | 291x288 px | 1620 | 11.5 | 31.3 |
+
+Recommendation: **40x40 main + 26x26 compact fallback** (implemented). 48x48 is
+measurably sharper but needs a 24-row art slot; the current layout change is
+deliberately limited to 20 rows so the splash keeps its proportions. The 26x26
+grid is now used only for small windows, where it still shows the official SVG
+art at the height the whale slot originally reserved.
 
 ## Title gradient
 

@@ -12,14 +12,15 @@ cd hyperai/hyperai-tui
 node scripts/generate-logo-art.mjs   # regenerates the committed art
 node scripts/build-patch.mjs         # rebuilds + self-applies the patch
 node scripts/verify.mjs              # 11/11 checks
-node --test tests/                   # 14/14 tests
+node --test tests/                   # 16/16 tests
 ```
 
-`verify.mjs` covers: brand data, logo digest, the whale-format letter grid
-(26×40 letters, white/pink palette, no dark entry), patch file set + the whale
-renderer reused by `hyperaiLogo.js`, the title gradient palette,
-profile-template consistency, skills-lock pin/classification, generator
-determinism, installer dry-run plan, and the foreign-profile refusal.
+`verify.mjs` covers: brand data, the canonical SVG digest, both whale-format
+letter grids (wide 40×40 + compact 26×26, white + SVG-rose palette, no dark
+entry), patch file set + the whale renderer reused by `hyperaiLogo.js` + the
+dynamic splash-art height, the title gradient palette, profile-template
+consistency, skills-lock pin/classification, generator determinism, installer
+dry-run plan, and the foreign-profile refusal.
 
 ## Profile composition (no TTY needed)
 
@@ -51,17 +52,22 @@ dsh --profile hyperai
 
 Evidence files:
 
-- `screenshots/launchpad.png` / `.txt` — `HYPERAI`/`HARNESS` block title in the
-  pink → white gradient, the whale-mechanism mark generated from the local
-  canonical `/Users/zhenhaoli/Downloads/51961168.png`, `hyperai-tui v0.16.1`
-  plate, `gpt-4o-mini` deployment route (dark terminal background).
-- `screenshots/launchpad-light.png` / `.txt` — the same launchpad rendered on a
-  light terminal background.
-- `screenshots/chat-splash.png` / `.txt` — `✦ hyperai-tui`, mark, tagline
-  `HyperAI Harness`, and the loaded-context line (`Skills 10`).
+- `screenshots/launchpad.png` / `.txt` — 120×50 launchpad: the wide 40×40
+  SVG-derived mark and the pink gradient title, `hyperai-tui v0.16.1` plate,
+  `gpt-4o-mini` deployment route (dark background).
+- `screenshots/launchpad-light.png` / `.txt` — the same screen on a light
+  terminal background.
+- `screenshots/launchpad-compact.png` / `.txt` — 110×40 terminal: automatic
+  degradation to the compact 26×26 mark.
+- `screenshots/chat-splash.png` / `.txt` — `✦ hyperai-tui`, wide mark, tagline
+  `HyperAI Harness`, loaded-context line.
 - `screenshots/chat-reply.png` / `chat-splash-and-reply.txt` — live
-  OpenAI-compatible reply (`LOGO_WHALE_STYLE_OK`) plus a bash tool call
-  (`TOOL_WHALE_STYLE_OK`) under the pink title.
+  OpenAI-compatible reply (`SVG_LOGO_OK`) plus a bash tool call
+  (`SVG_TOOL_OK`) under the pink title.
+- `screenshots/real-terminal-{dark,light,small}.png` — real Terminal.app window
+  captures (see below).
+- `screenshots/logo-clarity-svg.png` / `.md` — real-terminal 26/40/48 comparison
+  from the SVG source.
 - `screenshots/real-profile-skills-and-tool.txt` — earlier real-profile capture
   proving the agent listed the skill catalog and executed a bash tool call.
 
@@ -70,6 +76,37 @@ paints half-block cells (`▀`/`▄`/`█`) as exact cell rectangles instead of 
 glyphs, so block-art seams from the screenshot tool are not mistaken for product
 defects. The real-terminal PNGs below come from ScreenCaptureKit window
 captures, not from the Python renderer.
+
+## Canonical SVG -> terminal art
+
+`brand/hyperai-logo.svg` is the only logo source (`51961168.png` is retired).
+The generator parses the SVG (white circle path, icon rect, pattern matrix,
+embedded `271x267` PNG), composites it analytically at 512×512 with 4×4
+supersampling, and downsamples the result to the two whale-format letter grids:
+
+```sh
+node scripts/generate-logo-art.mjs   # SVG -> brand/generated/hyperai-logo.js
+node scripts/build-patch.mjs         # -> patches/dsh-tui@0.16.1.patch
+node scripts/install.mjs --no-skills # -> ~/.dsh/profiles/hyperai
+```
+
+Independent validation of the analytic composite against `rsvg-convert` at
+1024×1024: alpha-mask IoU **0.9996**, composited mean absolute difference
+**1.18/255**.
+
+Clarity experiment (real Terminal.app captures, same 48×24-cell box and
+background; RMSE vs the rsvg-rendered SVG, lower = closer):
+
+| grid | display cells | mark on screen | colors | edge energy | RMSE |
+|---|---|---|---|---|---|
+| 26×26 | 26×13 | 163×163 px | 1440 | 18.9 | 58.3 |
+| 40×40 | 40×20 | 248×248 px | 1533 | 13.6 | 46.4 |
+| 48×48 | 48×24 | 291×288 px | 1620 | 11.5 | 31.3 |
+
+Production uses **40×40 as the main mark** and **26×26 as the small-window
+fallback** (`HYPERAI_LOGO_WIDE_MIN_ROWS = 44` terminal content rows, shared by
+the logo component and the launchpad layout budget). The 48×48 grid is sharper
+but needs a 24-row slot and is deliberately not adopted.
 
 ## Real Mac terminal (Terminal.app)
 
@@ -83,23 +120,18 @@ harness:
 - The window was resized to ≈168×53 cells, the TUI was allowed to settle, and
   the window was captured at native resolution through ScreenCaptureKit
   (`get_window_state`), giving PNG screenshots without JPEG/scale artifacts.
-- Evidence: `screenshots/real-terminal-dark.png`,
-  `screenshots/real-terminal-light.png`,
-  `screenshots/real-terminal-dark-logo.png` (mark detail), and
-  `screenshots/real-terminal-whale-dark.png` /
-  `real-terminal-whale-dark-logo.png` — the upstream DeepSeek whale rendered
-  in the same window with the same `renderSpriteRows` for comparison.
-- Checks: the dark capture's dominant cell color is the OSC background; the mark
-  area contains only the original white plate + pink pattern + terminal
-  background (transparent pixels), with **no `#1A1A20`/black plate and no black
-  ring**. The light capture shows the same mark over a light background (the
-  white plate is white-on-white by design — it is never darkened). The whale
-  reference capture shows the same half-block quality on the same background,
-  validating that the mark uses the upstream mechanism.
-- Terminal.app supports neither the Kitty graphics protocol nor Sixel, and the
-  implementation deliberately uses neither: the splash mark is pure ANSI
-  true-color half blocks, exactly like the whale, so it renders identically in
-  any ANSI true-color terminal.
+- Evidence: `screenshots/real-terminal-dark.png` (169×55, wide 40×40 mark),
+  `screenshots/real-terminal-light.png` (168×54, same wide mark) and
+  `screenshots/real-terminal-small.png` (139×40, compact 26×26 mark).
+- Checks: the dark/light captures' dominant cell colors are the OSC backgrounds
+  (`#101014` / `#FAF7F2`); the mark area contains only the SVG's white circle,
+  rose icon and their blend edges, with transparent pixels showing the terminal
+  background — **no ink/black plate**. The small-window capture confirms the
+  automatic degradation to 26×26 and that the splash still fits.
+- Terminal.app supports neither the Kitty graphics protocol nor Sixel (see the
+  protocol probe in the experiment notes), and the implementation deliberately
+  uses neither: the splash mark is pure ANSI true-color half blocks, exactly
+  like the whale, so it renders identically in any ANSI true-color terminal.
 
 ## Title gradient color check
 

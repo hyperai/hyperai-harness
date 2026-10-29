@@ -134,38 +134,47 @@ index ed2f7f3..47876ac 100644
                                          primary: UPSTREAM_VALIDATED_VERSION,
 diff --git a/lib/types/components/hyperaiLogo.js b/lib/types/components/hyperaiLogo.js
 new file mode 100644
-index 0000000..678f456
+index 0000000..e8878b1
 --- /dev/null
 +++ b/lib/types/components/hyperaiLogo.js
-@@ -0,0 +1,42 @@
+@@ -0,0 +1,53 @@
 +/**
 + * hyperai-tui brand mark.
 + *
-+ * Renders the official HyperAI mark with the SAME mechanism as the upstream
-+ * DeepSeek whale (`components/Whale.js`): a static letter-grid sprite plus a
++ * Renders the canonical SVG's mark with the SAME mechanism as the upstream
++ * DeepSeek whale (`components/Whale.js`): static letter-grid sprites plus a
 + * small fixed palette, painted by the whale's own `renderSpriteRows`. That
 + * encoder emits true-color half blocks — `▀` with the upper pixel as foreground
 + * and the lower pixel as background, `▄` when only the lower pixel is opaque,
 + * `\x1b[49m` (terminal default background) for the empty half of a half-covered
-+ * cell, and plain spaces with an erase-to-EOL for fully transparent cells — so
-+ * transparent margins show the terminal background and no black is painted.
++ * cell, and plain spaces plus erase-to-EOL for fully transparent cells — so
++ * transparent pixels show the terminal background and no color is painted there.
 + *
-+ * The sprite is generated from `brand/hyperai-logo.png` by
-+ * `scripts/generate-logo-art.mjs` in the whale's own data format: one palette
-+ * letter per sprite pixel (`W` white plate, `p` pale-pink edge, `P` official
-+ * pink, `.` transparent). No image protocol is used, exactly like the whale.
++ * Two generated sprites share the same 40-column art slot:
++ *   - wide    40x40 sprite (20 display rows) — the main mark, used on terminals
++ *             tall enough for it (`HYPERAI_LOGO_WIDE_MIN_ROWS`);
++ *   - compact 26x26 sprite (13 display rows) — small-window degradation, the
++ *             height the whale slot originally reserved.
++ * `splashArtRows.js` uses the same threshold for the splash layout budget, so
++ * the logo and the space reserved for it always agree.
 + *
-+ * The art slot keeps the upstream contract: a fixed-width box of pre-rendered
-+ * ANSI rows, one row per `Text` child, so the splash layout measured for the
-+ * whale works unchanged.
++ * The art is pre-rendered at build time from `brand/hyperai-logo.svg`; the
++ * runtime never parses SVG/PNG and never recolors the art.
 + */
 +import { jsx as _jsx } from 'react/jsx-runtime'
-+import { Box, Text } from '../ui.js'
++import { Box, Text, useTerminalSize } from '../ui.js'
 +import { renderSpriteRows } from './Whale.js'
-+import { HYPERAI_LOGO_COLUMNS, HYPERAI_LOGO_PALETTE, HYPERAI_LOGO_SPRITE } from './hyperaiLogoRows.js'
++import {
++  HYPERAI_LOGO_COLUMNS,
++  HYPERAI_LOGO_PALETTE,
++  HYPERAI_LOGO_SPRITE_COMPACT,
++  HYPERAI_LOGO_SPRITE_WIDE,
++  HYPERAI_LOGO_WIDE_MIN_ROWS,
++} from './hyperaiLogoRows.js'
 +
-+/** Pre-rendered ANSI rows, computed once at module load — same path as the whale frames. */
-+const RENDERED = renderSpriteRows(HYPERAI_LOGO_SPRITE, HYPERAI_LOGO_PALETTE)
++/** Pre-rendered ANSI rows for both variants, computed once at module load — same path as the whale frames. */
++const RENDERED_WIDE = renderSpriteRows(HYPERAI_LOGO_SPRITE_WIDE, HYPERAI_LOGO_PALETTE)
++const RENDERED_COMPACT = renderSpriteRows(HYPERAI_LOGO_SPRITE_COMPACT, HYPERAI_LOGO_PALETTE)
 +
 +/**
 + * The splash brand mark.
@@ -173,40 +182,56 @@ index 0000000..678f456
 + * constant); omitted, the mark uses its own column count.
 + */
 +export function HyperAILogoArt({ width }) {
++  const { rows } = useTerminalSize()
++  const rendered = rows >= HYPERAI_LOGO_WIDE_MIN_ROWS ? RENDERED_WIDE : RENDERED_COMPACT
 +  return _jsx(Box, {
 +    flexDirection: 'column',
 +    flexShrink: 0,
 +    width: width ?? HYPERAI_LOGO_COLUMNS,
-+    children: RENDERED.map((row, index) => _jsx(Text, { wrap: 'truncate-end', children: row }, index)),
++    children: rendered.map((row, index) => _jsx(Text, { wrap: 'truncate-end', children: row }, index)),
 +  })
 +}
 diff --git a/lib/types/components/hyperaiLogoRows.js b/lib/types/components/hyperaiLogoRows.js
 new file mode 100644
-index 0000000..e0a3316
+index 0000000..2ff1674
 --- /dev/null
 +++ b/lib/types/components/hyperaiLogoRows.js
-@@ -0,0 +1,73 @@
+@@ -0,0 +1,141 @@
 +/**
 + * GENERATED FILE — do not edit by hand.
-+ * Terminal logo data for hyperai-tui in the SAME letter-grid format as the
-+ * upstream whale frames: one palette letter per sprite pixel, `.` transparent.
-+ * Derived from `brand/hyperai-logo.png` (60x60 PNG,
-+ * mark bbox 56x56, 26x26 sprite centered in the
-+ * whale's 40-column slot -> 13 display rows of half blocks).
-+ * Rendered at runtime by the whale's own `renderSpriteRows` (components/Whale.js).
++ * Terminal logo data for hyperai-tui, generated from the canonical SVG source
++ * `brand/hyperai-logo.svg` (120x120 viewBox: white circle
++ * + embedded 271x267 icon painted into a 90x89 rect).
++ *
++ * The build composites the SVG analytically (white circle + icon, 4x4
++ * supersampling), then downsamples to two letter-grid sprites in the upstream
++ * whale frame format — one palette letter per sprite pixel, `.` transparent —
++ * so the runtime renders them through the whale's own `renderSpriteRows`
++ * (true-color half blocks, no image protocol, no recoloring):
++ *
++ *   wide      40x40 sprite -> 20 display rows (main, terminal rows >= 44)
++ *   compact   26x26 sprite -> 13 display rows (small windows)
++ *
++ * Colors come from the SVG itself: white circle [255,255,255], icon
++ * accent [225,29,72], and intermediate blends for anti-aliased
++ * edges. Transparent pixels stay transparent (terminal background shows through).
++ *
 + * Regenerate with:
 + *
 + *   node scripts/generate-logo-art.mjs
-+ *
-+ * The mark is a downsampled copy of the official artwork, never a redraw: the
-+ * white plate stays white, the pink pattern keeps its official color, and the
-+ * transparent margin stays transparent (terminal background shows through).
 + */
 +
 +/** Display columns of the art slot (same as the upstream whale box). */
 +export const HYPERAI_LOGO_COLUMNS = 40
-+/** Sprite rows (half-block: two sprite pixels per display row). */
-+export const HYPERAI_LOGO_SPRITE_ROWS = 26
++
++/** Terminal rows at or above which the wide 40x40 sprite is used. */
++export const HYPERAI_LOGO_WIDE_MIN_ROWS = 44
++
++/** Sprite rows of the wide variant (half-block: two sprite pixels per display row). */
++export const HYPERAI_LOGO_SPRITE_ROWS_WIDE = 40
++
++/** Sprite rows of the compact variant (half-block: two sprite pixels per display row). */
++export const HYPERAI_LOGO_SPRITE_ROWS_COMPACT = 26
 +
 +/** Palette map, letter -> [r, g, b], read by `renderSpriteRows`. */
 +export const HYPERAI_LOGO_PALETTE = {
@@ -215,55 +240,126 @@ index 0000000..e0a3316
 +    255,
 +    255
 +  ],
-+  "p": [
-+    255,
-+    166,
-+    196
++  "a": [
++    248,
++    199,
++    209
 +  ],
-+  "P": [
-+    255,
-+    96,
-+    150
++  "b": [
++    240,
++    142,
++    164
++  ],
++  "c": [
++    233,
++    86,
++    118
++  ],
++  "R": [
++    225,
++    29,
++    72
 +  ]
 +}
 +
-+/** Letter-grid sprite rows (whale frame format). */
-+export const HYPERAI_LOGO_SPRITE = [
-+  "..................WWWWW.................",
-+  "...............WWWWWWWWWWW..............",
++/** Wide letter-grid sprite (40x40 mark centered in 40 columns). */
++export const HYPERAI_LOGO_SPRITE_WIDE = [
++  "................WWWWWWWW................",
 +  ".............WWWWWWWWWWWWWW.............",
-+  "............WWWWpPPPPPPppWWW............",
-+  "...........WWWpPPPPPPPPPPPWWW...........",
-+  "..........WWWpPPPPppppPPPPPWWW..........",
-+  ".........WWWpPPPWWpWppWWpPPPWWW.........",
-+  ".........WWpPPPWpPPpWPpWWpPPPWWW........",
-+  "........WWWPPPpWpPPpppWPpWPPPpWW........",
-+  "........WWpPPPpWpPWWPpWpPWpPPPWW........",
-+  "........WWPPPPWWWWppWPWpPppPPPpWW.......",
-+  ".......WWWPPPPWWWWWPpWWWPppPPPpWW.......",
-+  ".......WWWPPPpWWpWWWPPPWpppPPPPWW.......",
-+  ".......WWWPPPpWpPpWWWpWpWppPPPPWW.......",
-+  ".......WWWPPPWWWWWWWWWpPPWpPPPpWW.......",
-+  ".......WWWPPPWWWWWWWWWWpWWpPPPpWW.......",
-+  "........WWpPPPWWWWWWWWWWWWPPPPWWW.......",
-+  "........WWWPPPWWWWWWWWWWWpPPPPWW........",
-+  "........WWWpPPpWWWWWWWWWWPPPPpWW........",
-+  ".........WWWPPPWWWWWWWWWWPPPpWWW........",
-+  "..........WWWPPPpppWWWWWWpPpWWW.........",
-+  "...........WWWPPPPpWWWWWWppWWW..........",
-+  "............WWWpPPpWWWWWWWWWW...........",
-+  ".............WWWWWpWWWWWWWWW............",
-+  "..............WWWWWWWWWWWWW.............",
-+  ".................WWWWWWW................"
++  "..........WWWWWWWWWWWWWWWWWWWW..........",
++  ".........WWWWWWWWaaaaaaWWWWWWWW.........",
++  ".......WWWWWWWbcRRRRRRRRcbWWWWWWW.......",
++  "......WWWWWWbRRRRRRRRRRRRRRbWWWWWW......",
++  ".....WWWWWbRRRRRRRRRRRRRRRRRRaWWWWW.....",
++  "....WWWWWcRRRRRRcbbbbbcRRRRRRRbWWWWW....",
++  "....WWWWcRRRRRbWWWWWWWWWbRRRRRRbWWWW....",
++  "...WWWWcRRRRRaWWaaWbcbaWWaRRRRRRbWWWW...",
++  "..WWWWbRRRRRbWacRRbWcRRcWWaRRRRRRaWWWW..",
++  "..WWWaRRRRRcWWRRRRRbWbRaaaWaRRRRRRWWWW..",
++  "..WWWcRRRRRbWaRRRRRbWRbWcRaWcRRRRRbWWWW.",
++  ".WWWWRRRRRRWWWRRcWaWcRWaRRcWaRRRRRRWWWW.",
++  ".WWWbRRRRRcWWWacWaWaRRcaaRRaWcRRRRRaWWW.",
++  ".WWWcRRRRRbWWWWWaRRaacRaaRRbWaRRRRRcWWW.",
++  "WWWWRRRRRRaWWWWWacRRbWaWaRRRWaRRRRRRWWWW",
++  "WWWaRRRRRRWWWWWWWWcRRbWcaaRRWWRRRRRRWWWW",
++  "WWWaRRRRRcWWWWaWWWWcRRRRbWcRaWRRRRRRaWWW",
++  "WWWaRRRRRaWWaRRaWWWWcRRcWaRRWWRRRRRRaWWW",
++  "WWWaRRRRRWWWaRRbWWWWWbcWbaacWWRRRRRRaWWW",
++  "WWWaRRRRcWWWWbcWWWWWWWWbRRaWWaRRRRRRaWWW",
++  "WWWaRRRRbWWWWWWWWWWWWWWbRRRaWbRRRRRRWWWW",
++  "WWWWRRRRbWWWWWWWWWWWWWWWabaWWcRRRRRcWWWW",
++  ".WWWcRRRRaaWWWWWWWWWWWWWWWWWbRRRRRRbWWW.",
++  ".WWWbRRRRRcWWWWWWWWWWWWWWWWaRRRRRRRaWWW.",
++  ".WWWWRRRRRcWWWWWWWWWWWWWWWWbRRRRRRcWWWW.",
++  "..WWWbRRRRcWWWWWWWWWWWWWWWWcRRRRRRbWWWW.",
++  "..WWWWRRRRRWWWWWWWWWWWWWWWWcRRRRRcWWWW..",
++  "..WWWWaRRRRbWWWWWWWWWWWWWWWcRRRRRaWWWW..",
++  "...WWWWbRRRRbWWWWWWWWWWWWWWcRRRRaWWWW...",
++  "....WWWWbRRRRcbbbaWWWWWWWWWbRRRaWWWW....",
++  "....WWWWWbRRRRRRRbWWWWWWWWWaRRaWWWWW....",
++  ".....WWWWWacRRRRRbWWWWWWWWWacaWWWWW.....",
++  "......WWWWWWbcRRRbWWWWWWWWWWWWWWWW......",
++  ".......WWWWWWWabcaWWWWWWWWWWWWWWW.......",
++  ".........WWWWWWWWWWWWWWWWWWWWWW.........",
++  "..........WWWWWWWWWWWWWWWWWWWW..........",
++  "............WWWWWWWWWWWWWWWW............",
++  "................WWWWWWWW................"
 +]
 +
-+/** Colorless preview of the same sprite (docs / no-color logs). */
-+export const HYPERAI_LOGO_MONO = "                  #####                 \n               ###########              \n             ##############             \n            ####+******++###            \n           ###+***********###           \n          ###+****++++*****###          \n         ###+***##+#++##+***###         \n         ##+***#+**+#*+##+***###        \n        ###***+#+**+++#*+#***+##        \n        ##+***+#+*##*+#+*#+***##        \n        ##****####++#*#+*++***+##       \n       ###****#####*+###*++***+##       \n       ###***+##+###***#+++****##       \n       ###***+#+*+###+#+#++****##       \n       ###***#########+**#+***+##       \n       ###***##########+##+***+##       \n        ##+***############****###       \n        ###***###########+****##        \n        ###+**+##########****+##        \n         ###***##########***+###        \n          ###***+++######+*+###         \n           ###****+######++###          \n            ###+**+##########           \n             #####+#########            \n              #############             \n                 #######                "
++/** Compact letter-grid sprite (26x26 mark centered in 40 columns). */
++export const HYPERAI_LOGO_SPRITE_COMPACT = [
++  ".................WWWWWW.................",
++  "..............WWWWWWWWWWWW..............",
++  "............WWWWWabbbbaWWWWW............",
++  "...........WWWacRRRRRRRRcaWWW...........",
++  "..........WWWbRRRRRcRRRRRRbWWW..........",
++  ".........WWWbRRRbaWWWWbRRRRbWWW.........",
++  ".........WWbRRRaWbbaRcaWcRRRbWW.........",
++  "........WWaRRRcWRRRcaRaaWRRRRaWW........",
++  "........WWcRRRaWRRbacbbRabRRRcWW........",
++  "........WWRRRRWWabbaRcaccWRRRRWWW.......",
++  ".......WWbRRRcWWWWRcabWRRWcRRRaWW.......",
++  ".......WWbRRRbWWWWaRRacaRabRRRbWW.......",
++  ".......WWbRRRWWbcWWacRbaRabRRRbWW.......",
++  ".......WWbRRcWWcRWWWWbabaabRRRbWW.......",
++  ".......WWbRRbWWWWWWWWWcRbWcRRRbWW.......",
++  ".......WWaRRbWWWWWWWWWWaWaRRRRaWW.......",
++  "........WWRRRRWWWWWWWWWWWcRRRRWWW.......",
++  "........WWcRRRWWWWWWWWWWaRRRRbWW........",
++  "........WWaRRRaWWWWWWWWWaRRRRWWW........",
++  ".........WWbRRcWWWWWWWWWaRRRaWW.........",
++  ".........WWWbRRcbbaWWWWWWRRbWWW.........",
++  "..........WWWaRRRRaWWWWWWcaWWW..........",
++  "...........WWWWbRRaWWWWWWWWWW...........",
++  "............WWWWWaWWWWWWWWWW............",
++  "..............WWWWWWWWWWWW..............",
++  "................WWWWWWWW................"
++]
++
++/** Colorless preview of the wide sprite (docs / no-color logs). */
++export const HYPERAI_LOGO_MONO = "                ########                \n             ##############             \n          ####################          \n         ########++++++########         \n       #######-=********=-#######       \n      ######-**************-######      \n     #####-******************+#####     \n    #####=******=-----=*******-#####    \n    ####=*****-#########-******-####    \n   ####=*****+##++#-=-+##+******-####   \n  ####-*****-#+=**-#=**=##+******+####  \n  ###+*****=##*****-#-*+++#+******####  \n  ###=*****-#+*****-#*-#=*+#=*****-#### \n ####******###**=#+#=*#+**=#+******#### \n ###-*****=###+=#+#+**=++**+#=*****+### \n ###=*****-#####+**++=*++**-#+*****=### \n####******+#####+=**-#+#+***#+******####\n###+******########=**-#=++**##******####\n###+*****=####+####=****-#=*+#******+###\n###+*****+##+**+####=**=#+**##******+###\n###+*****###+**-#####-=#-++=##******+###\n###+****=####-=########-**+##+******+###\n###+****-##############-***+#-******####\n####****-###############+-+##=*****=####\n ###=****++#################-******-### \n ###-*****=################+*******+### \n ####*****=################-******=#### \n  ###-****=################=******-#### \n  ####*****################=*****=####  \n  ####+****-###############=*****+####  \n   ####-****-##############=****+####   \n    ####-****=---+#########-***+####    \n    #####-*******-#########+**+#####    \n     #####+=*****-#########+=+#####     \n      ######-=***-################      \n       #######+-=+###############       \n         ######################         \n          ####################          \n            ################            \n                ########                "
 diff --git a/lib/types/components/splashArtRows.js b/lib/types/components/splashArtRows.js
-index 75ebe9d..9662878 100644
+index 75ebe9d..b20a0b3 100644
 --- a/lib/types/components/splashArtRows.js
 +++ b/lib/types/components/splashArtRows.js
-@@ -4,11 +4,7 @@ export const PORTRAIT_ART_ROWS = 11;
+@@ -1,19 +1,29 @@
+ /** 启动页立绘槽的占行：鲸鱼自然高度、portrait 的 minimal 等高盒、吉祥物的侧栏默认盒。 */
++import { HYPERAI_LOGO_WIDE_MIN_ROWS } from './hyperaiLogoRows.js';
+ export const WHALE_ART_ROWS = 13;
++/** hyperai-tui: splash mark height for the wide 40x40 sprite (20 half-block rows). */
++export const HYPERAI_ART_ROWS_WIDE = 20;
++/** hyperai-tui: splash mark height for the compact 26x26 sprite (13 half-block rows). */
++export const HYPERAI_ART_ROWS_COMPACT = 13;
++/**
++ * hyperai-tui: pick the splash mark height from the terminal height. Shared by
++ * the logo component and the Launchpad layout budget so the two never disagree.
++ * @param {number} rows - terminal content rows.
++ * @returns 20 for >= HYPERAI_LOGO_WIDE_MIN_ROWS, otherwise 13.
++ */
++export function hyperaiArtRows(rows = process.stdout?.rows ?? 40) {
++    return rows >= HYPERAI_LOGO_WIDE_MIN_ROWS ? HYPERAI_ART_ROWS_WIDE : HYPERAI_ART_ROWS_COMPACT;
++}
+ export const PORTRAIT_ART_ROWS = 11;
  export const MASCOT_ART_ROWS = 15;
  /** 与 LogoV2 的默认品牌及 mascot → portrait → whale 分支一致。 */
  export function resolveSplashArtForm(input) {
@@ -275,7 +371,14 @@ index 75ebe9d..9662878 100644
 +    // hyperai-tui: the splash art slot always renders the HyperAI brand mark.
      return 'whale';
  }
- export function splashArtRows(form, imageBox) {
+-export function splashArtRows(form, imageBox) {
++export function splashArtRows(form, imageBox, rows) {
+     if (form === 'whale')
+-        return WHALE_ART_ROWS;
++        return hyperaiArtRows(rows);
+     if (form === 'portrait')
+         return PORTRAIT_ART_ROWS;
+     return imageBox?.rows ?? MASCOT_ART_ROWS;
 diff --git a/lib/types/components/splashEggs.js b/lib/types/components/splashEggs.js
 index 03e9f34..42bdb27 100644
 --- a/lib/types/components/splashEggs.js
@@ -380,7 +483,7 @@ index d7db9d3..61597c9 100644
      'onboarding-step-apikey-title': { zh: 'API Key 与连通性', en: 'API key and connectivity' },
      'onboarding-step-apikey-desc': {
 diff --git a/lib/types/screens/Launchpad.js b/lib/types/screens/Launchpad.js
-index d8a8835..5b3cbf3 100644
+index d8a8835..4ed8549 100644
 --- a/lib/types/screens/Launchpad.js
 +++ b/lib/types/screens/Launchpad.js
 @@ -479,7 +479,7 @@ onKernelPick, cwd, branch, tuiVersion, onFocusChange, onAction, onQueryChange, o
@@ -392,6 +495,15 @@ index d8a8835..5b3cbf3 100644
      // 名字用**短品牌名**（option.shortLabel，来自 manifest：DSH / Claude，与启动页
      // 「内核 · DSH」那个 chip 同源）：这一格与左下角的 `工作目录:分支` 共用底边，
      // 全名（DeepSeek Harness · … = 40 列）在窄终端里会把左边的目录铭牌挤掉。
+@@ -504,7 +504,7 @@ onKernelPick, cwd, branch, tuiVersion, onFocusChange, onAction, onQueryChange, o
+     const titleFont = resolveSplashTitleFont(font, brand, dailyEgg);
+     // 预算与 LogoV2 共享形态、图片槽：紧凑图片已缩减占位时不能仍按侧栏的15行算。
+     const splashArtForm = resolveSplashArtForm({ brand, whaleGirl, mascotSkin });
+-    const artRows = splashArtRows(splashArtForm, mascotBox);
++    const artRows = splashArtRows(splashArtForm, mascotBox, rows);
+     const layout = resolveLaunchpadLayout(columns, rows, {
+         params: hasParams,
+         whale,
 diff --git a/lib/types/update.js b/lib/types/update.js
 index 8efb701..e9a50a9 100644
 --- a/lib/types/update.js

@@ -2,39 +2,63 @@
 
 | Field | Value |
 |---|---|
-| File | `hyperai-logo.png` |
-| Origin | **Local canonical brand asset provided by the user** |
-| Source path | `/Users/zhenhaoli/Downloads/51961168.png` |
+| File | `hyperai-logo.svg` |
+| Origin | **Official HyperAI logo SVG provided by the user** |
+| Source path | `/Users/zhenhaoli/Downloads/logo-icon-border-1.svg` |
 | Provided | 2026-10-29 (Asia/Shanghai) |
-| Format | PNG, 60×60, 8-bit RGBA, non-interlaced |
-| sha256 | `165ecb79fbad9f2bdc2f2e0aa1e259848529907e7ea7ab32069376629b269741` |
+| Format | SVG, `120x120` viewBox; white circle path (`fill: white`) + `90x89` icon rect filled from an embedded `271x267` 8-bit RGBA PNG data URI through an `objectBoundingBox` pattern |
+| sha256 | `3de898089cbbcc15fd8609f2c46d9e8906ff5119a13baf949cbde1bcf7857bab` |
 
-## Treatment
+This SVG is the **single canonical source** for the HyperAI mark. The retired
+`51961168.png` (60x60) is no longer used anywhere in the generation chain.
 
-The file is copied byte-for-byte from the local source above (no download, no
-remote URL). `scripts/generate-logo-art.mjs` performs a lossless decode
-followed by a box downsample to a 26×26 sprite, quantizes it to the source's
-own white/pink colors and stores it in the upstream whale's letter-grid format
-(one palette letter per sprite pixel, `.` transparent). It does not redraw or
-annotate the mark, and it never substitutes colors: the white plate stays
-`#FFFFFF`, the pattern stays `#FF6096`, and the pale edge `#FFA6C4` is the
-source's own white→pink blend. There is no light-theme ink adaptation.
+## Treatment (SVG -> terminal art)
 
-The 60×60 source is still ~2.3× the 26×26 sprite; the generator's minimum
-source size is 48 px, chosen so this canonical file is accepted. 26×26 is the
-largest distortion-free sprite for the 13-row splash slot (half-block rows).
+`scripts/generate-logo-art.mjs` converts the SVG to the terminal art in four
+steps, all with Node built-ins (no image library, no network):
+
+1. **parse** — the generator understands exactly this composition and fails loud
+   if the SVG changes shape: it reads the `viewBox`, the white circle `Oval`
+   path (center + radius), the icon `<rect>`, the pattern `matrix(...)`, and the
+   base64 PNG embedded in the `<image>` data URI (decoded with a small pure-Node
+   PNG decoder).
+2. **composite** — the SVG is rendered analytically at 512x512 with 4x4
+   supersampling: white circle first, then the embedded icon stretched into the
+   icon rect exactly as the SVG's `objectBoundingBox` pattern maps it
+   (`preserveAspectRatio="none"`), straight-alpha "icon over circle". The
+   generator does not redraw the mark.
+   The analytic renderer was cross-checked against `rsvg-convert` at 1024x1024:
+   alpha mask IoU **0.9996**, composited mean absolute difference **1.18/255**
+   (remaining difference is edge anti-aliasing).
+3. **downsample** — alpha bounding box, square pad, area average to the two
+   terminal grids: **40x40** (main sprite, 20 half-block display rows) and
+   **26x26** (compact sprite, 13 display rows, used when the terminal is too
+   short for the wide mark).
+4. **quantize** — each sprite pixel becomes one palette letter on the SVG's own
+   white -> rose blend line: `W` = white circle `#FFFFFF`, `R` = icon rose
+   `#E11D48` (dominant opaque color of the embedded icon), with three
+   intermediate blends (`a`/`b`/`c`) keeping the anti-aliased edges; `.` =
+   transparent. Nothing is darkened or recolored.
+
+The terminal renders the sprites through the upstream whale's own
+`renderSpriteRows` (`components/Whale.js`), i.e. true-color half blocks with the
+terminal background showing through transparent cells — no image protocol.
 
 ## Replacement
 
-When a larger official pack is available, replace this file (keep the filename
-`hyperai-logo.png`), update `logo.sha256` / `logo.width` / `logo.height` /
-`logo.origin` in `../brand.json`, and rebuild:
+When the official logo is updated, replace this file (keep the filename
+`hyperai-logo.svg`), update `logo.sha256` / `logo.origin` / `logo.format` in
+`../brand.json`, and rebuild:
 
 ```sh
 node scripts/generate-logo-art.mjs
 node scripts/build-patch.mjs
 node scripts/install.mjs --no-skills
 ```
+
+The generator aborts if the new SVG does not have the documented composition
+(circle + pattern-filled icon rect + embedded PNG), so a structural change must
+be reviewed rather than silently producing a wrong mark.
 
 Usage of the mark follows the organization's own brand ownership. This
 repository does not claim trademark rights over it; the file is included only to

@@ -275,6 +275,50 @@ export const HYPERAI_PALETTE = Object.freeze({
 }`,
     },
     {
+      file: 'lib/types/components/splashArtRows.js',
+      why: 'splash mark height: wide 40x40 mark normally, compact 26x26 on small terminals',
+      find: `export const WHALE_ART_ROWS = 13;`,
+      replace: `import { HYPERAI_LOGO_WIDE_MIN_ROWS } from './hyperaiLogoRows.js';
+export const WHALE_ART_ROWS = 13;
+/** hyperai-tui: splash mark height for the wide 40x40 sprite (20 half-block rows). */
+export const HYPERAI_ART_ROWS_WIDE = 20;
+/** hyperai-tui: splash mark height for the compact 26x26 sprite (13 half-block rows). */
+export const HYPERAI_ART_ROWS_COMPACT = 13;
+/**
+ * hyperai-tui: pick the splash mark height from the terminal height. Shared by
+ * the logo component and the Launchpad layout budget so the two never disagree.
+ * @param {number} rows - terminal content rows.
+ * @returns 20 for >= HYPERAI_LOGO_WIDE_MIN_ROWS, otherwise 13.
+ */
+export function hyperaiArtRows(rows = process.stdout?.rows ?? 40) {
+    return rows >= HYPERAI_LOGO_WIDE_MIN_ROWS ? HYPERAI_ART_ROWS_WIDE : HYPERAI_ART_ROWS_COMPACT;
+}`,
+    },
+    {
+      file: 'lib/types/components/splashArtRows.js',
+      why: 'dynamic splash art height',
+      find: `export function splashArtRows(form, imageBox) {
+    if (form === 'whale')
+        return WHALE_ART_ROWS;
+    if (form === 'portrait')
+        return PORTRAIT_ART_ROWS;
+    return imageBox?.rows ?? MASCOT_ART_ROWS;
+}`,
+      replace: `export function splashArtRows(form, imageBox, rows) {
+    if (form === 'whale')
+        return hyperaiArtRows(rows);
+    if (form === 'portrait')
+        return PORTRAIT_ART_ROWS;
+    return imageBox?.rows ?? MASCOT_ART_ROWS;
+}`,
+    },
+    {
+      file: 'lib/types/screens/Launchpad.js',
+      why: 'layout budget must use the same dynamic art height as the logo component',
+      find: `    const artRows = splashArtRows(splashArtForm, mascotBox);`,
+      replace: `    const artRows = splashArtRows(splashArtForm, mascotBox, rows);`,
+    },
+    {
       file: 'lib/types/utils/paths.js',
       why: 'TUI preference/history root is shared with the dsh-tui profile upstream',
       find: `/** Data directory all preferences/history live in (\`~/.dsh-tui\`). */
@@ -406,11 +450,18 @@ function verifyPatch(patch, from, version) {
     if (!applied.includes(BRAND.splashWords.top)) throw new Error('patch apply smoke test failed: splash words missing')
     if (!applied.includes(BRAND.splashWords.bottom)) throw new Error('patch apply smoke test failed: splash words missing')
     const logo = readFileSync(join(pristine, 'lib/types/components/hyperaiLogoRows.js'), 'utf8')
-    if (!logo.includes('export const HYPERAI_LOGO_SPRITE =')) throw new Error('patch apply smoke test failed: logo sprite missing')
+    if (!logo.includes('export const HYPERAI_LOGO_SPRITE_WIDE =')) throw new Error('patch apply smoke test failed: wide logo sprite missing')
+    if (!logo.includes('export const HYPERAI_LOGO_SPRITE_COMPACT =')) throw new Error('patch apply smoke test failed: compact logo sprite missing')
     if (!logo.includes('export const HYPERAI_LOGO_PALETTE =')) throw new Error('patch apply smoke test failed: logo palette missing')
+    if (!logo.includes('export const HYPERAI_LOGO_WIDE_MIN_ROWS =')) throw new Error('patch apply smoke test failed: logo width threshold missing')
     const component = readFileSync(join(pristine, 'lib/types/components/hyperaiLogo.js'), 'utf8')
     if (!component.includes("from './Whale.js'")) throw new Error('patch apply smoke test failed: component does not reuse the whale renderer')
     if (!component.includes('renderSpriteRows')) throw new Error('patch apply smoke test failed: whale renderer not used')
+    if (!component.includes('useTerminalSize')) throw new Error('patch apply smoke test failed: component does not read terminal height')
+    const artRows = readFileSync(join(pristine, 'lib/types/components/splashArtRows.js'), 'utf8')
+    if (!artRows.includes('hyperaiArtRows')) throw new Error('patch apply smoke test failed: dynamic splash art height missing')
+    const launchpad = readFileSync(join(pristine, 'lib/types/screens/Launchpad.js'), 'utf8')
+    if (!launchpad.includes('splashArtRows(splashArtForm, mascotBox, rows)')) throw new Error('patch apply smoke test failed: Launchpad layout budget not updated')
   } finally {
     rmSync(sandbox, { recursive: true, force: true })
   }

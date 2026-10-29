@@ -1,24 +1,38 @@
 /**
  * GENERATED FILE — do not edit by hand.
- * Terminal logo data for hyperai-tui in the SAME letter-grid format as the
- * upstream whale frames: one palette letter per sprite pixel, `.` transparent.
- * Derived from `brand/hyperai-logo.png` (60x60 PNG,
- * mark bbox 56x56, 26x26 sprite centered in the
- * whale's 40-column slot -> 13 display rows of half blocks).
- * Rendered at runtime by the whale's own `renderSpriteRows` (components/Whale.js).
+ * Terminal logo data for hyperai-tui, generated from the canonical SVG source
+ * `brand/hyperai-logo.svg` (120x120 viewBox: white circle
+ * + embedded 271x267 icon painted into a 90x89 rect).
+ *
+ * The build composites the SVG analytically (white circle + icon, 4x4
+ * supersampling), then downsamples to two letter-grid sprites in the upstream
+ * whale frame format — one palette letter per sprite pixel, `.` transparent —
+ * so the runtime renders them through the whale's own `renderSpriteRows`
+ * (true-color half blocks, no image protocol, no recoloring):
+ *
+ *   wide      40x40 sprite -> 20 display rows (main, terminal rows >= 44)
+ *   compact   26x26 sprite -> 13 display rows (small windows)
+ *
+ * Colors come from the SVG itself: white circle [255,255,255], icon
+ * accent [225,29,72], and intermediate blends for anti-aliased
+ * edges. Transparent pixels stay transparent (terminal background shows through).
+ *
  * Regenerate with:
  *
  *   node scripts/generate-logo-art.mjs
- *
- * The mark is a downsampled copy of the official artwork, never a redraw: the
- * white plate stays white, the pink pattern keeps its official color, and the
- * transparent margin stays transparent (terminal background shows through).
  */
 
 /** Display columns of the art slot (same as the upstream whale box). */
 export const HYPERAI_LOGO_COLUMNS = 40
-/** Sprite rows (half-block: two sprite pixels per display row). */
-export const HYPERAI_LOGO_SPRITE_ROWS = 26
+
+/** Terminal rows at or above which the wide 40x40 sprite is used. */
+export const HYPERAI_LOGO_WIDE_MIN_ROWS = 44
+
+/** Sprite rows of the wide variant (half-block: two sprite pixels per display row). */
+export const HYPERAI_LOGO_SPRITE_ROWS_WIDE = 40
+
+/** Sprite rows of the compact variant (half-block: two sprite pixels per display row). */
+export const HYPERAI_LOGO_SPRITE_ROWS_COMPACT = 26
 
 /** Palette map, letter -> [r, g, b], read by `renderSpriteRows`. */
 export const HYPERAI_LOGO_PALETTE = {
@@ -27,47 +41,101 @@ export const HYPERAI_LOGO_PALETTE = {
     255,
     255
   ],
-  "p": [
-    255,
-    166,
-    196
+  "a": [
+    248,
+    199,
+    209
   ],
-  "P": [
-    255,
-    96,
-    150
+  "b": [
+    240,
+    142,
+    164
+  ],
+  "c": [
+    233,
+    86,
+    118
+  ],
+  "R": [
+    225,
+    29,
+    72
   ]
 }
 
-/** Letter-grid sprite rows (whale frame format). */
-export const HYPERAI_LOGO_SPRITE = [
-  "..................WWWWW.................",
-  "...............WWWWWWWWWWW..............",
+/** Wide letter-grid sprite (40x40 mark centered in 40 columns). */
+export const HYPERAI_LOGO_SPRITE_WIDE = [
+  "................WWWWWWWW................",
   ".............WWWWWWWWWWWWWW.............",
-  "............WWWWpPPPPPPppWWW............",
-  "...........WWWpPPPPPPPPPPPWWW...........",
-  "..........WWWpPPPPppppPPPPPWWW..........",
-  ".........WWWpPPPWWpWppWWpPPPWWW.........",
-  ".........WWpPPPWpPPpWPpWWpPPPWWW........",
-  "........WWWPPPpWpPPpppWPpWPPPpWW........",
-  "........WWpPPPpWpPWWPpWpPWpPPPWW........",
-  "........WWPPPPWWWWppWPWpPppPPPpWW.......",
-  ".......WWWPPPPWWWWWPpWWWPppPPPpWW.......",
-  ".......WWWPPPpWWpWWWPPPWpppPPPPWW.......",
-  ".......WWWPPPpWpPpWWWpWpWppPPPPWW.......",
-  ".......WWWPPPWWWWWWWWWpPPWpPPPpWW.......",
-  ".......WWWPPPWWWWWWWWWWpWWpPPPpWW.......",
-  "........WWpPPPWWWWWWWWWWWWPPPPWWW.......",
-  "........WWWPPPWWWWWWWWWWWpPPPPWW........",
-  "........WWWpPPpWWWWWWWWWWPPPPpWW........",
-  ".........WWWPPPWWWWWWWWWWPPPpWWW........",
-  "..........WWWPPPpppWWWWWWpPpWWW.........",
-  "...........WWWPPPPpWWWWWWppWWW..........",
-  "............WWWpPPpWWWWWWWWWW...........",
-  ".............WWWWWpWWWWWWWWW............",
-  "..............WWWWWWWWWWWWW.............",
-  ".................WWWWWWW................"
+  "..........WWWWWWWWWWWWWWWWWWWW..........",
+  ".........WWWWWWWWaaaaaaWWWWWWWW.........",
+  ".......WWWWWWWbcRRRRRRRRcbWWWWWWW.......",
+  "......WWWWWWbRRRRRRRRRRRRRRbWWWWWW......",
+  ".....WWWWWbRRRRRRRRRRRRRRRRRRaWWWWW.....",
+  "....WWWWWcRRRRRRcbbbbbcRRRRRRRbWWWWW....",
+  "....WWWWcRRRRRbWWWWWWWWWbRRRRRRbWWWW....",
+  "...WWWWcRRRRRaWWaaWbcbaWWaRRRRRRbWWWW...",
+  "..WWWWbRRRRRbWacRRbWcRRcWWaRRRRRRaWWWW..",
+  "..WWWaRRRRRcWWRRRRRbWbRaaaWaRRRRRRWWWW..",
+  "..WWWcRRRRRbWaRRRRRbWRbWcRaWcRRRRRbWWWW.",
+  ".WWWWRRRRRRWWWRRcWaWcRWaRRcWaRRRRRRWWWW.",
+  ".WWWbRRRRRcWWWacWaWaRRcaaRRaWcRRRRRaWWW.",
+  ".WWWcRRRRRbWWWWWaRRaacRaaRRbWaRRRRRcWWW.",
+  "WWWWRRRRRRaWWWWWacRRbWaWaRRRWaRRRRRRWWWW",
+  "WWWaRRRRRRWWWWWWWWcRRbWcaaRRWWRRRRRRWWWW",
+  "WWWaRRRRRcWWWWaWWWWcRRRRbWcRaWRRRRRRaWWW",
+  "WWWaRRRRRaWWaRRaWWWWcRRcWaRRWWRRRRRRaWWW",
+  "WWWaRRRRRWWWaRRbWWWWWbcWbaacWWRRRRRRaWWW",
+  "WWWaRRRRcWWWWbcWWWWWWWWbRRaWWaRRRRRRaWWW",
+  "WWWaRRRRbWWWWWWWWWWWWWWbRRRaWbRRRRRRWWWW",
+  "WWWWRRRRbWWWWWWWWWWWWWWWabaWWcRRRRRcWWWW",
+  ".WWWcRRRRaaWWWWWWWWWWWWWWWWWbRRRRRRbWWW.",
+  ".WWWbRRRRRcWWWWWWWWWWWWWWWWaRRRRRRRaWWW.",
+  ".WWWWRRRRRcWWWWWWWWWWWWWWWWbRRRRRRcWWWW.",
+  "..WWWbRRRRcWWWWWWWWWWWWWWWWcRRRRRRbWWWW.",
+  "..WWWWRRRRRWWWWWWWWWWWWWWWWcRRRRRcWWWW..",
+  "..WWWWaRRRRbWWWWWWWWWWWWWWWcRRRRRaWWWW..",
+  "...WWWWbRRRRbWWWWWWWWWWWWWWcRRRRaWWWW...",
+  "....WWWWbRRRRcbbbaWWWWWWWWWbRRRaWWWW....",
+  "....WWWWWbRRRRRRRbWWWWWWWWWaRRaWWWWW....",
+  ".....WWWWWacRRRRRbWWWWWWWWWacaWWWWW.....",
+  "......WWWWWWbcRRRbWWWWWWWWWWWWWWWW......",
+  ".......WWWWWWWabcaWWWWWWWWWWWWWWW.......",
+  ".........WWWWWWWWWWWWWWWWWWWWWW.........",
+  "..........WWWWWWWWWWWWWWWWWWWW..........",
+  "............WWWWWWWWWWWWWWWW............",
+  "................WWWWWWWW................"
 ]
 
-/** Colorless preview of the same sprite (docs / no-color logs). */
-export const HYPERAI_LOGO_MONO = "                  #####                 \n               ###########              \n             ##############             \n            ####+******++###            \n           ###+***********###           \n          ###+****++++*****###          \n         ###+***##+#++##+***###         \n         ##+***#+**+#*+##+***###        \n        ###***+#+**+++#*+#***+##        \n        ##+***+#+*##*+#+*#+***##        \n        ##****####++#*#+*++***+##       \n       ###****#####*+###*++***+##       \n       ###***+##+###***#+++****##       \n       ###***+#+*+###+#+#++****##       \n       ###***#########+**#+***+##       \n       ###***##########+##+***+##       \n        ##+***############****###       \n        ###***###########+****##        \n        ###+**+##########****+##        \n         ###***##########***+###        \n          ###***+++######+*+###         \n           ###****+######++###          \n            ###+**+##########           \n             #####+#########            \n              #############             \n                 #######                "
+/** Compact letter-grid sprite (26x26 mark centered in 40 columns). */
+export const HYPERAI_LOGO_SPRITE_COMPACT = [
+  ".................WWWWWW.................",
+  "..............WWWWWWWWWWWW..............",
+  "............WWWWWabbbbaWWWWW............",
+  "...........WWWacRRRRRRRRcaWWW...........",
+  "..........WWWbRRRRRcRRRRRRbWWW..........",
+  ".........WWWbRRRbaWWWWbRRRRbWWW.........",
+  ".........WWbRRRaWbbaRcaWcRRRbWW.........",
+  "........WWaRRRcWRRRcaRaaWRRRRaWW........",
+  "........WWcRRRaWRRbacbbRabRRRcWW........",
+  "........WWRRRRWWabbaRcaccWRRRRWWW.......",
+  ".......WWbRRRcWWWWRcabWRRWcRRRaWW.......",
+  ".......WWbRRRbWWWWaRRacaRabRRRbWW.......",
+  ".......WWbRRRWWbcWWacRbaRabRRRbWW.......",
+  ".......WWbRRcWWcRWWWWbabaabRRRbWW.......",
+  ".......WWbRRbWWWWWWWWWcRbWcRRRbWW.......",
+  ".......WWaRRbWWWWWWWWWWaWaRRRRaWW.......",
+  "........WWRRRRWWWWWWWWWWWcRRRRWWW.......",
+  "........WWcRRRWWWWWWWWWWaRRRRbWW........",
+  "........WWaRRRaWWWWWWWWWaRRRRWWW........",
+  ".........WWbRRcWWWWWWWWWaRRRaWW.........",
+  ".........WWWbRRcbbaWWWWWWRRbWWW.........",
+  "..........WWWaRRRRaWWWWWWcaWWW..........",
+  "...........WWWWbRRaWWWWWWWWWW...........",
+  "............WWWWWaWWWWWWWWWW............",
+  "..............WWWWWWWWWWWW..............",
+  "................WWWWWWWW................"
+]
+
+/** Colorless preview of the wide sprite (docs / no-color logs). */
+export const HYPERAI_LOGO_MONO = "                ########                \n             ##############             \n          ####################          \n         ########++++++########         \n       #######-=********=-#######       \n      ######-**************-######      \n     #####-******************+#####     \n    #####=******=-----=*******-#####    \n    ####=*****-#########-******-####    \n   ####=*****+##++#-=-+##+******-####   \n  ####-*****-#+=**-#=**=##+******+####  \n  ###+*****=##*****-#-*+++#+******####  \n  ###=*****-#+*****-#*-#=*+#=*****-#### \n ####******###**=#+#=*#+**=#+******#### \n ###-*****=###+=#+#+**=++**+#=*****+### \n ###=*****-#####+**++=*++**-#+*****=### \n####******+#####+=**-#+#+***#+******####\n###+******########=**-#=++**##******####\n###+*****=####+####=****-#=*+#******+###\n###+*****+##+**+####=**=#+**##******+###\n###+*****###+**-#####-=#-++=##******+###\n###+****=####-=########-**+##+******+###\n###+****-##############-***+#-******####\n####****-###############+-+##=*****=####\n ###=****++#################-******-### \n ###-*****=################+*******+### \n ####*****=################-******=#### \n  ###-****=################=******-#### \n  ####*****################=*****=####  \n  ####+****-###############=*****+####  \n   ####-****-##############=****+####   \n    ####-****=---+#########-***+####    \n    #####-*******-#########+**+#####    \n     #####+=*****-#########+=+#####     \n      ######-=***-################      \n       #######+-=+###############       \n         ######################         \n          ####################          \n            ################            \n                ########                "

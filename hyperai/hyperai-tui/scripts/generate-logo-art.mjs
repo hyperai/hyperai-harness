@@ -1,28 +1,36 @@
 #!/usr/bin/env node
 /**
- * Generate the terminal logo art for hyperai-tui from the OFFICIAL HyperAI logo
- * source image (`brand/hyperai-logo.png`), using the SAME rendering mechanism
- * as the upstream DeepSeek whale: a static letter-grid sprite plus a small
- * fixed palette, rendered to true-color half-block rows by the whale's own
- * `renderSpriteRows`.
+ * Generate the terminal logo data for hyperai-tui from the OFFICIAL HyperAI
+ * logo SVG (`brand/hyperai-logo.svg`, a 120x120 viewBox export: a white circle
+ * plus an embedded 271x267 icon painted into a 90x89 rect through an SVG
+ * pattern).
  *
- * The upstream whale (`components/Whale.js` + `components/whaleFrames.js`) is
- * pre-encoded art, one palette letter per sprite pixel (`. ` = transparent),
- * painted by `renderCellRows`: `▀` with fg = upper pixel / bg = lower pixel,
- * `▄` when only the lower pixel is opaque, and the terminal default background
- * (`\x1b[49m`) for the empty half of a half-covered cell. No image protocol is
- * involved and no color is invented at render time.
+ * The SVG is the single canonical source. The build chain is:
  *
- * This script converts the official raster into that data shape:
- *   1. alpha bounding box -> square 26x26 box-downsample (half-block gives
- *      13 display rows, the whale slot's height);
- *   2. per-pixel quantization to the source's own white→pink blend palette
- *      (W white plate, p pale-pink edge, P official pink, `.` transparent);
- *   3. the 26x26 mark centered in the whale's 40-column slot (7 transparent
- *      columns each side), exactly like the whale frames' letter rows.
+ *   brand/hyperai-logo.svg
+ *     [1] parse the SVG: circle geometry (white fill), icon rect + pattern
+ *         matrix, and the embedded PNG icon (data: URI, 271x267 RGBA)
+ *     [2] composite analytically at 512x512 with 4x4 supersampling:
+ *         white circle -> icon image stretched into the rect (the SVG's own
+ *         `patternContentUnits="objectBoundingBox"` mapping, preserveAspectRatio
+ *         none), straight-alpha "icon over circle"
+ *     [3] crop the alpha bounding box, square-pad, area-downsample to the two
+ *         terminal grids: 40x40 (main, 20 display rows) and 26x26 (compact,
+ *         13 display rows)
+ *     [4] quantize along the SVG's own white -> rose blend line into the whale's
+ *         letter-grid format (one palette letter per sprite pixel, `.` =
+ *         transparent)
+ *
+ * The terminal renders the sprites with the upstream whale's own
+ * `renderSpriteRows` (`components/Whale.js`) — true-color half blocks, no image
+ * protocol, no theme-specific recoloring. The SVG's own colors are preserved:
+ * white circle `#FFFFFF`, icon rose (dominant opaque color of the embedded
+ * icon, `#E11D48` in this export), and the white->rose blends used for
+ * anti-aliased edges. Transparent pixels stay transparent (terminal background
+ * shows through).
  *
  * Output: `brand/generated/hyperai-logo.js` (committed; the runtime never
- * parses PNG and never recolors the art). Re-run after replacing the source:
+ * parses SVG or PNG). Re-run after replacing the source:
  *
  *   node scripts/generate-logo-art.mjs
  *
@@ -35,32 +43,26 @@ import { fileURLToPath } from 'node:url'
 
 const HERE = dirname(fileURLToPath(import.meta.url))
 const PKG = join(HERE, '..')
-const SOURCE = join(PKG, 'brand', 'hyperai-logo.png')
+const SOURCE = join(PKG, 'brand', 'hyperai-logo.svg')
 const OUT_JS = join(PKG, 'brand', 'generated', 'hyperai-logo.js')
 const OUT_MONO = join(PKG, 'brand', 'generated', 'hyperai-logo.txt')
 
-/** Splash art slots (must match the TUI's water-whale layout constants). */
+/** Art slot width (same as the upstream whale box). */
 export const ART_COLUMNS = 40
-export const ART_ROWS = 13
-/** Square mark size in sprite pixels (half-block: one display row = 2 pixels). */
-const MARK = 26
-const X_OFFSET = Math.floor((ART_COLUMNS - MARK) / 2)
-/** Alpha at or above this is treated as covered; below it the cell stays empty. */
+/** Main sprite grid (40x40 -> 20 half-block display rows). */
+export const GRID_WIDE = 40
+/** Compact sprite grid (26x26 -> 13 half-block display rows). */
+export const GRID_COMPACT = 26
+/** Terminal rows at or above which the wide (40x40) sprite is used. */
+export const WIDE_MIN_ROWS = 44
+/** Canonical raster resolution used as the resampling source. */
+const CANVAS = 512
+/** Supersampling factor per axis for the analytic SVG composite. */
+const SUPERSAMPLE = 4
+/** Alpha at or above this is treated as opaque; below it the cell is empty. */
 const ALPHA_MIN = 128
-/**
- * Below this spatial size the official mark is downsampled to noise, not a logo.
- * The canonical HyperAI asset (brand/hyperai-logo.png) is 60x60, still ~2.3x the
- * 26x26 sprite; 48 is the floor that keeps the mark recognizable.
- */
-const MIN_SOURCE = 48
 
-/**
- * Decode an 8-bit non-interlaced RGB/RGBA PNG into straight RGBA bytes.
- * Supports the subset the brand source uses (and most exported logos): 8-bit
- * true-color with or without alpha, no interlacing, no palette.
- * @param {Buffer} buf - PNG file bytes.
- * @returns {{width: number, height: number, data: Uint8Array}} Decoded pixels.
- */
+/** Decode an 8-bit non-interlaced RGB/RGBA PNG into straight RGBA bytes. */
 export function decodePng(buf) {
   const signature = '89504e470d0a1a0a'
   if (buf.subarray(0, 8).toString('hex') !== signature) throw new Error('not a PNG file')
@@ -152,8 +154,169 @@ export function decodePng(buf) {
   return { width, height, data: out }
 }
 
-/** Bounding box of pixels with alpha > 0. */
-function alphaBox(image) {
+const number = '(-?\\d+(?:\\.\\d+)?)'
+const attr = (svg, tag, name) => {
+  const element = new RegExp(`<${tag}\\b[^>]*>`, 'u').exec(svg)
+  if (element === null) throw new Error(`SVG is missing <${tag}>`)
+  const matched = new RegExp(`${name}="${number}"`, 'u').exec(element[0])
+  if (matched === null) throw new Error(`SVG <${tag}> is missing ${name}`)
+  return Number(matched[1])
+}
+
+/**
+ * Parse the official export. The generator intentionally understands exactly the
+ * documented composition (white circle + rect filled from an embedded PNG
+ * through an objectBoundingBox pattern) and fails loud if the source changes
+ * shape, instead of silently producing a wrong mark.
+ * @param {string} svg - SVG document text.
+ * @returns Parsed geometry, embedded icon and pattern mapping.
+ */
+export function parseLogoSvg(svg) {
+  const viewBoxMatch = /viewBox="0 0 (\d+(?:\.\d+)?) (\d+(?:\.\d+)?)"/u.exec(svg)
+  if (viewBoxMatch === null) throw new Error('SVG is missing a viewBox')
+  const viewBox = { width: Number(viewBoxMatch[1]), height: Number(viewBoxMatch[2]) }
+
+  const ovalTag = /<path\b[^>]*id="Oval"[^>]*>/u.exec(svg)
+  if (ovalTag === null) throw new Error('SVG is missing the white "Oval" path')
+  if (!/fill="white"/u.test(ovalTag[0])) throw new Error('SVG "Oval" path is not white')
+  const circleData = /\bd="([^"]+)"/u.exec(ovalTag[0])
+  if (circleData === null) throw new Error('SVG "Oval" path has no `d`')
+  const coords = [...circleData[1].matchAll(new RegExp(`\\d+(?:\\.\\d+)?`, 'gu'))].map(match => Number(match[0]))
+  const xs = coords.filter((_, index) => index % 2 === 0)
+  const ys = coords.filter((_, index) => index % 2 === 1)
+  const circle = {
+    cx: (Math.min(...xs) + Math.max(...xs)) / 2,
+    cy: (Math.min(...ys) + Math.max(...ys)) / 2,
+    r: (Math.max(...xs) - Math.min(...xs)) / 2,
+  }
+  if (Math.abs((Math.max(...xs) - Math.min(...xs)) - (Math.max(...ys) - Math.min(...ys))) > 0.5) {
+    throw new Error('SVG "Oval" is not a circle')
+  }
+
+  const rectTag = /<rect\b[^>]*>/u.exec(svg)
+  if (rectTag === null) throw new Error('SVG is missing the icon <rect>')
+  const rect = {
+    x: attr(svg, 'rect', 'x'),
+    y: attr(svg, 'rect', 'y'),
+    width: attr(svg, 'rect', 'width'),
+    height: attr(svg, 'rect', 'height'),
+  }
+  if (!/fill="url\(#pattern/u.test(rectTag[0])) throw new Error('SVG icon rect is not pattern-filled')
+
+  const matrixMatch = /transform="matrix\(([^)]+)\)"/u.exec(svg)
+  if (matrixMatch === null) throw new Error('SVG is missing the pattern transform matrix')
+  const matrix = matrixMatch[1].trim().split(/[\s,]+/u).map(Number)
+  if (matrix.length !== 6) throw new Error(`pattern matrix must have 6 numbers, got ${matrix.length}`)
+
+  const anyMatrixMatch = /<image\b[^>]*>/u.exec(svg)
+  if (anyMatrixMatch === null) throw new Error('SVG is missing the embedded <image>')
+  const dims = { width: attr(svg, 'image', 'width'), height: attr(svg, 'image', 'height') }
+  const dataMatch = /xlink:href="data:image\/png;base64,([^"]+)"/u.exec(svg)
+  if (dataMatch === null) throw new Error('SVG does not embed a PNG data URI')
+  const icon = decodePng(Buffer.from(dataMatch[1], 'base64'))
+  if (icon.width !== dims.width || icon.height !== dims.height) {
+    throw new Error(`embedded PNG is ${icon.width}x${icon.height}, image tag says ${dims.width}x${dims.height}`)
+  }
+
+  return { viewBox, circle, rect, matrix, icon }
+}
+
+const clampByte = value => Math.max(0, Math.min(255, value))
+
+/** Bilinear sample of the embedded icon at continuous image coordinates. */
+function sampleIcon(icon, u, v) {
+  const x = Math.max(0, Math.min(icon.width - 1, u))
+  const y = Math.max(0, Math.min(icon.height - 1, v))
+  const x0 = Math.floor(x)
+  const y0 = Math.floor(y)
+  const x1 = Math.min(icon.width - 1, x0 + 1)
+  const y1 = Math.min(icon.height - 1, y0 + 1)
+  const fx = x - x0
+  const fy = y - y0
+  const fetch = (xx, yy) => {
+    const o = (yy * icon.width + xx) * 4
+    return [icon.data[o], icon.data[o + 1], icon.data[o + 2], icon.data[o + 3]]
+  }
+  const p00 = fetch(x0, y0)
+  const p10 = fetch(x1, y0)
+  const p01 = fetch(x0, y1)
+  const p11 = fetch(x1, y1)
+  const mix = (index) =>
+    (p00[index] * (1 - fx) + p10[index] * fx) * (1 - fy) + (p01[index] * (1 - fx) + p11[index] * fx) * fy
+  return [mix(0), mix(1), mix(2), mix(3)]
+}
+
+/**
+ * Composite the SVG analytically at `size` x `size`: white circle, then the
+ * embedded icon stretched into the icon rect (SVG's objectBoundingBox pattern
+ * mapping, preserveAspectRatio="none"), supersampled for anti-aliasing.
+ * @param {ReturnType<typeof parseLogoSvg>} parsed - Parsed SVG.
+ * @param {number} size - Output raster edge in pixels.
+ * @returns {{width:number,height:number,data:Uint8Array}} Straight-alpha RGBA.
+ */
+export function renderLogoSvg(parsed, size = CANVAS) {
+  const { viewBox, circle, rect, matrix, icon } = parsed
+  const scaleX = viewBox.width / size
+  const scaleY = viewBox.height / size
+  const [a, , , d, e, f] = matrix
+  if (!(a > 0) || !(d > 0)) throw new Error('pattern matrix has a non-positive scale')
+  const out = new Uint8Array(size * size * 4)
+  const samples = SUPERSAMPLE * SUPERSAMPLE
+  for (let py = 0; py < size; py++) {
+    for (let px = 0; px < size; px++) {
+      let sumA = 0
+      let sumR = 0
+      let sumG = 0
+      let sumB = 0
+      for (let sy = 0; sy < SUPERSAMPLE; sy++) {
+        for (let sx = 0; sx < SUPERSAMPLE; sx++) {
+          const x = (px + (sx + 0.5) / SUPERSAMPLE) * scaleX
+          const y = (py + (sy + 0.5) / SUPERSAMPLE) * scaleY
+          // base: the white circle
+          const dx = x - circle.cx
+          const dy = y - circle.cy
+          const baseA = dx * dx + dy * dy <= circle.r * circle.r ? 1 : 0
+          // overlay: the icon rect (pattern maps the image onto the rect bbox)
+          let iconA = 0
+          let iconR = 0
+          let iconG = 0
+          let iconB = 0
+          if (x >= rect.x && x <= rect.x + rect.width && y >= rect.y && y <= rect.y + rect.height) {
+            const bboxX = (x - rect.x) / rect.width
+            const bboxY = (y - rect.y) / rect.height
+            const u = (bboxX - e) / a
+            const v = (bboxY - f) / d
+            const sampled = sampleIcon(icon, u, v)
+            iconA = sampled[3] / 255
+            iconR = sampled[0]
+            iconG = sampled[1]
+            iconB = sampled[2]
+          }
+          const outA = iconA + baseA * (1 - iconA)
+          const premulR = iconR * iconA + 255 * baseA * (1 - iconA)
+          const premulG = iconG * iconA + 255 * baseA * (1 - iconA)
+          const premulB = iconB * iconA + 255 * baseA * (1 - iconA)
+          sumA += outA
+          sumR += premulR
+          sumG += premulG
+          sumB += premulB
+        }
+      }
+      const o = (py * size + px) * 4
+      const alpha = sumA / samples
+      if (alpha > 0) {
+        out[o] = clampByte(sumR / samples / alpha)
+        out[o + 1] = clampByte(sumG / samples / alpha)
+        out[o + 2] = clampByte(sumB / samples / alpha)
+        out[o + 3] = clampByte(alpha * 255)
+      }
+    }
+  }
+  return { width: size, height: size, data: out }
+}
+
+/** Alpha bounding box of an RGBA raster. */
+export function alphaBox(image) {
   const { width, height, data } = image
   let minX = width
   let minY = height
@@ -169,15 +332,11 @@ function alphaBox(image) {
       }
     }
   }
-  if (maxX < 0) throw new Error('logo source is fully transparent')
+  if (maxX < 0) throw new Error('rendered logo is fully transparent')
   return { x: minX, y: minY, width: maxX - minX + 1, height: maxY - minY + 1 }
 }
 
-/**
- * Box-downsample the (square-padded) official mark to `size` x `size`.
- * Alpha-weighted so transparent margins do not bleed dark fringes into edges.
- * @returns {{r:number,g:number,b:number,a:number}[][]} Pixel rows.
- */
+/** Area-average downsample of the alpha bbox to a square grid (premultiplied). */
 function downsampleSquare(image, box, size) {
   const side = Math.max(box.width, box.height)
   const padX = Math.floor((side - box.width) / 2)
@@ -193,7 +352,7 @@ function downsampleSquare(image, box, size) {
       let r = 0
       let g = 0
       let b = 0
-      let a = 0
+      let alpha = 0
       let weight = 0
       for (let sy = y0; sy < y1; sy++) {
         const sourceY = box.y + sy - padY
@@ -202,48 +361,58 @@ function downsampleSquare(image, box, size) {
           const sourceX = box.x + sx - padX
           if (sourceX < 0 || sourceX >= image.width) continue
           const o = (sourceY * image.width + sourceX) * 4
-          const alpha = image.data[o + 3] / 255
-          r += image.data[o] * alpha
-          g += image.data[o + 1] * alpha
-          b += image.data[o + 2] * alpha
-          a += alpha
+          const a = image.data[o + 3] / 255
+          r += image.data[o] * a
+          g += image.data[o + 1] * a
+          b += image.data[o + 2] * a
+          alpha += a
           weight += 1
         }
       }
-      if (a === 0 || weight === 0) row.push({ r: 0, g: 0, b: 0, a: 0 })
-      else row.push({ r: r / a, g: g / a, b: b / a, a: a / weight })
+      if (alpha === 0 || weight === 0) row.push({ r: 0, g: 0, b: 0, a: 0 })
+      else row.push({ r: r / alpha, g: g / alpha, b: b / alpha, a: alpha / weight })
     }
     rows.push(row)
   }
   return rows
 }
 
-/**
- * Palette alphabet, the same letter-grid convention as the upstream whale:
- * `W` white plate · `p` pale-pink edge blend · `P` official pink · `.` transparent.
- * Every entry is derived from the source raster's own white→pink blend line, so
- * no hue is invented and the white plate stays white.
- */
-export const PALETTE = {
-  W: [255, 255, 255],
-  p: [255, 166, 196],
-  P: [255, 96, 150],
-}
-const PALETTE_LETTERS = Object.keys(PALETTE)
+const clamp = value => Math.max(0, Math.min(255, Math.round(value)))
 
-/**
- * Quantize one downsampled pixel to the palette: transparent below the alpha
- * threshold, otherwise the nearest entry (nearest along the source's own
- * white→pink blend line).
- * @param {{r:number,g:number,b:number,a:number}} pixel - Downsampled pixel.
- * @returns {string} One palette letter, or `.` for transparent.
- */
-function quantize(pixel) {
+/** Dominant opaque color of the embedded icon (its own artwork color). */
+export function iconColor(icon) {
+  const counts = new Map()
+  for (let i = 0; i < icon.width * icon.height; i++) {
+    const o = i * 4
+    if (icon.data[o + 3] < 250) continue
+    const key = `${icon.data[o]},${icon.data[o + 1]},${icon.data[o + 2]}`
+    counts.set(key, (counts.get(key) ?? 0) + 1)
+  }
+  let best = null
+  for (const [key, count] of counts) {
+    if (best === null || count > best.count) best = { key, count }
+  }
+  if (best === null) throw new Error('embedded icon has no opaque pixels')
+  return best.key.split(',').map(Number)
+}
+
+/** Palette letters along the SVG's own white -> icon-color blend line. */
+export function buildPalette(white, accent) {
+  const letters = ['W', 'a', 'b', 'c', 'R']
+  const palette = {}
+  letters.forEach((letter, index) => {
+    const t = index / (letters.length - 1)
+    palette[letter] = [0, 1, 2].map(channel => clamp(white[channel] + (accent[channel] - white[channel]) * t))
+  })
+  return palette
+}
+
+function quantize(pixel, palette) {
   if (pixel.a * 255 < ALPHA_MIN) return '.'
   let best = '.'
   let bestDistance = Infinity
-  for (const letter of PALETTE_LETTERS) {
-    const target = PALETTE[letter]
+  for (const letter of Object.keys(palette)) {
+    const target = palette[letter]
     const dr = pixel.r - target[0]
     const dg = pixel.g - target[1]
     const db = pixel.b - target[2]
@@ -256,73 +425,103 @@ function quantize(pixel) {
   return best
 }
 
-/** Colorless character art for docs and for terminals logged without color. */
+/**
+ * Render the SVG to a square sprite of `size` x `size` palette letters padded
+ * into the 40-column whale art slot.
+ * @returns {{grid:number,sprite:string[]}} Sprite size and letter rows.
+ */
+export function buildSprite(parsed, palette, size) {
+  const raster = renderLogoSvg(parsed)
+  const box = alphaBox(raster)
+  const grid = downsampleSquare(raster, box, size)
+  const xOffset = Math.floor((ART_COLUMNS - size) / 2)
+  const rows = []
+  for (let y = 0; y < size; y++) {
+    const row = new Array(ART_COLUMNS).fill('.')
+    for (let x = 0; x < size; x++) row[xOffset + x] = quantize(grid[y][x], palette)
+    rows.push(row.join(''))
+  }
+  return { grid: size, sprite: rows }
+}
+
+const monoSymbols = { '.': ' ', W: '#', a: '+', b: '-', c: '=', R: '*' }
 function monoRows(sprite) {
-  const glyphs = { '.': ' ', W: '#', p: '+', P: '*' }
-  return sprite.map(row => [...row].map(letter => glyphs[letter] ?? '?').join(''))
+  return sprite.map(row => [...row].map(letter => monoSymbols[letter] ?? '?').join(''))
 }
 
 /**
- * Convert the official raster to the whale's letter-grid sprite format.
- * @param {string} sourcePath - PNG path (defaults to `brand/hyperai-logo.png`).
- * @returns {{image: object, box: object, sprite: string[]}} Sprite plus source metadata.
+ * Parse the SVG and produce both terminal sprites (wide 40x40 + compact 26x26).
+ * @param {string} sourcePath - SVG path (defaults to `brand/hyperai-logo.svg`).
  */
-export function buildLogoSprite(sourcePath = SOURCE) {
-  const image = decodePng(readFileSync(sourcePath))
-  if (Math.min(image.width, image.height) < MIN_SOURCE) {
-    throw new Error(`logo source is too small (${image.width}x${image.height}); need >= ${MIN_SOURCE}px`)
-  }
-  const box = alphaBox(image)
-  const mark = downsampleSquare(image, box, MARK)
-  const sprite = []
-  for (let y = 0; y < ART_ROWS * 2; y++) {
-    const row = new Array(ART_COLUMNS).fill('.')
-    for (let x = 0; x < MARK; x++) row[X_OFFSET + x] = quantize(mark[y][x])
-    sprite.push(row.join(''))
-  }
-  return { image, box, sprite }
+export function buildLogoArt(sourcePath = SOURCE) {
+  const svg = readFileSync(sourcePath, 'utf8')
+  const parsed = parseLogoSvg(svg)
+  const white = [255, 255, 255]
+  const accent = iconColor(parsed.icon)
+  const palette = buildPalette(white, accent)
+  const wide = buildSprite(parsed, palette, GRID_WIDE)
+  const compact = buildSprite(parsed, palette, GRID_COMPACT)
+  return { parsed, palette, white, accent, wide, compact }
 }
 
-/** Render the committed JS module for one sprite. */
+/** Render the committed JS module. */
 export function renderModule(art) {
-  const mono = monoRows(art.sprite).join('\n')
+  const { parsed, palette, white, accent, wide, compact } = art
+  const mono = monoRows(wide.sprite).join('\n')
   return `/**
  * GENERATED FILE — do not edit by hand.
- * Terminal logo data for hyperai-tui in the SAME letter-grid format as the
- * upstream whale frames: one palette letter per sprite pixel, \`.\` transparent.
- * Derived from \`brand/hyperai-logo.png\` (${art.image.width}x${art.image.height} PNG,
- * mark bbox ${art.box.width}x${art.box.height}, ${MARK}x${MARK} sprite centered in the
- * whale's ${ART_COLUMNS}-column slot -> ${ART_ROWS} display rows of half blocks).
- * Rendered at runtime by the whale's own \`renderSpriteRows\` (components/Whale.js).
+ * Terminal logo data for hyperai-tui, generated from the canonical SVG source
+ * \`brand/hyperai-logo.svg\` (${parsed.viewBox.width}x${parsed.viewBox.height} viewBox: white circle
+ * + embedded ${parsed.icon.width}x${parsed.icon.height} icon painted into a ${parsed.rect.width}x${parsed.rect.height} rect).
+ *
+ * The build composites the SVG analytically (white circle + icon, 4x4
+ * supersampling), then downsamples to two letter-grid sprites in the upstream
+ * whale frame format — one palette letter per sprite pixel, \`.\` transparent —
+ * so the runtime renders them through the whale's own \`renderSpriteRows\`
+ * (true-color half blocks, no image protocol, no recoloring):
+ *
+ *   wide      ${GRID_WIDE}x${GRID_WIDE} sprite -> ${GRID_WIDE / 2} display rows (main, terminal rows >= ${WIDE_MIN_ROWS})
+ *   compact   ${GRID_COMPACT}x${GRID_COMPACT} sprite -> ${GRID_COMPACT / 2} display rows (small windows)
+ *
+ * Colors come from the SVG itself: white circle ${JSON.stringify(white)}, icon
+ * accent ${JSON.stringify(accent)}, and intermediate blends for anti-aliased
+ * edges. Transparent pixels stay transparent (terminal background shows through).
+ *
  * Regenerate with:
  *
  *   node scripts/generate-logo-art.mjs
- *
- * The mark is a downsampled copy of the official artwork, never a redraw: the
- * white plate stays white, the pink pattern keeps its official color, and the
- * transparent margin stays transparent (terminal background shows through).
  */
 
 /** Display columns of the art slot (same as the upstream whale box). */
 export const HYPERAI_LOGO_COLUMNS = ${ART_COLUMNS}
-/** Sprite rows (half-block: two sprite pixels per display row). */
-export const HYPERAI_LOGO_SPRITE_ROWS = ${ART_ROWS * 2}
+
+/** Terminal rows at or above which the wide 40x40 sprite is used. */
+export const HYPERAI_LOGO_WIDE_MIN_ROWS = ${WIDE_MIN_ROWS}
+
+/** Sprite rows of the wide variant (half-block: two sprite pixels per display row). */
+export const HYPERAI_LOGO_SPRITE_ROWS_WIDE = ${GRID_WIDE}
+
+/** Sprite rows of the compact variant (half-block: two sprite pixels per display row). */
+export const HYPERAI_LOGO_SPRITE_ROWS_COMPACT = ${GRID_COMPACT}
 
 /** Palette map, letter -> [r, g, b], read by \`renderSpriteRows\`. */
-export const HYPERAI_LOGO_PALETTE = ${JSON.stringify(PALETTE, null, 2)}
+export const HYPERAI_LOGO_PALETTE = ${JSON.stringify(palette, null, 2)}
 
-/** Letter-grid sprite rows (whale frame format). */
-export const HYPERAI_LOGO_SPRITE = ${JSON.stringify(art.sprite, null, 2)}
+/** Wide letter-grid sprite (${GRID_WIDE}x${GRID_WIDE} mark centered in ${ART_COLUMNS} columns). */
+export const HYPERAI_LOGO_SPRITE_WIDE = ${JSON.stringify(wide.sprite, null, 2)}
 
-/** Colorless preview of the same sprite (docs / no-color logs). */
+/** Compact letter-grid sprite (${GRID_COMPACT}x${GRID_COMPACT} mark centered in ${ART_COLUMNS} columns). */
+export const HYPERAI_LOGO_SPRITE_COMPACT = ${JSON.stringify(compact.sprite, null, 2)}
+
+/** Colorless preview of the wide sprite (docs / no-color logs). */
 export const HYPERAI_LOGO_MONO = ${JSON.stringify(mono)}
 `
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
-  const art = buildLogoSprite()
+  const art = buildLogoArt()
   mkdirSync(dirname(OUT_JS), { recursive: true })
   writeFileSync(OUT_JS, renderModule(art))
-  writeFileSync(OUT_MONO, monoRows(art.sprite).join('\n') + '\n')
+  writeFileSync(OUT_MONO, monoRows(art.wide.sprite).join('\n') + '\n')
   process.stdout.write(`hyperai-tui: wrote ${OUT_JS}\nhyperai-tui: wrote ${OUT_MONO}\n`)
 }

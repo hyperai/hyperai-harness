@@ -22,32 +22,33 @@ that patch through pnpm `patchedDependencies`.
 | `lib/types/branding.js` | splash words → `HYPERAI`/`HARNESS`, tagline, `/settings` brand label, `HYPERAI_PALETTE` (pink accent + dark/light title ladders) | brand data |
 | `lib/types/components/splashFonts.js` | the `deepseek` brand no longer short-circuits to the font table's built-in `DEEPSEEK`/`HARNESS` | the big title actually changes |
 | `lib/types/components/LogoV2.js` | art slot → `HyperAILogoArt`; mascot/portrait slots off; `✦ hyperai-tui` wordmark; title ladder pinned to the HyperAI pink palette (pink → near-white on dark, deep pink → light pink on light) | splash art + title gradient |
-| `lib/types/components/hyperaiLogo.js` (new) | splash-mark component; renders the sprite through the upstream whale's own `renderSpriteRows` (`components/Whale.js`) | renderer |
-| `lib/types/components/hyperaiLogoRows.js` (new, generated) | letter-grid sprite + palette in the whale frame format (26×40 letters, `.` transparent) | asset |
-| `lib/types/components/splashArtRows.js` | art form pinned to the mark | layout |
-| `lib/types/screens/Launchpad.js` | version plate `hyperai-tui v…` | landing page |
+| `lib/types/components/hyperaiLogo.js` (new) | splash-mark component; picks the wide/compact sprite from the terminal height and renders it through the upstream whale's own `renderSpriteRows` (`components/Whale.js`) | renderer |
+| `lib/types/components/hyperaiLogoRows.js` (new, generated) | two letter-grid sprites (wide 40×40, compact 26×26; 40 columns of palette letters) + palette, generated from the canonical SVG | asset |
+| `lib/types/components/splashArtRows.js` | art form pinned to the mark; dynamic art height (wide 20 rows / compact 13 rows) shared with the logo component | layout |
+| `lib/types/screens/Launchpad.js` | version plate `hyperai-tui v…`; layout budget uses the dynamic art height | landing page |
 | `lib/types/i18n.js` | tagline, kernel label, task notification, onboarding copy, star line | copy |
 | `lib/types/components/splashEggs.js` | star line links the HyperAI repository | copy |
 | `lib/types/dsh-adapter/plugin.js` | first-run wizard off (upstream wizard is DeepSeek-credential specific) | boot |
 | `lib/types/utils/paths.js` | UI state root `~/.dsh-tui-<profile>` for non-`dsh-tui` profiles | isolation |
 | `lib/types/update.js` | updater disabled (it would replace the branded package) | safety |
 
-The splash mark is a **resampled copy of the local canonical HyperAI logo**
-(`/Users/zhenhaoli/Downloads/51961168.png`, copied byte-for-byte to
-`brand/hyperai-logo.png`), never a redraw: `scripts/generate-logo-art.mjs`
-decodes the PNG with Node built-ins, box-downsamples it to a 26×26 sprite,
-quantizes it to the source's own white/pink palette and emits it in the same
-letter-grid data format as the upstream whale frames (one palette letter per
-sprite pixel, `.` transparent). The component renders that sprite with the
-whale's own `renderSpriteRows` — true-color half blocks, terminal background for
-transparent pixels, no image protocol, no theme-specific recoloring. No remote
-URL is fetched. Provenance, source path and digest are recorded in
-`brand/brand.json` and `brand/PROVENANCE.md`.
+The splash mark is generated from the **canonical official SVG**
+(`/Users/zhenhaoli/Downloads/logo-icon-border-1.svg`, copied byte-for-byte to
+`brand/hyperai-logo.svg`), never a redraw: `scripts/generate-logo-art.mjs` parses
+the SVG (white circle path, icon rect, pattern matrix, embedded 271×267 PNG),
+composites it analytically at 512×512 with 4×4 supersampling, and downsamples it
+to two letter-grid sprites in the upstream whale frame format — wide `40×40`
+(main, 20 display rows) and compact `26×26` (13 rows, small windows) — using the
+SVG's own white/rose colors plus intermediate blends. The component renders them
+with the whale's own `renderSpriteRows` — true-color half blocks, terminal
+background for transparent pixels, no image protocol, no theme-specific
+recoloring. No remote URL is fetched. Provenance, source path and digest are
+recorded in `brand/brand.json` and `brand/PROVENANCE.md`.
 
 ## Build and verify
 
 ```sh
-node scripts/generate-logo-art.mjs   # brand/hyperai-logo.png -> brand/generated/*
+node scripts/generate-logo-art.mjs   # brand/hyperai-logo.svg -> brand/generated/*
 node scripts/build-patch.mjs         # upstream tarball -> patches/dsh-tui@0.16.1.patch
 node scripts/verify.mjs              # 11 offline build/distribution checks
 node --test tests/                   # 14 unit tests
