@@ -1,0 +1,29 @@
+{
+  "$comment": "Brand data for hyperai-tui. The build (scripts/build-patch.mjs) reads these values to produce the pnpm patch that rebrands the upstream @deepseek-harness-tui/dsh-tui package; the logo art is generated from brand/hyperai-logo.png by scripts/generate-logo-art.mjs.",
+  "productName": "HyperAI Harness",
+  "pluginName": "hyperai-tui",
+  "profileName": "hyperai",
+  "splashWords": {
+    "top": "HYPERAI",
+    "bottom": "HARNESS",
+    "plain": "HyperAI Harness"
+  },
+  "tagline": {
+    "zh": "HyperAI Harness",
+    "en": "HyperAI Harness"
+  },
+  "upstream": {
+    "package": "@deepseek-harness-tui/dsh-tui",
+    "version": "0.16.1",
+    "repository": "https://github.com/ccch1mneyyy/dsh-TUI",
+    "license": "MIT"
+  },
+  "logo": {
+    "file": "brand/hyperai-logo.png",
+    "origin": "GitHub organization avatar of https://github.com/hyperai (official HyperAI organization profile image)",
+    "originUrl": "https://avatars.githubusercontent.com/u/51961168",
+    "fetchedAt": "2026-10-29",
+    "sha256": "a8ad3ebb6f165c9d97818f091e917515e5d363742b78dc79628589feca49a101",
+    "treatment": "Downsampled to a 26x26 true-color half-block sprite; no redraw. The light-terminal variant maps the white plate to an ink tone for contrast; the official pink accents are unchanged."
+  }
+}

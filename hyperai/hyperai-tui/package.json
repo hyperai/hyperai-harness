@@ -1,0 +1,30 @@
+{
+  "name": "hyperai-tui",
+  "version": "0.1.0",
+  "private": true,
+  "description": "HyperAI-branded terminal interface for DeepSeek Harness, distributed as a reproducible dsh profile.",
+  "license": "MIT",
+  "type": "module",
+  "bin": {
+    "hyperai-tui": "./bin/hyperai-tui.js"
+  },
+  "engines": {
+    "node": "^22.19 || >=24"
+  },
+  "files": [
+    "bin",
+    "brand",
+    "overlay",
+    "patches",
+    "profile",
+    "scripts",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "node scripts/generate-logo-art.mjs && node scripts/build-patch.mjs",
+    "install-profile": "node scripts/install.mjs",
+    "install-skills": "node scripts/install-skills.mjs",
+    "test": "node --test tests/",
+    "verify": "node scripts/verify.mjs"
+  }
+}
