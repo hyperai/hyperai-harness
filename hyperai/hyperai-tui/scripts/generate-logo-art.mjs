@@ -1,19 +1,28 @@
 #!/usr/bin/env node
 /**
  * Generate the terminal logo art for hyperai-tui from the OFFICIAL HyperAI logo
- * source image (`brand/hyperai-logo.png`).
+ * source image (`brand/hyperai-logo.png`), using the SAME rendering mechanism
+ * as the upstream DeepSeek whale: a static letter-grid sprite plus a small
+ * fixed palette, rendered to true-color half-block rows by the whale's own
+ * `renderSpriteRows`.
  *
- * The logo is not redrawn: this script only downsamples the official raster to
- * the splash-art pixel grid and encodes it as true-color half-block rows that
- * the TUI renders instead of the upstream DeepSeek whale. Two variants are
- * emitted so the mark stays legible in both terminal backgrounds:
+ * The upstream whale (`components/Whale.js` + `components/whaleFrames.js`) is
+ * pre-encoded art, one palette letter per sprite pixel (`. ` = transparent),
+ * painted by `renderCellRows`: `▀` with fg = upper pixel / bg = lower pixel,
+ * `▄` when only the lower pixel is opaque, and the terminal default background
+ * (`\x1b[49m`) for the empty half of a half-covered cell. No image protocol is
+ * involved and no color is invented at render time.
  *
- *   dark  — the official colors on a dark terminal (white mark, pink accents)
- *   light — the official accent colors with the white plate mapped to an ink
- *           tone (a contrast adaptation for light terminals, not a redraw)
+ * This script converts the official raster into that data shape:
+ *   1. alpha bounding box -> square 26x26 box-downsample (half-block gives
+ *      13 display rows, the whale slot's height);
+ *   2. per-pixel quantization to the source's own white→pink blend palette
+ *      (W white plate, p pale-pink edge, P official pink, `.` transparent);
+ *   3. the 26x26 mark centered in the whale's 40-column slot (7 transparent
+ *      columns each side), exactly like the whale frames' letter rows.
  *
  * Output: `brand/generated/hyperai-logo.js` (committed; the runtime never
- * parses PNG). Re-run after replacing the source image:
+ * parses PNG and never recolors the art). Re-run after replacing the source:
  *
  *   node scripts/generate-logo-art.mjs
  *
@@ -209,157 +218,111 @@ function downsampleSquare(image, box, size) {
   return rows
 }
 
-const fg = ([r, g, b]) => `\x1b[38;2;${r};${g};${b}m`
-const bg = ([r, g, b]) => `\x1b[48;2;${r};${g};${b}m`
-const BG_DEFAULT = '\x1b[49m'
-const RESET = '\x1b[0m'
-const ERASE_TO_EOL = '\x1b[K'
+/**
+ * Palette alphabet, the same letter-grid convention as the upstream whale:
+ * `W` white plate · `p` pale-pink edge blend · `P` official pink · `.` transparent.
+ * Every entry is derived from the source raster's own white→pink blend line, so
+ * no hue is invented and the white plate stays white.
+ */
+export const PALETTE = {
+  W: [255, 255, 255],
+  p: [255, 166, 196],
+  P: [255, 96, 150],
+}
+const PALETTE_LETTERS = Object.keys(PALETTE)
 
 /**
- * Encode a sprite grid to true-color half-block ANSI rows, mirroring the TUI's
- * own whale encoder so the patched art blends with the existing renderer.
- * @param {(x:number, y:number) => [number,number,number]|undefined} pixel - Sprite pixel lookup.
+ * Quantize one downsampled pixel to the palette: transparent below the alpha
+ * threshold, otherwise the nearest entry (nearest along the source's own
+ * white→pink blend line).
+ * @param {{r:number,g:number,b:number,a:number}} pixel - Downsampled pixel.
+ * @returns {string} One palette letter, or `.` for transparent.
  */
-function encodeHalfBlockRows(pixel) {
-  const rows = []
-  for (let y = 0; y < ART_ROWS * 2; y += 2) {
-    let out = ''
-    let current = ''
-    for (let x = 0; x < ART_COLUMNS; x++) {
-      const top = pixel(x, y)
-      const bottom = pixel(x, y + 1)
-      let sequence
-      let char
-      if (top !== undefined && bottom !== undefined) {
-        sequence = fg(top) + bg(bottom)
-        char = '▀'
-      } else if (top !== undefined) {
-        sequence = fg(top) + BG_DEFAULT
-        char = '▀'
-      } else if (bottom !== undefined) {
-        sequence = fg(bottom) + BG_DEFAULT
-        char = '▄'
-      } else {
-        sequence = ''
-        char = ' '
-      }
-      if (sequence !== current) {
-        out += sequence === '' ? RESET : sequence
-        current = sequence
-      }
-      out += char
+function quantize(pixel) {
+  if (pixel.a * 255 < ALPHA_MIN) return '.'
+  let best = '.'
+  let bestDistance = Infinity
+  for (const letter of PALETTE_LETTERS) {
+    const target = PALETTE[letter]
+    const dr = pixel.r - target[0]
+    const dg = pixel.g - target[1]
+    const db = pixel.b - target[2]
+    const distance = dr * dr + dg * dg + db * db
+    if (distance < bestDistance) {
+      bestDistance = distance
+      best = letter
     }
-    let row = out
-    if (!row.endsWith(RESET)) row += RESET
-    rows.push(row + ERASE_TO_EOL)
   }
-  return rows
+  return best
 }
 
-const clamp = value => Math.max(0, Math.min(255, Math.round(value)))
-
-/** Opaque mark pixels; light terminals get the white plate mapped to ink. */
-function visiblePixels(sprite, variant) {
-  const rows = []
-  for (let y = 0; y < ART_ROWS * 2; y++) {
-    const row = []
-    for (let x = 0; x < ART_COLUMNS; x++) {
-      const sx = x - X_OFFSET
-      if (sx < 0 || sx >= MARK) {
-        row.push(undefined)
-        continue
-      }
-      const pixel = sprite[y][sx]
-      if (pixel.a * 255 < ALPHA_MIN) {
-        row.push(undefined)
-        continue
-      }
-      let { r, g, b } = pixel
-      if (variant === 'light') {
-        const max = Math.max(r, g, b)
-        const min = Math.min(r, g, b)
-        const saturation = max === 0 ? 0 : (max - min) / max
-        // White/near-white plate → ink. Keep the official pink accents.
-        if (max > 200 && saturation < 0.2) {
-          r = 26
-          g = 26
-          b = 32
-        }
-      }
-      row.push([clamp(r), clamp(g), clamp(b)])
-    }
-    rows.push(row)
-  }
-  return rows
+/** Colorless character art for docs and for terminals logged without color. */
+function monoRows(sprite) {
+  const glyphs = { '.': ' ', W: '#', p: '+', P: '*' }
+  return sprite.map(row => [...row].map(letter => glyphs[letter] ?? '?').join(''))
 }
 
-/** Monochrome character art for docs and for terminals logged without color. */
-function monoRows(grid) {
-  const glyphs = ' .:-=+*#%@'
-  return grid.map(row =>
-    row
-      .map(pixel => {
-        if (pixel === undefined) return ' '
-        const luminance = (0.299 * pixel[0] + 0.587 * pixel[1] + 0.114 * pixel[2]) / 255
-        const index = Math.min(glyphs.length - 1, Math.max(0, Math.round(luminance * (glyphs.length - 1))))
-        return glyphs[index]
-      })
-      .join(''),
-  )
-}
-
-function literal(rows) {
-  return `[\n${rows.map(row => `  ${JSON.stringify(row)},`).join('\n')}\n]`
-}
-
-export function buildLogoArt(sourcePath = SOURCE) {
+/**
+ * Convert the official raster to the whale's letter-grid sprite format.
+ * @param {string} sourcePath - PNG path (defaults to `brand/hyperai-logo.png`).
+ * @returns {{image: object, box: object, sprite: string[]}} Sprite plus source metadata.
+ */
+export function buildLogoSprite(sourcePath = SOURCE) {
   const image = decodePng(readFileSync(sourcePath))
   if (Math.min(image.width, image.height) < MIN_SOURCE) {
     throw new Error(`logo source is too small (${image.width}x${image.height}); need >= ${MIN_SOURCE}px`)
   }
   const box = alphaBox(image)
-  const sprite = downsampleSquare(image, box, MARK)
-  const dark = encodeHalfBlockRows((x, y) => visiblePixels(sprite, 'dark')[y][x])
-  const light = encodeHalfBlockRows((x, y) => visiblePixels(sprite, 'light')[y][x])
-  return { image, box, sprite, dark, light }
+  const mark = downsampleSquare(image, box, MARK)
+  const sprite = []
+  for (let y = 0; y < ART_ROWS * 2; y++) {
+    const row = new Array(ART_COLUMNS).fill('.')
+    for (let x = 0; x < MARK; x++) row[X_OFFSET + x] = quantize(mark[y][x])
+    sprite.push(row.join(''))
+  }
+  return { image, box, sprite }
 }
 
+/** Render the committed JS module for one sprite. */
 export function renderModule(art) {
-  const mono = monoRows(visiblePixels(art.sprite, 'dark')).join('\n')
+  const mono = monoRows(art.sprite).join('\n')
   return `/**
  * GENERATED FILE — do not edit by hand.
- * Terminal logo art for hyperai-tui, derived from the official HyperAI mark at
- * \`brand/hyperai-logo.png\` (${art.image.width}x${art.image.height} PNG, mark bbox
- * ${art.box.width}x${art.box.height}, ${MARK}x${MARK} sprite, ${ART_COLUMNS}x${ART_ROWS} display cells).
+ * Terminal logo data for hyperai-tui in the SAME letter-grid format as the
+ * upstream whale frames: one palette letter per sprite pixel, \`.\` transparent.
+ * Derived from \`brand/hyperai-logo.png\` (${art.image.width}x${art.image.height} PNG,
+ * mark bbox ${art.box.width}x${art.box.height}, ${MARK}x${MARK} sprite centered in the
+ * whale's ${ART_COLUMNS}-column slot -> ${ART_ROWS} display rows of half blocks).
+ * Rendered at runtime by the whale's own \`renderSpriteRows\` (components/Whale.js).
  * Regenerate with:
  *
  *   node scripts/generate-logo-art.mjs
  *
- * The mark is a downsampled copy of the official artwork, never a redraw. The
- * \`light\` variant maps the white plate to an ink tone so the mark stays legible
- * on light terminals; the official pink accents are unchanged in both variants.
+ * The mark is a downsampled copy of the official artwork, never a redraw: the
+ * white plate stays white, the pink pattern keeps its official color, and the
+ * transparent margin stays transparent (terminal background shows through).
  */
 
-/** Display columns of one logo row (matches the splash art box width). */
+/** Display columns of the art slot (same as the upstream whale box). */
 export const HYPERAI_LOGO_COLUMNS = ${ART_COLUMNS}
-/** Display rows of the logo art (half-block: 2 sprite pixels per row). */
-export const HYPERAI_LOGO_ROWS_COUNT = ${ART_ROWS}
+/** Sprite rows (half-block: two sprite pixels per display row). */
+export const HYPERAI_LOGO_SPRITE_ROWS = ${ART_ROWS * 2}
 
-/** True-color half-block rows for dark terminals (official colors). */
-export const HYPERAI_LOGO_ROWS_DARK = ${literal(art.dark)}
+/** Palette map, letter -> [r, g, b], read by \`renderSpriteRows\`. */
+export const HYPERAI_LOGO_PALETTE = ${JSON.stringify(PALETTE, null, 2)}
 
-/** True-color half-block rows for light terminals (ink plate adaptation). */
-export const HYPERAI_LOGO_ROWS_LIGHT = ${literal(art.light)}
+/** Letter-grid sprite rows (whale frame format). */
+export const HYPERAI_LOGO_SPRITE = ${JSON.stringify(art.sprite, null, 2)}
 
-/** Colorless character-art preview of the same sprite (docs / no-color logs). */
+/** Colorless preview of the same sprite (docs / no-color logs). */
 export const HYPERAI_LOGO_MONO = ${JSON.stringify(mono)}
 `
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
-  const art = buildLogoArt()
+  const art = buildLogoSprite()
   mkdirSync(dirname(OUT_JS), { recursive: true })
   writeFileSync(OUT_JS, renderModule(art))
-  writeFileSync(OUT_MONO, monoRows(visiblePixels(art.sprite, 'dark')).join('\n') + '\n')
+  writeFileSync(OUT_MONO, monoRows(art.sprite).join('\n') + '\n')
   process.stdout.write(`hyperai-tui: wrote ${OUT_JS}\nhyperai-tui: wrote ${OUT_MONO}\n`)
 }

@@ -10,12 +10,24 @@ path.
 - sha256: `165ecb79fbad9f2bdc2f2e0aa1e259848529907e7ea7ab32069376629b269741`
 - size: 60×60 RGBA, transparent outside the circular mark
 - treatment: alpha bounding box cropped, square-padded, box-downsampled to a
-  26×26 sprite (≈2.3× source reduction), encoded as ANSI true-color half-block
-  rows (26 sprite rows = 13 terminal rows, 40 columns with padding).
+  26×26 sprite, quantized to the source's own white/pink colors and stored in
+  the **upstream whale's letter-grid format**: one palette letter per sprite
+  pixel, `.` for transparent, 26 sprite rows = 13 terminal rows, centred in the
+  40-column art slot.
 
-The mark is never redrawn. `scripts/generate-logo-art.mjs` is a pure
-decode → crop → downsample → encode pipeline; it requires no image library and
-is covered by `tests/logo-art.test.mjs`.
+The mark is never redrawn and never recolored: the white plate stays `#FFFFFF`,
+the pattern keeps the official `#FF6096`, the pale edge is `#FFA6C4` (the
+source's own white→pink blend) and transparent pixels stay transparent, so the
+terminal background shows through. `scripts/generate-logo-art.mjs` is a pure
+decode → crop → downsample → quantize pipeline; it requires no image library
+and is covered by `tests/logo-art.test.mjs`.
+
+**Resolution limit:** the splash art slot is 13 terminal rows tall and the whale
+renderer uses half-block characters, so a square mark can be at most 26×26
+pixels (26 of the 40 columns). That is the largest distortion-free rendering the
+unchanged layout allows; rendering larger would need a taller slot, i.e. a
+layout change this distribution deliberately does not make. The official source
+is 60×60, so the committed sprite is a ≈2.3× reduction of the same artwork.
 
 **Production note:** an organization avatar is an official brand resource, but
 it is not a design hand-off. If a designer supplies the official logo pack
@@ -29,21 +41,37 @@ node scripts/build-patch.mjs
 node scripts/install.mjs
 ```
 
-## Terminal adaptation
+## Terminal adaptation — the whale's own renderer
 
-The upstream splash art slot is 40 columns × 13 rows. Two variants are emitted
-from the same sprite:
+The upstream splash art slot is a fixed 40-column × 13-row box, and the upstream
+DeepSeek whale fills it with a pre-encoded letter-grid sprite (40×26 letters =
+13 half-block rows). The HyperAI mark deliberately reuses that exact mechanism,
+data format and renderer instead of inventing an image pipeline:
 
-- **dark**: the official colors — white plate, pink accent (`#FF6599`-family).
-- **light**: the official pink accents are kept, and the white plate is mapped
-  to ink (`#1A1A20`). This is a contrast adaptation for light terminals, not a
-  new logo. It is documented in the generated file header.
+- **data** — `brand/generated/hyperai-logo.js` exports
+  `HYPERAI_LOGO_SPRITE` (26 sprite rows × 40 columns of palette letters) and
+  `HYPERAI_LOGO_PALETTE` (`W` white plate, `p` pale-pink edge, `P` official
+  pink, `.` transparent) — the same shape as upstream
+  `components/whaleFrames.js` (`{ rows: string[] }` letter grids);
+- **renderer** — `components/hyperaiLogo.js` calls the whale's own
+  `renderSpriteRows(sprite, palette)` (imported from `components/Whale.js`) once
+  at module load and renders the resulting rows through `Text`, mirroring
+  `WhaleArt` structurally;
+- **half-block encoding** — two sprite pixels per cell: `▀` with the upper pixel
+  as foreground and the lower pixel as background when both are opaque, `▄` when
+  only the lower pixel is opaque, and the empty half of a half-covered cell uses
+  `\x1b[49m` (terminal default background); fully transparent cells are plain
+  spaces plus an erase-to-EOL. No black is ever painted, so transparent margins
+  show the terminal background;
+- **no image protocol** — no Kitty/Sixel/inline images are involved, exactly
+  like the whale (the splash works in any ANSI true-color terminal);
+- **one palette for every theme** — the previous light-theme variant that mapped
+  the white plate to ink (`#1A1A20`) is gone: it made the plate read as a black
+  disc. The mark is now identical in dark and light themes. On a light terminal
+  the white plate is inherently close to the background (white artwork on a
+  white background), but it is never darkened or recolored.
 
-The component picks a variant from the active theme (`useTheme` +
-`isLightThemeActive`), so light and dark themes both show a legible mark.
-Half-block rendering is supported by every ANSI terminal; no Kitty/Sixel support
-is required. The art is pre-rendered at build time, so the runtime never parses
-an image.
+The art is pre-rendered at build time, so the runtime never parses a PNG.
 
 ## Title gradient
 

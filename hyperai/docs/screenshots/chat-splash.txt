@@ -14,7 +14,7 @@
             ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀           ██  ██  ██  ██  ██  ██  ██  ██  ██████  ██████  ██████
               ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀             gpt-4o-mini
                 ▀▀▀▀▀▀▀▀▀▀▀▀▀               /private/tmp
-                                            Tip: /config shows config sources and how you launched · /tips mo…
+                                            Tip: While working: Enter steers, Tab queues, Ctrl+Enter interrup…
 
              HyperAI Harness
 

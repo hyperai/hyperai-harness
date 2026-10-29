@@ -1,25 +1,31 @@
 /**
  * hyperai-tui brand mark.
  *
- * Renders the official HyperAI mark — downsampled from `brand/hyperai-logo.png`
- * by `scripts/generate-logo-art.mjs` — in the splash art slot that upstream
- * `@deepseek-harness-tui/dsh-tui` fills with the DeepSeek whale. The mark is a
- * copied, resampled asset, never a redrawn logo.
+ * Renders the official HyperAI mark with the SAME mechanism as the upstream
+ * DeepSeek whale (`components/Whale.js`): a static letter-grid sprite plus a
+ * small fixed palette, painted by the whale's own `renderSpriteRows`. That
+ * encoder emits true-color half blocks — `▀` with the upper pixel as foreground
+ * and the lower pixel as background, `▄` when only the lower pixel is opaque,
+ * `\x1b[49m` (terminal default background) for the empty half of a half-covered
+ * cell, and plain spaces with an erase-to-EOL for fully transparent cells — so
+ * transparent margins show the terminal background and no black is painted.
  *
- * Two color variants keep the mark legible in both terminal backgrounds: the
- * official colors on dark terminals, and the same artwork with the white plate
- * mapped to an ink tone on light terminals. The official pink accents survive
- * unchanged in both.
+ * The sprite is generated from `brand/hyperai-logo.png` by
+ * `scripts/generate-logo-art.mjs` in the whale's own data format: one palette
+ * letter per sprite pixel (`W` white plate, `p` pale-pink edge, `P` official
+ * pink, `.` transparent). No image protocol is used, exactly like the whale.
  *
- * `HyperAILogoArt` keeps the upstream art slot's contract: a fixed-width box of
- * pre-rendered ANSI rows, one row per `Text` child, so the splash layout that
- * upstream measures for the whale keeps working unchanged.
+ * The art slot keeps the upstream contract: a fixed-width box of pre-rendered
+ * ANSI rows, one row per `Text` child, so the splash layout measured for the
+ * whale works unchanged.
  */
 import { jsx as _jsx } from 'react/jsx-runtime'
 import { Box, Text } from '../ui.js'
-import { isLightThemeActive } from '../theme.js'
-import { useTheme } from './design-system/ThemeProvider.js'
-import { HYPERAI_LOGO_COLUMNS, HYPERAI_LOGO_ROWS_DARK, HYPERAI_LOGO_ROWS_LIGHT } from './hyperaiLogoRows.js'
+import { renderSpriteRows } from './Whale.js'
+import { HYPERAI_LOGO_COLUMNS, HYPERAI_LOGO_PALETTE, HYPERAI_LOGO_SPRITE } from './hyperaiLogoRows.js'
+
+/** Pre-rendered ANSI rows, computed once at module load — same path as the whale frames. */
+const RENDERED = renderSpriteRows(HYPERAI_LOGO_SPRITE, HYPERAI_LOGO_PALETTE)
 
 /**
  * The splash brand mark.
@@ -27,12 +33,10 @@ import { HYPERAI_LOGO_COLUMNS, HYPERAI_LOGO_ROWS_DARK, HYPERAI_LOGO_ROWS_LIGHT }
  * constant); omitted, the mark uses its own column count.
  */
 export function HyperAILogoArt({ width }) {
-  const [themeName] = useTheme()
-  const rows = isLightThemeActive(themeName) ? HYPERAI_LOGO_ROWS_LIGHT : HYPERAI_LOGO_ROWS_DARK
   return _jsx(Box, {
     flexDirection: 'column',
     flexShrink: 0,
     width: width ?? HYPERAI_LOGO_COLUMNS,
-    children: rows.map((row, index) => _jsx(Text, { wrap: 'truncate-end', children: row }, index)),
+    children: RENDERED.map((row, index) => _jsx(Text, { wrap: 'truncate-end', children: row }, index)),
   })
 }

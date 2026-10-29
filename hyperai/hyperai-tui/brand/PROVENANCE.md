@@ -13,14 +13,16 @@
 
 The file is copied byte-for-byte from the local source above (no download, no
 remote URL). `scripts/generate-logo-art.mjs` performs a lossless decode
-followed by a box downsample to a 26×26 sprite and a true-color half-block
-encode; it does not redraw, recolor, or annotate the mark. The only color
-transform is the light-terminal contrast adaptation documented in
-`generated/hyperai-logo.js` (white plate → ink), which is derived from the
-official pink accent colors.
+followed by a box downsample to a 26×26 sprite, quantizes it to the source's
+own white/pink colors and stores it in the upstream whale's letter-grid format
+(one palette letter per sprite pixel, `.` transparent). It does not redraw or
+annotate the mark, and it never substitutes colors: the white plate stays
+`#FFFFFF`, the pattern stays `#FF6096`, and the pale edge `#FFA6C4` is the
+source's own white→pink blend. There is no light-theme ink adaptation.
 
 The 60×60 source is still ~2.3× the 26×26 sprite; the generator's minimum
-source size is 48 px, chosen so this canonical file is accepted.
+source size is 48 px, chosen so this canonical file is accepted. 26×26 is the
+largest distortion-free sprite for the 13-row splash slot (half-block rows).
 
 ## Replacement
 

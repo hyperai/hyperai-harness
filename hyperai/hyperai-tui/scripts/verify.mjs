@@ -50,22 +50,36 @@ check('official logo source matches the recorded digest', () => {
   return brand.logo.file
 })
 
-check('generated logo art has the splash grid shape', () => {
-  const rows = (text, name) => {
-    const matched = new RegExp(`export const ${name} = \\[([\\s\\S]*?)\\n\\]`, 'u').exec(text)
+check('logo data uses the whale letter-grid format', () => {
+  const art = readFileSync(join(PKG, 'brand', 'generated', 'hyperai-logo.js'), 'utf8')
+  const parseArray = name => {
+    const matched = new RegExp(`export const ${name} = \\[([\\s\\S]*?)\\n\\]`, 'u').exec(art)
     if (matched === null) throw new Error(`${name} not found`)
     return [...matched[1].matchAll(/"(?:[^"\\]|\\.)*"/gu)].map(match => JSON.parse(match[0]))
   }
-  const art = readFileSync(join(PKG, 'brand', 'generated', 'hyperai-logo.js'), 'utf8')
-  for (const name of ['HYPERAI_LOGO_ROWS_DARK', 'HYPERAI_LOGO_ROWS_LIGHT']) {
-    const lines = rows(art, name)
-    if (lines.length !== 13) throw new Error(`${name} has ${lines.length} rows`)
-    for (const line of lines) {
-      const width = displayWidth(line)
-      if (width !== 40) throw new Error(`${name} row is ${width} columns`)
-    }
+  const sprite = parseArray('HYPERAI_LOGO_SPRITE')
+  const paletteMatch = /export const HYPERAI_LOGO_PALETTE = (\{[\s\S]*?\n\})/u.exec(art)
+  if (paletteMatch === null) throw new Error('HYPERAI_LOGO_PALETTE not found')
+  const palette = JSON.parse(paletteMatch[1])
+  if (sprite.length !== 26) throw new Error(`sprite has ${sprite.length} rows (expected 26)`)
+  for (const row of sprite) if (row.length !== 40) throw new Error(`sprite row is ${row.length} columns`)
+  const letters = new Set(Object.keys(palette))
+  const used = new Set(sprite.join('').split(''))
+  for (const letter of used) {
+    if (letter !== '.' && !letters.has(letter)) throw new Error(`sprite uses unknown letter ${letter}`)
   }
-  return '2 variants x 13 rows x 40 columns'
+  // The official white plate and pink pattern must both be present, and nothing
+  // may be darker than the official pink — the old light-theme ink remap is gone.
+  const colors = Object.values(palette)
+  if (!colors.some(([r, g, b]) => r === 255 && g === 255 && b === 255)) throw new Error('white plate missing from palette')
+  if (!colors.some(([r, g, b]) => r === 255 && g === 96 && b === 150)) throw new Error('official pink missing from palette')
+  for (const [r, g, b] of colors) {
+    if (Math.max(r, g, b) < 150) throw new Error(`palette has a dark entry: ${r},${g},${b}`)
+  }
+  for (const letter of ['W', 'P']) {
+    if (!used.has(letter)) throw new Error(`sprite does not use the ${letter} palette letter`)
+  }
+  return `${sprite.length}x${sprite[0].length} letter grid, ${sprite.length / 2} display rows, ${letters.size} palette colors`
 })
 
 check('branding patch targets only documented upstream files', () => {
@@ -90,7 +104,10 @@ check('branding patch targets only documented upstream files', () => {
   for (const marker of ['HYPERAI', 'hyperaiLogo', 'hyperai-tui', "return { kind: 'unknown' }"]) {
     if (!patch.includes(marker)) throw new Error(`patch is missing marker ${marker}`)
   }
-  return `${files.length} files`
+  if (!patch.includes("from './Whale.js'")) throw new Error('hyperaiLogo does not reuse the whale renderer module')
+  if (!patch.includes('renderSpriteRows')) throw new Error('hyperaiLogo does not call renderSpriteRows')
+  if (!patch.includes('HYPERAI_LOGO_SPRITE')) throw new Error('patched logo rows are missing the sprite data')
+  return `${files.length} files, logo rendered by the whale renderSpriteRows`
 })
 
 check('title gradient uses the HyperAI pink palette, not the theme blue', () => {

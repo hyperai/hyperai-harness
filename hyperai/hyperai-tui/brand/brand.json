@@ -25,6 +25,6 @@
     "sha256": "165ecb79fbad9f2bdc2f2e0aa1e259848529907e7ea7ab32069376629b269741",
     "width": 60,
     "height": 60,
-    "treatment": "Downsampled to a 26x26 true-color half-block sprite; no redraw. The light-terminal variant maps the white plate to an ink tone for contrast; the official pink accents are unchanged."
+    "treatment": "Downsampled to a 26x26 letter-grid sprite in the upstream whale frame format and rendered by the whale's own renderSpriteRows (true-color half blocks, no image protocol). No redraw and no recoloring: white plate #FFFFFF, official pink #FF6096, pale edge #FFA6C4 from the source's own white-to-pink blend, transparent pixels stay transparent."
   }
 }

@@ -14,21 +14,21 @@
             ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀           ██  ██  ██  ██  ██  ██  ██  ██  ██████  ██████  ██████
               ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀             deepseek-v4-flash
                 ▀▀▀▀▀▀▀▀▀▀▀▀▀               /private/tmp
-                                            Tip: /preset only applies to new sessions (blank-only rule) · /ti…
+                                            Tip: Ctrl+P toggles the startup loaded-context panel · /tips more…
 
              HyperAI Harness
 
-  ❯ Reply with exactly PINK_BRAND_OK and run bash echo BRAND_TOOL_OK.
+  ❯ Reply with exactly LOGO_WHALE_STYLE_OK and run bash echo TOOL_WHALE_STYLE_OK.
 
-  ⚓ Thinking · 1s (ctrl+o to expand)
+  ⚓ Thinking · 2s (ctrl+o to expand)
 
-  • Bash(echo BRAND_TOOL_OK) · 0s
-   ⎿ BRAND_TOOL_OK
+  ⏺ ┌─ bash ──────────────────
+    │ echo TOOL_WHALE_STYLE_OK
 
-  ⏺ PINK_BRAND_OK
+  • Bash(echo TOOL_WHALE_STYLE_OK) · 0s
+   ⎿ TOOL_WHALE_STYLE_OK
 
-
-
+  ⏺ LOGO_WHALE_STYLE_OK
 
 
 
@@ -38,7 +38,7 @@
   ╭────────────────────────────────────────────────────────────────────────────────────────────────────────╮
   ⌸ ❯                                                                                                      ⛶
   ╰────────────────────────────────────────────────────────────────────────────────────────────────────────╯
-                                                                                              13k/262k 5.1%
-   deepseek-v4-flash · cache 98.9% · tmp                                                ctx 5.1% (13k/262k)
+                                                                                              14k/262k 5.3%
+   deepseek-v4-flash · cache 98.7% · tmp                                                ctx 5.3% (14k/262k)
 
 

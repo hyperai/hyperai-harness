@@ -406,7 +406,11 @@ function verifyPatch(patch, from, version) {
     if (!applied.includes(BRAND.splashWords.top)) throw new Error('patch apply smoke test failed: splash words missing')
     if (!applied.includes(BRAND.splashWords.bottom)) throw new Error('patch apply smoke test failed: splash words missing')
     const logo = readFileSync(join(pristine, 'lib/types/components/hyperaiLogoRows.js'), 'utf8')
-    if (!logo.includes('HYPERAI_LOGO_ROWS_DARK')) throw new Error('patch apply smoke test failed: logo art missing')
+    if (!logo.includes('export const HYPERAI_LOGO_SPRITE =')) throw new Error('patch apply smoke test failed: logo sprite missing')
+    if (!logo.includes('export const HYPERAI_LOGO_PALETTE =')) throw new Error('patch apply smoke test failed: logo palette missing')
+    const component = readFileSync(join(pristine, 'lib/types/components/hyperaiLogo.js'), 'utf8')
+    if (!component.includes("from './Whale.js'")) throw new Error('patch apply smoke test failed: component does not reuse the whale renderer')
+    if (!component.includes('renderSpriteRows')) throw new Error('patch apply smoke test failed: whale renderer not used')
   } finally {
     rmSync(sandbox, { recursive: true, force: true })
   }

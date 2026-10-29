@@ -11,11 +11,13 @@ Everything below was run on this Mac on 2026-10-29. Environment:
 cd hyperai/hyperai-tui
 node scripts/generate-logo-art.mjs   # regenerates the committed art
 node scripts/build-patch.mjs         # rebuilds + self-applies the patch
-node scripts/verify.mjs              # 9/9 checks
+node scripts/verify.mjs              # 11/11 checks
 node --test tests/                   # 14/14 tests
 ```
 
-`verify.mjs` covers: brand data, logo digest, art grid shape, patch file set,
+`verify.mjs` covers: brand data, logo digest, the whale-format letter grid
+(26×40 letters, white/pink palette, no dark entry), patch file set + the whale
+renderer reused by `hyperaiLogo.js`, the title gradient palette,
 profile-template consistency, skills-lock pin/classification, generator
 determinism, installer dry-run plan, and the foreign-profile refusal.
 
@@ -50,16 +52,54 @@ dsh --profile hyperai
 Evidence files:
 
 - `screenshots/launchpad.png` / `.txt` — `HYPERAI`/`HARNESS` block title in the
-  pink → white gradient, mark generated from the local canonical
-  `/Users/zhenhaoli/Downloads/51961168.png`, `hyperai-tui v0.16.1` plate,
-  `gpt-4o-mini` deployment route.
+  pink → white gradient, the whale-mechanism mark generated from the local
+  canonical `/Users/zhenhaoli/Downloads/51961168.png`, `hyperai-tui v0.16.1`
+  plate, `gpt-4o-mini` deployment route (dark terminal background).
+- `screenshots/launchpad-light.png` / `.txt` — the same launchpad rendered on a
+  light terminal background.
 - `screenshots/chat-splash.png` / `.txt` — `✦ hyperai-tui`, mark, tagline
   `HyperAI Harness`, and the loaded-context line (`Skills 10`).
 - `screenshots/chat-reply.png` / `chat-splash-and-reply.txt` — live
-  OpenAI-compatible reply (`PINK_BRAND_OK`) plus a bash tool call
-  (`BRAND_TOOL_OK`) under the pink title.
+  OpenAI-compatible reply (`LOGO_WHALE_STYLE_OK`) plus a bash tool call
+  (`TOOL_WHALE_STYLE_OK`) under the pink title.
 - `screenshots/real-profile-skills-and-tool.txt` — earlier real-profile capture
   proving the agent listed the skill catalog and executed a bash tool call.
+
+The PNGs from the PTY harness are rendered by `pyte` + Pillow, and the renderer
+paints half-block cells (`▀`/`▄`/`█`) as exact cell rectangles instead of font
+glyphs, so block-art seams from the screenshot tool are not mistaken for product
+defects. The real-terminal PNGs below come from ScreenCaptureKit window
+captures, not from the Python renderer.
+
+## Real Mac terminal (Terminal.app)
+
+The splash was also captured from the actual macOS terminal, not just the PTY
+harness:
+
+- The Terminal window (Basic profile) was launched with a small `.command`
+  script; the terminal background was set through OSC 11 (`#101014` for the dark
+  shot, `#FAF7F2` for the light shot) so both contrast directions are real
+  Terminal.app rendering, not a Python simulation.
+- The window was resized to ≈168×53 cells, the TUI was allowed to settle, and
+  the window was captured at native resolution through ScreenCaptureKit
+  (`get_window_state`), giving PNG screenshots without JPEG/scale artifacts.
+- Evidence: `screenshots/real-terminal-dark.png`,
+  `screenshots/real-terminal-light.png`,
+  `screenshots/real-terminal-dark-logo.png` (mark detail), and
+  `screenshots/real-terminal-whale-dark.png` /
+  `real-terminal-whale-dark-logo.png` — the upstream DeepSeek whale rendered
+  in the same window with the same `renderSpriteRows` for comparison.
+- Checks: the dark capture's dominant cell color is the OSC background; the mark
+  area contains only the original white plate + pink pattern + terminal
+  background (transparent pixels), with **no `#1A1A20`/black plate and no black
+  ring**. The light capture shows the same mark over a light background (the
+  white plate is white-on-white by design — it is never darkened). The whale
+  reference capture shows the same half-block quality on the same background,
+  validating that the mark uses the upstream mechanism.
+- Terminal.app supports neither the Kitty graphics protocol nor Sixel, and the
+  implementation deliberately uses neither: the splash mark is pure ANSI
+  true-color half blocks, exactly like the whale, so it renders identically in
+  any ANSI true-color terminal.
 
 ## Title gradient color check
 
@@ -72,7 +112,8 @@ directly (pyte rebuilds the screen and exposes each cell's foreground):
   was `#7DA1DE`)
 
 The light-theme ladder (`#D6336C` → `#FF6699` → `#FFB3CC`) is covered by the
-generated palette data; a live light-terminal capture was not taken.
+generated palette data and by the real light-terminal capture
+(`real-terminal-light.png`).
 
 Live model calls used an environment-only OpenAI-compatible credential (an
 internal gateway reachable from this machine). No credential is stored in this

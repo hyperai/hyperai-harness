@@ -22,8 +22,8 @@ that patch through pnpm `patchedDependencies`.
 | `lib/types/branding.js` | splash words → `HYPERAI`/`HARNESS`, tagline, `/settings` brand label, `HYPERAI_PALETTE` (pink accent + dark/light title ladders) | brand data |
 | `lib/types/components/splashFonts.js` | the `deepseek` brand no longer short-circuits to the font table's built-in `DEEPSEEK`/`HARNESS` | the big title actually changes |
 | `lib/types/components/LogoV2.js` | art slot → `HyperAILogoArt`; mascot/portrait slots off; `✦ hyperai-tui` wordmark; title ladder pinned to the HyperAI pink palette (pink → near-white on dark, deep pink → light pink on light) | splash art + title gradient |
-| `lib/types/components/hyperaiLogo.js` (new) | splash-mark component (theme-aware rows) | renderer |
-| `lib/types/components/hyperaiLogoRows.js` (new, generated) | true-color half-block rows from the official logo | asset |
+| `lib/types/components/hyperaiLogo.js` (new) | splash-mark component; renders the sprite through the upstream whale's own `renderSpriteRows` (`components/Whale.js`) | renderer |
+| `lib/types/components/hyperaiLogoRows.js` (new, generated) | letter-grid sprite + palette in the whale frame format (26×40 letters, `.` transparent) | asset |
 | `lib/types/components/splashArtRows.js` | art form pinned to the mark | layout |
 | `lib/types/screens/Launchpad.js` | version plate `hyperai-tui v…` | landing page |
 | `lib/types/i18n.js` | tagline, kernel label, task notification, onboarding copy, star line | copy |
@@ -35,18 +35,21 @@ that patch through pnpm `patchedDependencies`.
 The splash mark is a **resampled copy of the local canonical HyperAI logo**
 (`/Users/zhenhaoli/Downloads/51961168.png`, copied byte-for-byte to
 `brand/hyperai-logo.png`), never a redraw: `scripts/generate-logo-art.mjs`
-decodes the PNG with Node built-ins, box-downsamples it to a 26×26 sprite, and
-encodes two variants (official colors for dark terminals; white plate mapped to
-ink for light terminals — the pink accents are unchanged). No remote URL is
-fetched. Provenance, source path and digest are recorded in `brand/brand.json`
-and `brand/PROVENANCE.md`.
+decodes the PNG with Node built-ins, box-downsamples it to a 26×26 sprite,
+quantizes it to the source's own white/pink palette and emits it in the same
+letter-grid data format as the upstream whale frames (one palette letter per
+sprite pixel, `.` transparent). The component renders that sprite with the
+whale's own `renderSpriteRows` — true-color half blocks, terminal background for
+transparent pixels, no image protocol, no theme-specific recoloring. No remote
+URL is fetched. Provenance, source path and digest are recorded in
+`brand/brand.json` and `brand/PROVENANCE.md`.
 
 ## Build and verify
 
 ```sh
 node scripts/generate-logo-art.mjs   # brand/hyperai-logo.png -> brand/generated/*
 node scripts/build-patch.mjs         # upstream tarball -> patches/dsh-tui@0.16.1.patch
-node scripts/verify.mjs              # 9 offline build/distribution checks
+node scripts/verify.mjs              # 11 offline build/distribution checks
 node --test tests/                   # 14 unit tests
 ```
 
