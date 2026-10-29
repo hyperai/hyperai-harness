@@ -12,7 +12,7 @@ cd hyperai/hyperai-tui
 node scripts/generate-logo-art.mjs   # regenerates the committed art
 node scripts/build-patch.mjs         # rebuilds + self-applies the patch
 node scripts/verify.mjs              # 11/11 checks
-node --test tests/                   # 16/16 tests
+node --test tests/                   # 17/17 tests
 ```
 
 `verify.mjs` covers: brand data, the canonical SVG digest, both whale-format
@@ -65,7 +65,12 @@ Evidence files:
   OpenAI-compatible reply (`SVG_LOGO_OK`) plus a bash tool call
   (`SVG_TOOL_OK`) under the pink title.
 - `screenshots/real-terminal-{dark,light,small}.png` — real Terminal.app window
-  captures (see below).
+  captures (ANSI fallback; see below).
+- `screenshots/ghostty-hd-logo.png`, `ghostty-chat-splash.png`,
+  `ghostty-small-window.png`, `ghostty-resized-back.png`,
+  `ghostty-ansi-fallback.png`, `terminal-ansi-logo.png`,
+  `logo-hd-vs-ansi.png`, `logo-detail-2x.png`, `hyperai-logo-512.png`,
+  `ghostty-protocol-probe.json` — Ghostty/Kitty HD mode evidence (see below).
 - `screenshots/logo-clarity-svg.png` / `.md` — real-terminal 26/40/48 comparison
   from the SVG source.
 - `screenshots/real-profile-skills-and-tool.txt` — earlier real-profile capture
@@ -132,6 +137,55 @@ harness:
   protocol probe in the experiment notes), and the implementation deliberately
   uses neither: the splash mark is pure ANSI true-color half blocks, exactly
   like the whale, so it renders identically in any ANSI true-color terminal.
+
+## Ghostty + Kitty Graphics Protocol (HD logo mode)
+
+Machine probe on 2026-10-29 (real terminal, not `$TERM` guessing):
+
+```sh
+open -na Ghostty.app --args -e <probe-script>   # Ghostty 1.4.0, macOS 26.1 (arm64)
+```
+
+Raw replies recorded in `screenshots/ghostty-protocol-probe.json`:
+
+| query | reply | meaning |
+|---|---|---|
+| `CSI c` (DA1) | `CSI ? 62 ; 22 ; 52 c` | no parameter 4 → no Sixel advertised |
+| Kitty Graphics query | `ESC _ G i=31 ; OK ESC \` | **Kitty Graphics Protocol available** |
+| `CSI 16 t` (cell size) | `CSI 6 ; 17 ; 8 t` | 8x17 px cells |
+| `CSI 14 t` (window px) | `CSI 4 ; 595 ; 792 t` | window pixel size |
+| `CSI > 0 q` (XTVERSION) | `DCS > | ghostty 1.4.0 ST` | Ghostty 1.4.0 |
+
+The HyperAI TUI's HD path uses the upstream renderer's own capability probe
+(`useTerminalImages` → kitty query + DA1 + cell metrics) and paints the embedded
+512x512 PNG through the upstream `Image` component. Observed rendering in real
+Ghostty:
+
+- `ghostty-hd-logo.png` — 1198x918 window, initial launchpad: smooth HD logo on
+  `#101014`, transparent background (terminal bg through the circle's outside),
+  no black rectangle, no color fringes;
+- `ghostty-chat-splash.png` — chat splash, same HD mark;
+- `ghostty-small-window.png` — window shrunk to 1001x622: the image follows the
+  fixed art slot (compact 13-row height) and does not overlap the title or
+  composer; `ghostty-resized-back.png` — enlarged back: one placement only, no
+  ghost image (single rose cluster in the capture, same pixel count as the first
+  capture);
+- `ghostty-ansi-fallback.png` — same terminal with
+  `DSH_TUI_DISABLE_TERMINAL_IMAGES=1`: the ANSI sprite path is used;
+- `terminal-ansi-logo.png` — Terminal.app (no Kitty/Sixel): ANSI sprite
+  fallback, unchanged;
+- PTY without any terminal replies: the ANSI sprite renders immediately and no
+  Kitty payload is emitted (fallback is the first frame, detection never blocks
+  startup).
+
+HD vs ANSI measured on the same real captures (`logo-hd-vs-ansi.png`,
+`logo-detail-2x.png`): the HD image shows **thousands of distinct colors with
+smooth edges** versus the sprite's 5-color cell blocks; the HD capture contains
+**0 black pixels** in the logo area (transparency = terminal background).
+
+`node scripts/verify.mjs` (11/11) now also checks the embedded 512x512 PNG
+payload, its sha256, and that the patch wires the `Image` component with the
+Upstream renderer.
 
 ## Title gradient color check
 

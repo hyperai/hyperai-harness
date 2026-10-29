@@ -7,6 +7,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
+import { createHash } from 'node:crypto'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import {
@@ -14,6 +15,7 @@ import {
   GRID_COMPACT,
   GRID_WIDE,
   buildLogoArt,
+  decodePng,
   iconColor,
   parseLogoSvg,
   renderLogoSvg,
@@ -105,6 +107,34 @@ test('generated module exports both sprites and the width threshold', () => {
   assert.match(module, /export const HYPERAI_LOGO_SPRITE_WIDE = \[/u)
   assert.match(module, /export const HYPERAI_LOGO_SPRITE_COMPACT = \[/u)
   assert.match(module, /export const HYPERAI_LOGO_PALETTE = \{/u)
+})
+
+test('embedded HD PNG is a 512x512 RGBA render of the SVG', () => {
+  const art = buildLogoArt(SOURCE)
+  assert.equal(art.hdPng.length > 0, true)
+  assert.match(art.hdSha256, /^[0-9a-f]{64}$/u)
+  const image = decodePng(art.hdPng)
+  assert.equal(image.width, 512)
+  assert.equal(image.height, 512)
+  let transparent = 0
+  let white = 0
+  let rose = 0
+  for (let i = 0; i < image.width * image.height; i++) {
+    const o = i * 4
+    const [r, g, b, a] = [image.data[o], image.data[o + 1], image.data[o + 2], image.data[o + 3]]
+    if (a < 8) transparent++
+    else if (Math.min(r, g, b) > 240) white++
+    else if (r > 200 && g < 120 && b < 140) rose++
+  }
+  const total = image.width * image.height
+  assert.ok(transparent / total > 0.2, 'HD PNG must keep the transparent background')
+  assert.ok(white / total > 0.2, 'HD PNG must keep the white circle')
+  assert.ok(rose / total > 0.1, 'HD PNG must keep the SVG icon artwork')
+  // The committed module embeds exactly this PNG.
+  const module = readFileSync(join(PKG, 'brand', 'generated', 'hyperai-logo.js'), 'utf8')
+  const match = /export const HYPERAI_LOGO_HD_PNG_BASE64 = "([^"]+)"/u.exec(module)
+  assert.ok(match !== null, 'HYPERAI_LOGO_HD_PNG_BASE64 missing')
+  assert.equal(createHash('sha256').update(Buffer.from(match[1], 'base64')).digest('hex'), art.hdSha256)
 })
 
 const min = (a, b, c) => Math.min(a, b, c)

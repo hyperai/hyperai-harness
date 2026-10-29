@@ -84,12 +84,15 @@ deployment default exactly as upstream defines it.
 | Check | Result | Evidence |
 |---|---|---|
 | Build the branding patch from the pinned upstream package | **PASS** | `scripts/build-patch.mjs` self-applies the patch to a fresh extraction |
-| `hyperai-tui` artifacts (logo art, patch, profile, skills lock) | **PASS** | `node scripts/verify.mjs` → 11/11; `node --test tests/` → 16/16 |
+| `hyperai-tui` artifacts (logo art, patch, profile, skills lock) | **PASS** | `node scripts/verify.mjs` → 11/11; `node --test tests/` → 17/17 |
 | `hyperai` profile recognized and composed by dsh | **PASS** | `DSH_HOME=<home> dsh --profile hyperai --dump-config` |
 | Startup shows `HYPERAI` / `HARNESS` block title + HyperAI mark | **PASS** | PTY capture of the launchpad and chat splash |
 | Mark is generated from the canonical official SVG `/Users/zhenhaoli/Downloads/logo-icon-border-1.svg` | **PASS** | byte-identical copy in `brand/hyperai-logo.svg`; generator parses the SVG's own elements + embedded icon; no remote fetch; the old 60×60 PNG is retired |
 | Mark uses the upstream whale's own drawing mechanism | **PASS** | letter-grid sprites + palette in `whaleFrames.js` format; rendered by the whale's `renderSpriteRows`; white circle + SVG rose icon preserved, **no ink/black substitution, no image protocol** |
 | 40×40 main mark + 26×26 small-window fallback | **PASS** | wide mark on ≥44-row content; automatic degradation on shorter terminals; layout budget shares the same threshold |
+| High-definition logo via terminal image protocol | **PASS** | Ghostty 1.4.0 + Kitty Graphics: 512×512 transparent PNG painted through the upstream `Image` component (`ghostty-hd-logo.png`); protocol probe returns `G i=31;OK` |
+| Non-graphics terminals keep the ANSI logo | **PASS** | Terminal.app and PTY captures show the 40×40/26×26 sprite (`terminal-ansi-logo.png`); `DSH_TUI_DISABLE_TERMINAL_IMAGES=1` in Ghostty also falls back (`ghostty-ansi-fallback.png`) |
+| Window resize / image clearing in HD mode | **PASS** | Ghostty shrink→enlarge captures keep one placement, no ghost/残影 (`ghostty-small-window.png`, `ghostty-resized-back.png`); layout height unchanged |
 | SVG-derived logo clarity compared in the real terminal | **PASS** | `logo-clarity-svg.png`: 26/40/48 grids on the same background/box; 48×48 needs a 24-row slot and is not used in production |
 | Title gradient is pink → white, not the theme's mist blue | **PASS** | captured title cells use `#FF6096`/`#FFA6C4`/`#FFF4F8`, **0 blue-ish cells** (was `#7DA1DE`) |
 | Welcome screen no longer shows the DeepSeek whale/wordmark/tagline | **PASS** | `✦ hyperai-tui`, `HyperAI Harness` tagline, mark in the art slot |
@@ -106,9 +109,13 @@ deployment default exactly as upstream defines it.
 Screen captures live in [`docs/screenshots/`](docs/screenshots) (colored PNGs
 plus text): `launchpad.png`, `launchpad-light.png`, `launchpad-compact.png`,
 `chat-splash.png`, `chat-reply.png`, the SVG clarity comparison
-`logo-clarity-svg.png`, and real Terminal.app captures `real-terminal-dark.png`,
-`real-terminal-light.png`, `real-terminal-small.png` (compact fallback). The
-exact procedure and evidence are in
+`logo-clarity-svg.png`, real Terminal.app captures `real-terminal-dark.png`,
+`real-terminal-light.png`, `real-terminal-small.png` (compact fallback), and the
+Ghostty HD-mode evidence `ghostty-hd-logo.png`, `ghostty-chat-splash.png`,
+`ghostty-small-window.png`, `ghostty-resized-back.png`,
+`ghostty-ansi-fallback.png`, `terminal-ansi-logo.png`,
+`logo-hd-vs-ansi.png`, `logo-detail-2x.png`, `hyperai-logo-512.png`,
+`ghostty-protocol-probe.json`. The exact procedure and evidence are in
 [`docs/verification.md`](docs/verification.md).
 
 **NOT TESTED:** live MinerU OCR API calls (no key); `playwright-browser` (no
@@ -142,7 +149,16 @@ Claude/Codex backends under the HyperAI profile.
   art slot, so the splash hero grew by 7 rows; terminals below 44 content rows
   automatically fall back to the original 13-row height. The embedded icon is
   `271×267`, so it comfortably covers the 40×40 grid; a `48×48` grid measured
-  sharper but needs a 24-row slot and is deliberately not adopted.
+  sharper but needs a 24-row slot and is deliberately not adopted. In
+  Kitty/Sixel-capable terminals the logo is instead a 512×512 transparent PNG
+  painted by the upstream `Image` component; that path needs the terminal
+  renderer's own detection (it also disables itself under tmux/screen, in
+  non-fullscreen and non-TTY runs, and when
+  `DSH_TUI_DISABLE_TERMINAL_IMAGES=1`) and the optional `sharp` decoder that
+  dsh-tui already ships — any failure keeps the ANSI sprite. `@deepseek-harness-tui/dsh-tui`
+  0.16.1 supports Kitty Graphics + Sixel only (no iTerm2 inline images), and its
+  Ghostty screenshots are color-managed by the display profile, so captured RGB
+  values can differ slightly from the PNG's exact bytes while looking identical.
 - The UI color theme outside the splash header is still upstream's default
   (mist blue); only the splash title/wordmark/tagline were moved to the HyperAI
   pink family. A full palette is a data change in the patch but needs a design

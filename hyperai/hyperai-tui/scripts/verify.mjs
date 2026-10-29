@@ -85,7 +85,17 @@ check('logo data uses the whale letter-grid format (wide + compact)', () => {
     if (!used.has('.')) throw new Error(`${name} has no transparent cells`)
     summaries.push(`${expectedRows}x40`)
   }
-  return `${summaries.join(' + ')} letter grids, ${letters.size} palette colors (white + SVG rose)`
+  // The HD raster for the terminal image protocol path: embedded PNG must be a
+  // 512x512 RGBA PNG whose digest matches the generated module's own record.
+  const hdMatch = /export const HYPERAI_LOGO_HD_PNG_BASE64 = "([^"]+)"/u.exec(art)
+  if (hdMatch === null) throw new Error('HYPERAI_LOGO_HD_PNG_BASE64 missing')
+  const png = Buffer.from(hdMatch[1], 'base64')
+  if (png.subarray(0, 8).toString('hex') !== '89504e470d0a1a0a') throw new Error('HD payload is not a PNG')
+  if (png.readUInt32BE(16) !== 512 || png.readUInt32BE(20) !== 512) throw new Error('HD PNG is not 512x512')
+  const hdDigest = createHash('sha256').update(png).digest('hex')
+  const recorded = /export const HYPERAI_LOGO_HD_SHA256 = "([0-9a-f]{64})"/u.exec(art)
+  if (recorded === null || recorded[1] !== hdDigest) throw new Error('HD PNG sha256 mismatch')
+  return `${summaries.join(' + ')} letter grids + 512x512 HD PNG, ${letters.size} palette colors (white + SVG rose)`
 })
 
 check('branding patch targets only documented upstream files', () => {
@@ -117,6 +127,10 @@ check('branding patch targets only documented upstream files', () => {
   if (!patch.includes('HYPERAI_LOGO_WIDE_MIN_ROWS')) throw new Error('patched logo rows are missing the wide/compact row threshold')
   if (!patch.includes('hyperaiArtRows')) throw new Error('splash layout does not use the dynamic art height')
   if (!patch.includes('splashArtRows(splashArtForm, mascotBox, rows)')) throw new Error('Launchpad layout budget ignores terminal rows')
+  if (!patch.includes('HYPERAI_LOGO_HD_PNG_BASE64')) throw new Error('hyperaiLogo does not embed the HD PNG payload')
+  if (!patch.includes('useTerminalImages')) throw new Error('hyperaiLogo does not use the terminal image capability')
+  if (!patch.includes('useTerminalImageCellSize')) throw new Error('hyperaiLogo does not measure the terminal cell size')
+  if (!patch.includes('presentation: \'transcript\'')) throw new Error('hyperaiLogo does not opt the splash image into the transcript image lifecycle')
   return `${files.length} files, logo rendered by the whale renderSpriteRows (wide/compact)`
 })
 

@@ -37,7 +37,8 @@
  * Requires only Node built-ins (zlib) — no image library.
  */
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs'
-import { inflateSync } from 'node:zlib'
+import { deflateSync, inflateSync } from 'node:zlib'
+import { createHash } from 'node:crypto'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -61,6 +62,62 @@ const CANVAS = 512
 const SUPERSAMPLE = 4
 /** Alpha at or above this is treated as opaque; below it the cell is empty. */
 const ALPHA_MIN = 128
+/** High-definition raster size embedded for the terminal image protocol path. */
+export const HD_SIZE = 512
+
+const CRC_TABLE = (() => {
+  const table = new Uint32Array(256)
+  for (let n = 0; n < 256; n++) {
+    let c = n
+    for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1
+    table[n] = c >>> 0
+  }
+  return table
+})()
+
+function crc32(buf) {
+  let c = 0xffffffff
+  for (let i = 0; i < buf.length; i++) c = CRC_TABLE[(c ^ buf[i]) & 0xff] ^ (c >>> 8)
+  return (c ^ 0xffffffff) >>> 0
+}
+
+function pngChunk(type, data) {
+  const typeBuf = Buffer.from(type, 'ascii')
+  const body = Buffer.concat([typeBuf, data])
+  const out = Buffer.alloc(8 + data.length + 4)
+  out.writeUInt32BE(data.length, 0)
+  body.copy(out, 4)
+  out.writeUInt32BE(crc32(body), 8 + data.length)
+  return out
+}
+
+/**
+ * Encode straight-alpha RGBA pixels as a PNG (8-bit, color type 6, filter 0).
+ * Used for the high-definition raster that the terminal image protocol path
+ * hands to the renderer; pure Node built-ins (zlib), no image library.
+ * @param {{width:number,height:number,data:Uint8Array}} image - RGBA pixels.
+ * @returns {Buffer} PNG file bytes.
+ */
+export function encodePng(image) {
+  const { width, height, data } = image
+  const ihdr = Buffer.alloc(13)
+  ihdr.writeUInt32BE(width, 0)
+  ihdr.writeUInt32BE(height, 4)
+  ihdr[8] = 8 // bit depth
+  ihdr[9] = 6 // RGBA
+  const raw = Buffer.alloc(height * (1 + width * 4))
+  for (let y = 0; y < height; y++) {
+    const rowStart = y * (1 + width * 4)
+    raw[rowStart] = 0
+    Buffer.from(data.buffer, data.byteOffset + y * width * 4, width * 4).copy(raw, rowStart + 1)
+  }
+  return Buffer.concat([
+    Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+    pngChunk('IHDR', ihdr),
+    pngChunk('IDAT', deflateSync(raw, { level: 9 })),
+    pngChunk('IEND', Buffer.alloc(0)),
+  ])
+}
 
 /** Decode an 8-bit non-interlaced RGB/RGBA PNG into straight RGBA bytes. */
 export function decodePng(buf) {
@@ -461,12 +518,14 @@ export function buildLogoArt(sourcePath = SOURCE) {
   const palette = buildPalette(white, accent)
   const wide = buildSprite(parsed, palette, GRID_WIDE)
   const compact = buildSprite(parsed, palette, GRID_COMPACT)
-  return { parsed, palette, white, accent, wide, compact }
+  const hdPng = encodePng(renderLogoSvg(parsed, HD_SIZE))
+  const hdSha256 = createHash('sha256').update(hdPng).digest('hex')
+  return { parsed, palette, white, accent, wide, compact, hdPng, hdSha256 }
 }
 
 /** Render the committed JS module. */
 export function renderModule(art) {
-  const { parsed, palette, white, accent, wide, compact } = art
+  const { parsed, palette, white, accent, wide, compact, hdPng, hdSha256 } = art
   const mono = monoRows(wide.sprite).join('\n')
   return `/**
  * GENERATED FILE — do not edit by hand.
@@ -486,6 +545,11 @@ export function renderModule(art) {
  * Colors come from the SVG itself: white circle ${JSON.stringify(white)}, icon
  * accent ${JSON.stringify(accent)}, and intermediate blends for anti-aliased
  * edges. Transparent pixels stay transparent (terminal background shows through).
+ *
+ * The same source also provides a ${HD_SIZE}x${HD_SIZE} RGBA PNG (embedded below)
+ * for the terminal image protocol path (Kitty Graphics / Sixel): terminals that
+ * report graphics support show that PNG directly through the renderer's Image
+ * component; everything else keeps the letter-grid fallback above.
  *
  * Regenerate with:
  *
@@ -512,6 +576,15 @@ export const HYPERAI_LOGO_SPRITE_WIDE = ${JSON.stringify(wide.sprite, null, 2)}
 
 /** Compact letter-grid sprite (${GRID_COMPACT}x${GRID_COMPACT} mark centered in ${ART_COLUMNS} columns). */
 export const HYPERAI_LOGO_SPRITE_COMPACT = ${JSON.stringify(compact.sprite, null, 2)}
+
+/** High-definition raster edge in pixels (terminal image protocol path). */
+export const HYPERAI_LOGO_HD_SIZE = ${HD_SIZE}
+
+/** sha256 of the embedded high-definition PNG (reproducibility check). */
+export const HYPERAI_LOGO_HD_SHA256 = ${JSON.stringify(hdSha256)}
+
+/** Base64 of the ${HD_SIZE}x${HD_SIZE} RGBA PNG generated from the canonical SVG. */
+export const HYPERAI_LOGO_HD_PNG_BASE64 = ${JSON.stringify(hdPng.toString('base64'))}
 
 /** Colorless preview of the wide sprite (docs / no-color logs). */
 export const HYPERAI_LOGO_MONO = ${JSON.stringify(mono)}

@@ -24,6 +24,6 @@
     "providedAt": "2026-10-29",
     "sha256": "3de898089cbbcc15fd8609f2c46d9e8906ff5119a13baf949cbde1bcf7857bab",
     "format": "SVG, 120x120 viewBox, 8-bit RGBA embedded icon (271x267 PNG data URI)",
-    "treatment": "Generated into two whale-format letter-grid sprites (40x40 main, 26x26 compact) by scripts/generate-logo-art.mjs: the SVG is composited analytically (white circle + embedded icon through its pattern mapping, 4x4 supersampling), alpha-cropped, downsampled, and quantized along the SVG's own white->rose blend line. No redraw, no recolor, transparent pixels stay transparent. Rendered at runtime by the whale's renderSpriteRows."
+    "treatment": "Generated into two whale-format letter-grid sprites (40x40 main, 26x26 compact) and a 512x512 transparent RGBA PNG, all from the canonical SVG, by scripts/generate-logo-art.mjs: the SVG is composited analytically (white circle + embedded icon through its pattern mapping, 4x4 supersampling), alpha-cropped, downsampled/quantized along the SVG's own white->rose blend line. The PNG is embedded in the generated module for the terminal image protocol path (upstream Image component); the sprites are rendered by the whale's renderSpriteRows. No redraw, no recolor, transparent pixels stay transparent."
   }
 }

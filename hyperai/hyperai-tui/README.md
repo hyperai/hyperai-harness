@@ -22,8 +22,8 @@ that patch through pnpm `patchedDependencies`.
 | `lib/types/branding.js` | splash words → `HYPERAI`/`HARNESS`, tagline, `/settings` brand label, `HYPERAI_PALETTE` (pink accent + dark/light title ladders) | brand data |
 | `lib/types/components/splashFonts.js` | the `deepseek` brand no longer short-circuits to the font table's built-in `DEEPSEEK`/`HARNESS` | the big title actually changes |
 | `lib/types/components/LogoV2.js` | art slot → `HyperAILogoArt`; mascot/portrait slots off; `✦ hyperai-tui` wordmark; title ladder pinned to the HyperAI pink palette (pink → near-white on dark, deep pink → light pink on light) | splash art + title gradient |
-| `lib/types/components/hyperaiLogo.js` (new) | splash-mark component; picks the wide/compact sprite from the terminal height and renders it through the upstream whale's own `renderSpriteRows` (`components/Whale.js`) | renderer |
-| `lib/types/components/hyperaiLogoRows.js` (new, generated) | two letter-grid sprites (wide 40×40, compact 26×26; 40 columns of palette letters) + palette, generated from the canonical SVG | asset |
+| `lib/types/components/hyperaiLogo.js` (new) | splash-mark component; uses the upstream `Image` component + embedded 512×512 PNG when the renderer reports Kitty/Sixel support, otherwise the wide/compact whale sprite through `renderSpriteRows`; fixed-height art slot keeps the layout stable | renderer |
+| `lib/types/components/hyperaiLogoRows.js` (new, generated) | two letter-grid sprites (wide 40×40, compact 26×26) + palette + the embedded 512×512 transparent PNG used by the terminal image protocol path | asset |
 | `lib/types/components/splashArtRows.js` | art form pinned to the mark; dynamic art height (wide 20 rows / compact 13 rows) shared with the logo component | layout |
 | `lib/types/screens/Launchpad.js` | version plate `hyperai-tui v…`; layout budget uses the dynamic art height | landing page |
 | `lib/types/i18n.js` | tagline, kernel label, task notification, onboarding copy, star line | copy |
@@ -39,11 +39,14 @@ the SVG (white circle path, icon rect, pattern matrix, embedded 271×267 PNG),
 composites it analytically at 512×512 with 4×4 supersampling, and downsamples it
 to two letter-grid sprites in the upstream whale frame format — wide `40×40`
 (main, 20 display rows) and compact `26×26` (13 rows, small windows) — using the
-SVG's own white/rose colors plus intermediate blends. The component renders them
-with the whale's own `renderSpriteRows` — true-color half blocks, terminal
-background for transparent pixels, no image protocol, no theme-specific
-recoloring. No remote URL is fetched. Provenance, source path and digest are
-recorded in `brand/brand.json` and `brand/PROVENANCE.md`.
+SVG's own white/rose colors plus intermediate blends, and also encodes a
+`512×512` transparent RGBA PNG in the module. The component shows the PNG through
+the upstream `Image` component when the renderer's own capability probe reports
+Kitty Graphics or Sixel, and falls back to the sprites via the whale's
+`renderSpriteRows` otherwise — true-color half blocks, terminal background for
+transparent pixels, no theme-specific recoloring. No remote URL is fetched.
+Provenance, source path and digest are recorded in `brand/brand.json` and
+`brand/PROVENANCE.md`.
 
 ## Build and verify
 

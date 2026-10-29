@@ -40,9 +40,14 @@ steps, all with Node built-ins (no image library, no network):
    intermediate blends (`a`/`b`/`c`) keeping the anti-aliased edges; `.` =
    transparent. Nothing is darkened or recolored.
 
-The terminal renders the sprites through the upstream whale's own
-`renderSpriteRows` (`components/Whale.js`), i.e. true-color half blocks with the
-terminal background showing through transparent cells — no image protocol.
+The build also encodes the same 512x512 RGBA composite as a PNG
+(`encodePng`, pure Node + zlib) and embeds it in the generated module
+(`HYPERAI_LOGO_HD_PNG_BASE64`, digest `HYPERAI_LOGO_HD_SHA256`). Terminals whose
+renderer reports Kitty Graphics or Sixel support show that PNG through the
+upstream `Image` component; everything else renders the letter-grid sprites
+through the upstream whale's `renderSpriteRows` (true-color half blocks, terminal
+background through transparent cells). No separate PNG file is committed — the
+canonical SVG remains the only source.
 
 ## Replacement
 

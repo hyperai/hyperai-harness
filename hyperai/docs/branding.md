@@ -73,14 +73,16 @@ data format and renderer instead of inventing an image pipeline:
   `\x1b[49m` (terminal default background); fully transparent cells are plain
   spaces plus an erase-to-EOL. No black is ever painted, so transparent pixels
   show the terminal background;
-- **no image protocol** — no Kitty/Sixel/inline images are involved, exactly
-  like the whale (the splash works in any ANSI true-color terminal);
+- **ANSI fallback path** — the sprite path involves no image protocol, exactly
+  like the whale, so any ANSI true-color terminal renders it; the optional
+  high-definition path below uses the upstream image lifecycle when the
+  renderer reports graphics support;
 - **one palette for every theme** — the mark is identical in dark and light
   themes. On a light terminal the white circle is inherently close to the
   background (white artwork on a white background), but it is never darkened or
   recolored.
 
-The art is pre-rendered at build time, so the runtime never parses SVG or PNG.
+The sprites are pre-rendered at build time and the HD PNG is embedded in the generated module, so the runtime never parses the SVG and only decodes the embedded PNG when the renderer reports terminal image capability.
 
 ## Real-terminal evidence
 
@@ -108,6 +110,99 @@ measurably sharper but needs a 24-row art slot; the current layout change is
 deliberately limited to 20 rows so the splash keeps its proportions. The 26x26
 grid is now used only for small windows, where it still shows the official SVG
 art at the height the whale slot originally reserved.
+
+## High-definition terminal image mode (Kitty Graphics / Sixel)
+
+The same SVG also produces a **512x512 RGBA PNG** at build time
+(`encodePng(renderLogoSvg(parsed, 512))`, pure Node + zlib) which is embedded in
+`brand/generated/hyperai-logo.js` as `HYPERAI_LOGO_HD_PNG_BASE64` with its
+sha256. Runtime chain:
+
+```
+canonical SVG --(build)--> letter-grid sprites (ANSI fallback)
+                         \-> 512x512 transparent PNG (HD mode)
+                                     |
+                     renderer capability probe (Kitty/Sixel)
+                        |                        |
+                   available                 unavailable/failure
+                        |                        |
+             upstream Image component      ANSI sprite rows
+             (sharp decode -> renderer      (renderSpriteRows)
+              draws the PNG over the
+              art-slot cells)
+```
+
+- **Detection is the renderer's**, never the terminal name: `useTerminalImages()`
+  requests the upstream capability probe (Kitty query + DA1 + cell metrics). The
+  same probe is already used by the upstream maid/portrait images and disables
+  itself under tmux/screen, without a TTY, in non-fullscreen mode and when
+  `DSH_TUI_DISABLE_TERMINAL_IMAGES` is set. No protocol bytes are emitted by the
+  logo component itself.
+- **Painting is upstream's `Image` component** (`lib/types/ink/components/Image.js`):
+  the component contributes a normal Yoga leaf; the Ink renderer decides after
+  layout whether to attach a terminal-graphics placement (Kitty upload / Sixel
+  raster) over the same cells. The logo passes `transparent` so the terminal
+  background shows through and `presentation: 'transcript'` so the placement
+  joins the renderer's normal image lifecycle (crop, clear, resize redraw).
+- **Decoding is upstream's `sharp` path** (`loadSharp()` from
+  `dsh-adapter/sharp.js`, host copy first): a missing/broken sharp simply
+  returns `undefined` and the component falls back to the sprite rows. The PNG
+  is decoded lazily only after the renderer confirms graphics support.
+- **Layout is unchanged**: the image is aspect-fitted into the same 40-column
+  art slot and a fixed-height wrapper keeps the art column at exactly the
+  sprite height (20 rows wide / 13 rows compact). Switching between HD and ANSI
+  (or shrinking the window) never moves the title, composer or footer. The
+  wide/compact choice stays on the shared `HYPERAI_LOGO_WIDE_MIN_ROWS`
+  threshold.
+- **Fallbacks**: no graphics support, decode failure, disabled env, tmux/SSH
+  wrappers, non-TTY runs and old-style PTYs all keep the ANSI sprite path; a
+  failed placement keeps the sprite fallback cells because the sprite rows are
+  passed as the `Image` component's children.
+
+## Real-terminal evidence
+
+- `docs/screenshots/real-terminal-dark.png` — Terminal.app, background `#101014`
+  (OSC 11), 40x40 main mark, 169x55 window;  **ANSI fallback** (Terminal.app
+  supports neither Kitty Graphics nor Sixel).
+- `docs/screenshots/real-terminal-light.png` — Terminal.app, background
+  `#FAF7F2`, same ANSI main mark.
+- `docs/screenshots/real-terminal-small.png` — Terminal.app, 139x40 window:
+  the compact 26x26 mark, automatic degradation.
+- `docs/screenshots/ghostty-hd-logo.png` — **Ghostty 1.4.0 + Kitty Graphics
+  Protocol**: the 512x512 transparent PNG painted by the upstream `Image`
+  component (smooth circle, full-color icon, no black box, transparent
+  background).
+- `docs/screenshots/ghostty-chat-splash.png` — the chat splash in Ghostty with
+  the same HD mark.
+- `docs/screenshots/ghostty-small-window.png` — Ghostty resized down: the HD
+  image follows the art slot (compact 13-row height), no residue.
+- `docs/screenshots/terminal-ansi-logo.png` — Terminal.app startup: ANSI
+  sprite fallback.
+- `docs/screenshots/ghostty-ansi-fallback.png` — Ghostty with
+  `DSH_TUI_DISABLE_TERMINAL_IMAGES=1`: ANSI sprite fallback in a Kitty-capable
+  terminal.
+- `docs/screenshots/ghostty-resized-back.png` — resized back up after shrinking:
+  no ghost placements.
+- `docs/screenshots/logo-hd-vs-ansi.png` / `logo-detail-2x.png` — side-by-side
+  real captures: HD image vs ANSI sprite.
+- `docs/screenshots/logo-clarity-svg.png` / `.md` — real-terminal comparison of
+  the SVG-derived `26x26` / `40x40` / `48x48` grids on the same background and
+  box.
+- `docs/screenshots/hyperai-logo-512.png` — the generated HD PNG itself;
+  `docs/screenshots/ghostty-protocol-probe.json` — raw Ghostty protocol replies.
+
+Clarity experiment (real Terminal.app captures; RMSE against the SVG rendered by
+`rsvg-convert` on the same background, lower = closer):
+
+| grid | display cells | mark on screen | colors | edge energy | RMSE vs SVG |
+|---|---|---|---|---|---|
+| 26x26 | 26x13 | 163x163 px | 1440 | 18.9 | 58.3 |
+| 40x40 | 40x20 | 248x248 px | 1533 | 13.6 | 46.4 |
+| 48x48 | 48x24 | 291x288 px | 1620 | 11.5 | 31.3 |
+
+Recommendation (implemented): in ANSI-only terminals, **40x40 main + 26x26
+compact fallback**; in Kitty/Sixel terminals the **512x512 PNG** is used
+instead. 48x48 ANSI needs a 24-row slot and is deliberately not used.
 
 ## Title gradient
 
