@@ -15,7 +15,7 @@ import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { install, parseArgs, profileManifest, workspaceFile } from './install.mjs'
+import { install, mergeCordisPatch, parseArgs, profileManifest, workspaceFile } from './install.mjs'
 import { loadLock, selectedSkills } from './install-skills.mjs'
 
 const HERE = dirname(fileURLToPath(import.meta.url))
@@ -49,26 +49,59 @@ await check('profile manifest is a native DSH profile with the pinned TUI bundle
   return `${bundles.join(' + ')} @ ${brand.upstream.version}`
 })
 
-await check('the profile patch layer keeps the native model, TUI and skills wiring', () => {
+await check('the profile patch layer keeps only the profile-scoped skill root', () => {
   for (const marker of [
-    '- id: llm-pi-ai',
-    'apiKeyEnv:',
-    "api: openai-completions",
-    'baseURL:',
-    '- id: dsh-tui',
-    'provider:',
-    'model:',
-    'fullscreen: true',
     '- id: skill-filesystem',
     'disabled: false',
     'customSkillDirs:',
     'DSH_HYPERAI_SKILLS_DIR',
+    'watch: true',
   ]) {
     if (!cordis.includes(marker)) throw new Error(`cordis.patch.yml is missing ${JSON.stringify(marker)}`)
   }
+  // Model configuration is DSH-native: /provider writes a plain llm-pi-ai row
+  // into the *installed* profile. The committed template must not force a
+  // provider, endpoint, apiKeyEnv or default model on anyone.
+  const cordisConfig = cordis.split('\n').filter(line => !line.trim().startsWith('#')).join('\n')
+  for (const marker of ['- id: llm-pi-ai', 'apiKeyEnv', 'HYPERAI_API_KEY', 'HYPERAI_BASE_URL', 'HYPERAI_MODEL', 'HYPERAI_PROVIDER', 'gpt-4o-mini', 'provider:', 'model:']) {
+    if (cordisConfig.includes(marker)) throw new Error(`cordis.patch.yml still forces model configuration: ${JSON.stringify(marker)}`)
+  }
   if (/api[_-]?key\s*[:=]\s*['"]?[A-Za-z0-9_-]{16,}/iu.test(cordis)) throw new Error('the profile must not contain a credential')
   if (cordis.includes('hyperaiLogo')) throw new Error('profile patch layer still references the removed logo')
-  return 'OpenAI-compatible route + TUI route + profile skill root'
+  return 'skill root only; providers/models are DSH-native (/provider, /model)'
+})
+
+await check('a reinstall drops the legacy model preset but keeps user configuration', () => {
+  const legacy = [
+    '- id: llm-pi-ai',
+    '  config:',
+    '    providers:',
+    '      hyperai:',
+    "        apiKeyEnv: !!js process.env.HYPERAI_API_KEY_ENV ?? 'HYPERAI_API_KEY'",
+    '- id: dsh-tui',
+    '  config:',
+    "    provider: !!js process.env.HYPERAI_PROVIDER ?? 'hyperai'",
+    "    model: !!js process.env.HYPERAI_MODEL ?? 'gpt-4o-mini'",
+    '    fullscreen: false',
+    '    lang: zh',
+    '- id: llm-pi-ai',
+    '  config:',
+    '    providers:',
+    '      litellm:',
+    '        apiKeyEnv: LITELLM_API_KEY',
+    '        baseURL: https://gateway.example/v1',
+    '        models:',
+    '          - id: gpt-4o-mini',
+    '',
+  ].join('\n')
+  const merged = mergeCordisPatch(legacy, cordis)
+  if (merged.includes('HYPERAI_API_KEY_ENV') || merged.includes('HYPERAI_PROVIDER')) {
+    throw new Error('the legacy environment-driven preset survived the migration')
+  }
+  for (const marker of ['litellm', 'LITELLM_API_KEY', 'fullscreen: false', 'lang: zh']) {
+    if (!merged.includes(marker)) throw new Error(`user configuration was not preserved: ${JSON.stringify(marker)}`)
+  }
+  return 'legacy preset removed; user provider and TUI rows kept'
 })
 
 await check('the profile installs the TUI through the documented pnpm patch', () => {
@@ -138,10 +171,11 @@ await check('the installer refuses a foreign profile and the manifest stays mana
 })
 
 await check('the README documents the native profile, TUI relation and run command', () => {
-  for (const marker of ['apps/tui', 'dsh --profile hyperai', 'HYPERAI_API_KEY', 'HYPERAI_BASE_URL', 'Skills']) {
+  for (const marker of ['apps/tui', 'dsh --profile hyperai', '/provider', '/model', 'Skills']) {
     if (!readme.includes(marker)) throw new Error(`README is missing ${JSON.stringify(marker)}`)
   }
-  return 'native profile + env-configured model + skills'
+  if (readme.includes('HYPERAI_API_KEY')) throw new Error('README still documents a forced provider credential')
+  return 'native profile + DSH-native provider/model configuration + skills'
 })
 
 const failed = checks.filter(entry => !entry.ok)

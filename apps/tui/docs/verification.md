@@ -10,8 +10,8 @@ node scripts/verify.mjs             # 8/8 distribution checks
 node --test tests/                  # 7/7 branding contract tests
 
 cd ../profiles/hyperai
-node scripts/verify.mjs             # 7/7 profile checks
-node --test tests/                  # 10/10 installer + skills tests
+node scripts/verify.mjs             # 8/8 profile checks
+node --test tests/                  # 11/11 installer + skills tests
 ```
 
 `build-patch.mjs` unpacks the pinned upstream package with `npm pack`, applies
@@ -19,9 +19,11 @@ the exact-match edits, then applies the generated patch to a fresh copy and
 smoke-tests it (splash words, solid `#FF6096` palette, art suppression, the
 solid-title override, no logo module, brand-display copy). TUI verify additionally rejects logo
 payloads, added image-protocol code, unexpected upstream files and patch size
-growth; profile verify checks the native manifest/bundles, the environment-driven
-model route, the TUI patch wiring, the pinned skills lock and the installer plan
-and refusal rules.
+growth; profile verify checks the native manifest/bundles, that the profile
+patch layer contains only the skill root (no forced provider, endpoint,
+credential variable or default model), the TUI patch wiring, the pinned skills
+lock, the installer plan/refusal rules and the reinstall migration that keeps
+user provider/TUI rows while dropping the removed environment-driven preset.
 
 Measured: patch is **34,787 bytes / 10 upstream files** (the previous logo
 distribution carried >150 KB of embedded PNG/sprites; none of it remains).
@@ -74,9 +76,10 @@ Real TUI session through the OpenAI-compatible gateway, driven in a PTY:
 | Launch | `dsh --profile hyperai` starts into the launchpad; `hyperai-tui v0.16.1` plate |
 
 `deepseek-v4-flash` returned a provider-side `400 "no healthy deployment"` from
-the gateway during this run; the profile's model list and route are unchanged and
-`/model`/`HYPERAI_MODEL` still switch models (verified with the two models
-above).
+the gateway during this run; the profile's model list and route were user-configured
+at that time (`/model` still switches models — verified with the two models
+above). The profile now ships no model provider/default at all; providers are
+configured with DSH's native `/provider` flow.
 
 ### Isolation
 

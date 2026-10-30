@@ -25,10 +25,12 @@ managed profile and installs the pinned upstream dependency):
 ```sh
 cd apps/profiles/hyperai
 node scripts/install.mjs            # profile init + TUI patch + skills
-export HYPERAI_API_KEY=<your key>
-export HYPERAI_BASE_URL=https://your-openai-compatible-gateway/v1
 dsh --profile hyperai
 ```
+
+Configure the model with DSH's native commands inside the TUI: `/provider` to
+add an API provider and `/model` to pick a model. The profile does not preset a
+provider, endpoint, API-key variable or default model.
 
 `dsh --profile hyperai` is the only entry point; there is no extra launcher CLI.
 

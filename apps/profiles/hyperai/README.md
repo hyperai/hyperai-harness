@@ -10,8 +10,8 @@ This package owns only the profile side:
 
 - the native profile manifest and bundle order (`@deepseek-ai/dsh-base` then the
   branded `@deepseek-harness-tui/dsh-tui`);
-- the profile patch layer: OpenAI-compatible model route (environment-driven
-  key/endpoint/model), the TUI default route, and the profile-scoped skill root;
+- the profile patch layer: the profile-scoped skill root only. Model providers
+  and models are **DSH-native user configuration**, not profile defaults;
 - profile initialization, validation, TUI patch installation and the HyperAI
   skills install/lock mechanism.
 
@@ -36,21 +36,31 @@ the branding patch landed, then installs the pinned skills. A profile that the
 installer did not create is refused unless `--force` is given; every replaced
 managed file is backed up under `<profile>/.hyperai-backups/<timestamp>/` first.
 Existing user data (skills content, `~/.dsh-tui-hyperai` UI state, model
-selection) is preserved.
+selection and user-created `llm-pi-ai`/`insert` rows in `cordis.patch.yml`) is
+preserved; re-running the installer backs the file up and merges only the
+managed skill-root row, dropping the removed environment-driven preset rows.
 
-## Configure the model (no credentials in the repo)
+## Configure the model (DSH-native, no preset provider)
+
+The profile does **not** ship a provider, endpoint, API-key variable or default
+model. It behaves like the original `dsh-tui` profile:
 
 ```sh
-export HYPERAI_API_KEY=<your key>                    # name overridable via HYPERAI_API_KEY_ENV
-export HYPERAI_BASE_URL=https://your-gateway/v1      # any OpenAI-compatible endpoint
-export HYPERAI_MODEL=<model id>                      # comma-separated HYPERAI_MODELS also works
 dsh --profile hyperai
+# inside the TUI:
+#   /provider  → add/edit an OpenAI-compatible (or catalog) provider, e.g.
+#               route `litellm`, base URL https://your-gateway/v1, key saved in
+#               ~/.dsh/.credentials.yaml
+#   /model     → pick a model from that provider
 ```
 
-`cordis.patch.yml` reads these at load time; it never stores a key. `/model`
-inside the TUI can switch between the configured models, and the choice is
-persisted under the profile's own `~/.dsh-tui-hyperai` state directory (separate
-from the original `dsh-tui` profile's `~/.dsh-tui`).
+Provider settings are persisted by DSH in this profile's own
+`cordis.patch.yml` (an `llm-pi-ai` row with plain values) and in
+`~/.dsh/.credentials.yaml` (mode 0600). The `/model` choice is persisted in
+`~/.dsh-tui-hyperai/model.json`. All of these survive restarts and are kept by
+`scripts/install.mjs` re-runs (it merges user rows instead of replacing the
+patch file). No environment-variable credential, endpoint or model is required
+or read by the profile.
 
 ## Skills
 
@@ -65,7 +75,7 @@ and refuses to overwrite user-modified skills. See
 ```
 apps/profiles/hyperai/
 ├── package.json          native DSH profile manifest (bundles + pinned TUI dep)
-├── cordis.patch.yml      provider route + TUI default route + skill root
+├── cordis.patch.yml      profile-scoped skill root only (model config is user-owned)
 ├── pnpm-workspace.yaml   hoisted profile workspace + TUI patch wiring
 ├── README.md
 ├── scripts/install.mjs   profile init + TUI patch + dependency install

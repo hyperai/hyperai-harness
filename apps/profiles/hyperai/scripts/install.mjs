@@ -118,6 +118,124 @@ export function workspaceFile() {
   return readFileSync(join(PROFILE_TEMPLATE, 'pnpm-workspace.yaml'), 'utf8')
 }
 
+/**
+ * Split a profile patch document into a leading header and top-level list
+ * blocks. Each block starts at a column-zero `- ` list item and keeps the lines
+ * that follow it, so `!!js` tags, comments and `insert:` blocks survive
+ * byte-for-byte. Returns undefined when the text is not a top-level YAML list.
+ * @param {string} text profile patch text.
+ * @returns {{ header: string[], blocks: { lines: string[] }[] } | undefined}
+ */
+export function splitPatchBlocks(text) {
+  const lines = text.split('\n')
+  const header = []
+  const blocks = []
+  let current
+  for (const line of lines) {
+    if (/^-(?:\s|$)/u.test(line)) {
+      if (current !== undefined) blocks.push(current)
+      current = { lines: [line] }
+    } else if (current === undefined) header.push(line)
+    else current.lines.push(line)
+  }
+  if (current !== undefined) blocks.push(current)
+  return blocks.length === 0 ? undefined : { header, blocks }
+}
+
+/** The `id:` of a top-level patch block, or undefined for `insert:`/anonymous rows. */
+function blockId(block) {
+  const match = /^-\s+id:\s*([A-Za-z0-9_.@/-]+)\s*$/u.exec(block.lines[0])
+  return match?.[1]
+}
+
+/** Whether a block still carries the removed environment-driven model preset. */
+function isLegacyModelPreset(block) {
+  const text = block.lines.join('\n')
+  return /\bHYPERAI_[A-Z_]+\b/u.test(text)
+}
+
+/**
+ * Sanitize a preserved `dsh-tui` row: strip the legacy environment-driven
+ * provider/model defaults and the `!!js` deployment knobs they introduced, but
+ * keep any other setting the user changed. Returns undefined when nothing but
+ * the old preset defaults remains (the bundle defaults then apply again).
+ * @param {{ lines: string[] }} block dsh-tui patch block.
+ * @returns {{ lines: string[] } | undefined}
+ */
+function sanitizeLegacyDshTuiRow(block) {
+  const stripped = block.lines.filter(line =>
+    !/^\s+(?:provider|model):\s*!!js\b/u.test(line)
+    && !/^\s+(?:preset|workspace|sessionId|backend):\s*!!js\s+process\.env\.DSH_TUI_/u.test(line))
+  const meaningful = stripped
+    .map(line => line.trim())
+    .filter(line => line !== '' && !line.startsWith('#') && line !== '- id: dsh-tui' && line !== 'config:')
+  // The old preset default also restated these TUI display keys; keep a row
+  // only when the user changed at least one of them.
+  if (meaningful.every(line => /^(?:fullscreen|terminalImages): true$/u.test(line) || line === 'effort: max')) {
+    return undefined
+  }
+  return { lines: stripped }
+}
+
+/**
+ * Merge the current template into an installed profile patch while preserving
+ * every block the user owns. Managed template ids are replaced; the removed
+ * environment-driven `llm-pi-ai` preset is dropped; a user-created provider row
+ * (plain values created by `/provider`) and every unknown/`insert:` row is kept.
+ * @param {string} existing installed profile patch text.
+ * @param {string} template committed profile template text.
+ * @returns {string} merged patch text.
+ */
+export function mergeCordisPatch(existing, template) {
+  const parsedTemplate = splitPatchBlocks(template)
+  if (parsedTemplate === undefined) throw new Error('profile template is not a top-level YAML list')
+  const parsedExisting = splitPatchBlocks(existing)
+  if (parsedExisting === undefined) throw new Error('installed cordis.patch.yml is not a top-level YAML list')
+  const templateIds = new Set(parsedTemplate.blocks.map(block => blockId(block)).filter(id => id !== undefined))
+  const kept = []
+  for (const block of parsedExisting.blocks) {
+    const id = blockId(block)
+    if (id !== undefined && templateIds.has(id)) continue
+    if (id === 'llm-pi-ai') {
+      // A legacy preset is replaced by nothing. A plain provider row created by
+      // DSH's `/provider` is user configuration and must survive every reinstall.
+      if (!isLegacyModelPreset(block)) kept.push(block)
+      continue
+    }
+    if (id === 'dsh-tui') {
+      const sanitized = sanitizeLegacyDshTuiRow(block)
+      if (sanitized !== undefined) kept.push(sanitized)
+      continue
+    }
+    kept.push(block)
+  }
+  const header = parsedTemplate.header.length === 0 ? '' : `${parsedTemplate.header.join('\n')}\n`
+  const body = [...parsedTemplate.blocks, ...kept].map(block => block.lines.join('\n').replace(/\s+$/u, '')).join('\n\n')
+  return `${header}${body}\n`
+}
+
+/** Write the merged profile patch, backing up a differing previous copy. */
+function stageCordisPatch(options, template, plan) {
+  const relative = 'cordis.patch.yml'
+  const target = join(options.profileDir, relative)
+  const previous = existsSync(target) ? readFileSync(target, 'utf8') : undefined
+  const content = previous === undefined ? template : mergeCordisPatch(previous, template)
+  if (previous === content) {
+    plan.push({ file: relative, action: 'unchanged' })
+    return
+  }
+  if (previous !== undefined && !previous.includes(PATCH_MARKER) && !options.force) {
+    throw new Error(
+      `refusing to overwrite ${target}: it was not created by this installer (missing marker "${PATCH_MARKER}"). Re-run with --force to back it up and replace it.`,
+    )
+  }
+  plan.push({ file: relative, action: previous === undefined ? 'create' : 'replace' })
+  if (options.dryRun) return
+  if (previous !== undefined) backupFile(options, relative)
+  mkdirSync(dirname(target), { recursive: true })
+  writeFileSync(target, content)
+}
+
 /** Copy a generated file into place, backing up a differing previous copy. */
 function stageFile(options, relative, content, { marker, plan }) {
   const target = join(options.profileDir, relative)
@@ -205,10 +323,7 @@ export async function install(options = parseArgs([])) {
     marker: `"${MANAGED_MARKER}": true`,
     plan,
   })
-  stageFile(options, 'cordis.patch.yml', readFileSync(join(PROFILE_TEMPLATE, 'cordis.patch.yml'), 'utf8'), {
-    marker: PATCH_MARKER,
-    plan,
-  })
+  stageCordisPatch(options, readFileSync(join(PROFILE_TEMPLATE, 'cordis.patch.yml'), 'utf8'), plan)
   stageFile(options, 'pnpm-workspace.yaml', workspaceFile(), { marker: WORKSPACE_MARKER, plan })
   stageCopy(options, join('patches', 'hyperai-tui.patch'), PATCH_FILE, plan)
   if (options.dryRun) {
@@ -252,10 +367,9 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
         [
           '',
           'next steps:',
-          '  export HYPERAI_API_KEY=<your key>',
-          '  export HYPERAI_BASE_URL=https://your-openai-compatible-gateway/v1   # default: https://api.openai.com/v1',
-          '  export HYPERAI_MODEL=<model id>                                      # default: gpt-4o-mini placeholder',
           `  dsh --profile ${options.profile}`,
+          '  then configure a provider with /provider and pick a model with /model',
+          '  (DSH-native flow; this profile presets no provider, endpoint or model)',
           '',
         ].join('\n'),
       )
