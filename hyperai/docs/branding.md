@@ -77,12 +77,35 @@ data format and renderer instead of inventing an image pipeline:
   like the whale, so any ANSI true-color terminal renders it; the optional
   high-definition path below uses the upstream image lifecycle when the
   renderer reports graphics support;
-- **one palette for every theme** — the mark is identical in dark and light
-  themes. On a light terminal the white circle is inherently close to the
-  background (white artwork on a white background), but it is never darkened or
-  recolored.
+- **theme-aware light variant** — the official white plate has 1:1 contrast on a
+  pure-white terminal background (Orca light, VS Code light, iTerm2 light), where
+  the circle becomes invisible. Light themes therefore use a light variant that
+  repaints only the circle's existing outer edge with the SVG's own icon accent
+  (`#E11D48`) as a thin rim: no new colours are invented, the SVG is untouched,
+  the interior white plate and the rose icon keep their official colours. Dark
+  themes keep the official rendering exactly. The rim is applied to both the
+  ANSI sprites and the HD PNG.
 
 The sprites are pre-rendered at build time and the HD PNG is embedded in the generated module, so the runtime never parses the SVG and only decodes the embedded PNG when the renderer reports terminal image capability.
+
+## Light-terminal contrast fix (Orca / VS Code / iTerm2 light themes)
+
+The user's real embedded terminal is **Orca 1.4.244** (xterm.js 6.0.0, light
+theme, OSC 11 background `#FFFFFF`). The ANSI fallback worked there — the sprite
+was in the terminal buffer — but the official `#FFFFFF` circle on a `#FFFFFF`
+background had no contrast, so only the rose icon remained visible and the mark
+looked gone. This was diagnosed with real terminal probes (DA1 `?1;2c`, no Kitty
+reply, OSC 11 `#FFFFFF`) and real captures: before the fix the icon-centred
+radial rose profile had **0** ring pixels at the circle edge; after the fix it
+has **3811 + 2450** at the rim radius, while dark terminals still measure **0**
+(official rendering preserved).
+
+- `docs/terminal-compatibility.md` holds the full matrix and diagnostics usage.
+- `docs/screenshots/orca-light-before.png` / `orca-light-after.png` /
+  `logo-light-fix-comparison.png` — real Orca captures before/after.
+- `docs/screenshots/terminal-ansi-{dark,light}.png` — Terminal.app ANI dark/light.
+- `docs/screenshots/ghostty-hd-logo-{dark,light}.png` — Ghostty Kitty HD
+  dark/light (light uses the rimmed HD PNG).
 
 ## Real-terminal evidence
 

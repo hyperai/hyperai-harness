@@ -1,0 +1,44 @@
+{
+  "tty": {
+    "stdin": true,
+    "stdout": false
+  },
+  "env": {
+    "TERM": "xterm-ghostty",
+    "TERM_PROGRAM": "ghostty",
+    "TERM_PROGRAM_VERSION": "1.4.0",
+    "COLORTERM": "truecolor",
+    "NO_COLOR": "1"
+  },
+  "probes": {
+    "da1": [
+      62,
+      22,
+      52
+    ],
+    "kitty": true,
+    "xtversion": ">|ghostty 1.4.0",
+    "cell": "\u001b[6;17;8t",
+    "window": "\u001b[4;850;1192t",
+    "background": [
+      16,
+      16,
+      20
+    ],
+    "foreground": [
+      255,
+      255,
+      255
+    ]
+  },
+  "decision": {
+    "multiplexer": "none",
+    "protocol": "kitty",
+    "imagesAvailable": true,
+    "variant": "dark",
+    "lightBackground": false,
+    "path": "HD PNG (kitty, dark variant)",
+    "fallbackReasons": [],
+    "verification": "the renderer has no end-to-end image display acknowledgement; a terminal that falsely advertises graphics could still show a blank slot, so the sprite fallback stays the safest default when images are not needed"
+  }
+}

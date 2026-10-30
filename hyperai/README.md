@@ -84,7 +84,7 @@ deployment default exactly as upstream defines it.
 | Check | Result | Evidence |
 |---|---|---|
 | Build the branding patch from the pinned upstream package | **PASS** | `scripts/build-patch.mjs` self-applies the patch to a fresh extraction |
-| `hyperai-tui` artifacts (logo art, patch, profile, skills lock) | **PASS** | `node scripts/verify.mjs` → 11/11; `node --test tests/` → 17/17 |
+| `hyperai-tui` artifacts (logo art, patch, profile, skills lock) | **PASS** | `node scripts/verify.mjs` → 12/12; `node --test tests/` → 20/20 |
 | `hyperai` profile recognized and composed by dsh | **PASS** | `DSH_HOME=<home> dsh --profile hyperai --dump-config` |
 | Startup shows `HYPERAI` / `HARNESS` block title + HyperAI mark | **PASS** | PTY capture of the launchpad and chat splash |
 | Mark is generated from the canonical official SVG `/Users/zhenhaoli/Downloads/logo-icon-border-1.svg` | **PASS** | byte-identical copy in `brand/hyperai-logo.svg`; generator parses the SVG's own elements + embedded icon; no remote fetch; the old 60×60 PNG is retired |
@@ -93,6 +93,10 @@ deployment default exactly as upstream defines it.
 | High-definition logo via terminal image protocol | **PASS** | Ghostty 1.4.0 + Kitty Graphics: 512×512 transparent PNG painted through the upstream `Image` component (`ghostty-hd-logo.png`); protocol probe returns `G i=31;OK` |
 | Non-graphics terminals keep the ANSI logo | **PASS** | Terminal.app and PTY captures show the 40×40/26×26 sprite (`terminal-ansi-logo.png`); `DSH_TUI_DISABLE_TERMINAL_IMAGES=1` in Ghostty also falls back (`ghostty-ansi-fallback.png`) |
 | Window resize / image clearing in HD mode | **PASS** | Ghostty shrink→enlarge captures keep one placement, no ghost/残影 (`ghostty-small-window.png`, `ghostty-resized-back.png`); layout height unchanged |
+| User's real embedded terminal (Orca, xterm.js 6.0.0 light) | **PASS** | Real probes: no Kitty/Sixel, OSC 11 `#FFFFFF`; ANSI fallback was present but the official white plate had 1:1 contrast (logo looked gone). Light-theme rim fixes it — `orca-light-before.png` / `orca-light-after.png`; ring-pixel profile 0 → 3811+2450 (dark controls stay 0) |
+| Light-terminal variants only add the SVG-accent rim | **PASS** | Dark sprites/PNG byte-identical to the official render; light sprites repaint only the circle edge with the SVG's own `#E11D48`; dark terminals measured 0 rim pixels |
+| Image decode failure falls back to ANSI | **PASS** | Ghostty + corrupted embedded PNG payload: sharp decode fails → ANSI sprite (`ghostty-png-decode-fallback.png`), same rendering as images-disabled |
+| Terminal diagnostics command | **PASS** | `node scripts/diagnose-terminal.mjs --json` reports real probes (Kitty/Sixel/DA1/OSC 11/XTVERSION/cell size), protocol, theme variant, fallback reason; no secrets; covered by `tests/diagnose-terminal.test.mjs` |
 | SVG-derived logo clarity compared in the real terminal | **PASS** | `logo-clarity-svg.png`: 26/40/48 grids on the same background/box; 48×48 needs a 24-row slot and is not used in production |
 | Title gradient is pink → white, not the theme's mist blue | **PASS** | captured title cells use `#FF6096`/`#FFA6C4`/`#FFF4F8`, **0 blue-ish cells** (was `#7DA1DE`) |
 | Welcome screen no longer shows the DeepSeek whale/wordmark/tagline | **PASS** | `✦ hyperai-tui`, `HyperAI Harness` tagline, mark in the art slot |
@@ -115,7 +119,14 @@ Ghostty HD-mode evidence `ghostty-hd-logo.png`, `ghostty-chat-splash.png`,
 `ghostty-small-window.png`, `ghostty-resized-back.png`,
 `ghostty-ansi-fallback.png`, `terminal-ansi-logo.png`,
 `logo-hd-vs-ansi.png`, `logo-detail-2x.png`, `hyperai-logo-512.png`,
-`ghostty-protocol-probe.json`. The exact procedure and evidence are in
+`ghostty-protocol-probe.json`, plus the user-terminal and light-vs-dark evidence
+`orca-light-before.png`, `orca-light-after.png`, `orca-light-small.png`,
+`orca-light-resized-back.png`, `terminal-ansi-dark.png`, `terminal-ansi-light.png`,
+`ghostty-hd-logo-dark.png`, `ghostty-hd-logo-light.png`,
+`logo-light-fix-comparison.png`, `ghostty-png-decode-fallback.png`. The full
+terminal matrix and diagnostics are in
+[`docs/terminal-compatibility.md`](docs/terminal-compatibility.md) and the
+protocol research in [`docs/image-protocols.md`](docs/image-protocols.md). The exact procedure and evidence are in
 [`docs/verification.md`](docs/verification.md).
 
 **NOT TESTED:** live MinerU OCR API calls (no key); `playwright-browser` (no
@@ -155,7 +166,13 @@ Claude/Codex backends under the HyperAI profile.
   renderer's own detection (it also disables itself under tmux/screen, in
   non-fullscreen and non-TTY runs, and when
   `DSH_TUI_DISABLE_TERMINAL_IMAGES=1`) and the optional `sharp` decoder that
-  dsh-tui already ships — any failure keeps the ANSI sprite. `@deepseek-harness-tui/dsh-tui`
+  dsh-tui already ships — any failure keeps the ANSI sprite. Light terminal
+  themes use a variant that repaints only the circle's outer edge with the SVG's
+  own icon accent, because the official white plate on a pure-white background
+  (e.g. the xterm.js-based Orca, VS Code or iTerm2 light themes) has no contrast;
+  dark themes keep the official rendering. Real Sixel, iTerm2 inline images,
+  VS Code/Cursor and Windows/Linux terminals are **NOT TESTED** here (see the
+  matrix), and image placements have no end-to-end display acknowledgement. `@deepseek-harness-tui/dsh-tui`
   0.16.1 supports Kitty Graphics + Sixel only (no iTerm2 inline images), and its
   Ghostty screenshots are color-managed by the display profile, so captured RGB
   values can differ slightly from the PNG's exact bytes while looking identical.

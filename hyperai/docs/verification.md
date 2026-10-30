@@ -11,8 +11,8 @@ Everything below was run on this Mac on 2026-10-29. Environment:
 cd hyperai/hyperai-tui
 node scripts/generate-logo-art.mjs   # regenerates the committed art
 node scripts/build-patch.mjs         # rebuilds + self-applies the patch
-node scripts/verify.mjs              # 11/11 checks
-node --test tests/                   # 17/17 tests
+node scripts/verify.mjs              # 12/12 checks
+node --test tests/                   # 20/20 tests
 ```
 
 `verify.mjs` covers: brand data, the canonical SVG digest, both whale-format
@@ -138,6 +138,33 @@ harness:
   uses neither: the splash mark is pure ANSI true-color half blocks, exactly
   like the whale, so it renders identically in any ANSI true-color terminal.
 
+## Real embedded terminal: Orca (xterm.js 6.0.0, light theme)
+
+The user's actual embedded terminal is **Orca 1.4.244**. Real probes inside it
+(`scripts/diagnose-terminal.mjs`, saved output) return:
+
+| probe | reply |
+|---|---|
+| DA1 | `CSI ? 1 ; 2 c` → no Sixel |
+| Kitty Graphics query | no reply → no Kitty |
+| OSC 11 background | `rgb:ffff/ffff/ffff` → **light theme** |
+| XTVERSION | `xterm.js(6.0.0)` |
+| cell/window pixel queries | no reply → renderer default 8×16 |
+
+So the renderer correctly selects **no image protocol** and paints the ANSI
+sprite; the fallback was never hidden. The visible defect was contrast: the
+official white plate on a pure-white background. Before the fix the real Orca
+capture's icon-centred radial rose profile had **0** pixels at the circle edge;
+after the light-theme rim was added it has **3811 + 2450**, and the dark
+Terminal.app / Ghostty controls still have **0** (official art unchanged).
+
+- `screenshots/orca-light-before.png` / `orca-light-after.png` — real captures.
+- `screenshots/orca-light-small.png` — compact sprite in a small Orca window.
+- `screenshots/orca-light-resized-back.png` — resize back: identical radial
+  signature, no ghost placement.
+- `docs/terminal-compatibility.md` — full matrix, diagnostics and honest
+  NOT TESTED list (real Sixel terminal, iTerm2, VS Code/Cursor, Windows/Linux).
+
 ## Ghostty + Kitty Graphics Protocol (HD logo mode)
 
 Machine probe on 2026-10-29 (real terminal, not `$TERM` guessing):
@@ -183,9 +210,10 @@ HD vs ANSI measured on the same real captures (`logo-hd-vs-ansi.png`,
 smooth edges** versus the sprite's 5-color cell blocks; the HD capture contains
 **0 black pixels** in the logo area (transparency = terminal background).
 
-`node scripts/verify.mjs` (11/11) now also checks the embedded 512x512 PNG
-payload, its sha256, and that the patch wires the `Image` component with the
-Upstream renderer.
+`node scripts/verify.mjs` (**12/12**) now also checks the embedded 512x512 PNG
+payloads (official + light variant), their sha256, that the patch wires the
+`Image` component with the Upstream renderer, and that
+`scripts/diagnose-terminal.mjs` probes the real terminal without reading secrets.
 
 ## Title gradient color check
 

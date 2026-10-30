@@ -25,6 +25,7 @@
     "install-profile": "node scripts/install.mjs",
     "install-skills": "node scripts/install-skills.mjs",
     "test": "node --test tests/",
-    "verify": "node scripts/verify.mjs"
+    "verify": "node scripts/verify.mjs",
+    "diagnose-terminal": "node scripts/diagnose-terminal.mjs"
   }
 }

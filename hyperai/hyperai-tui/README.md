@@ -22,8 +22,8 @@ that patch through pnpm `patchedDependencies`.
 | `lib/types/branding.js` | splash words → `HYPERAI`/`HARNESS`, tagline, `/settings` brand label, `HYPERAI_PALETTE` (pink accent + dark/light title ladders) | brand data |
 | `lib/types/components/splashFonts.js` | the `deepseek` brand no longer short-circuits to the font table's built-in `DEEPSEEK`/`HARNESS` | the big title actually changes |
 | `lib/types/components/LogoV2.js` | art slot → `HyperAILogoArt`; mascot/portrait slots off; `✦ hyperai-tui` wordmark; title ladder pinned to the HyperAI pink palette (pink → near-white on dark, deep pink → light pink on light) | splash art + title gradient |
-| `lib/types/components/hyperaiLogo.js` (new) | splash-mark component; uses the upstream `Image` component + embedded 512×512 PNG when the renderer reports Kitty/Sixel support, otherwise the wide/compact whale sprite through `renderSpriteRows`; fixed-height art slot keeps the layout stable | renderer |
-| `lib/types/components/hyperaiLogoRows.js` (new, generated) | two letter-grid sprites (wide 40×40, compact 26×26) + palette + the embedded 512×512 transparent PNG used by the terminal image protocol path | asset |
+| `lib/types/components/hyperaiLogo.js` (new) | splash-mark component; uses the upstream `Image` component + embedded 512×512 PNG when the renderer reports Kitty/Sixel support, otherwise the wide/compact whale sprite through `renderSpriteRows`; theme-selected dark/light variants (light adds an SVG-accent rim so a white plate stays visible on white backgrounds); fixed-height art slot keeps the layout stable | renderer |
+| `lib/types/components/hyperaiLogoRows.js` (new, generated) | dark and light letter-grid sprites (wide 40×40, compact 26×26) + palettes + two embedded 512×512 transparent PNGs (official / light rim) used by the terminal image protocol path | asset |
 | `lib/types/components/splashArtRows.js` | art form pinned to the mark; dynamic art height (wide 20 rows / compact 13 rows) shared with the logo component | layout |
 | `lib/types/screens/Launchpad.js` | version plate `hyperai-tui v…`; layout budget uses the dynamic art height | landing page |
 | `lib/types/i18n.js` | tagline, kernel label, task notification, onboarding copy, star line | copy |
@@ -37,16 +37,33 @@ The splash mark is generated from the **canonical official SVG**
 `brand/hyperai-logo.svg`), never a redraw: `scripts/generate-logo-art.mjs` parses
 the SVG (white circle path, icon rect, pattern matrix, embedded 271×267 PNG),
 composites it analytically at 512×512 with 4×4 supersampling, and downsamples it
-to two letter-grid sprites in the upstream whale frame format — wide `40×40`
-(main, 20 display rows) and compact `26×26` (13 rows, small windows) — using the
-SVG's own white/rose colors plus intermediate blends, and also encodes a
-`512×512` transparent RGBA PNG in the module. The component shows the PNG through
+to dark/light variants of two letter-grid sprites in the upstream whale frame
+format — wide `40×40` (main, 20 display rows) and compact `26×26` (13 rows, small
+windows) — using the SVG's own white/rose colors plus intermediate blends, and
+also encodes two `512×512` transparent RGBA PNGs (official and light-background
+rim) in the module. The component shows the PNG through
 the upstream `Image` component when the renderer's own capability probe reports
 Kitty Graphics or Sixel, and falls back to the sprites via the whale's
 `renderSpriteRows` otherwise — true-color half blocks, terminal background for
-transparent pixels, no theme-specific recoloring. No remote URL is fetched.
-Provenance, source path and digest are recorded in `brand/brand.json` and
-`brand/PROVENANCE.md`.
+transparent pixels. Light terminal themes get a variant that adds a thin rim on
+the circle's existing edge using the SVG's own icon accent (the official white
+plate has no contrast on a pure-white background); dark themes keep the official
+render. No remote URL is fetched. Provenance, source path and digest are
+recorded in `brand/brand.json` and `brand/PROVENANCE.md`.
+
+## Terminal diagnostics
+
+```sh
+node scripts/diagnose-terminal.mjs          # human-readable
+node scripts/diagnose-terminal.mjs --json   # machine-readable
+```
+
+Reports terminal identity, real DA1/Kitty/XTVERSION/cell/OSC 11 replies,
+multiplexer state, selected protocol, dark/light variant, logo path and the
+fallback reason — without reading secrets. See
+[`../docs/terminal-compatibility.md`](../docs/terminal-compatibility.md) for the
+tested matrix and [`../docs/image-protocols.md`](../docs/image-protocols.md) for
+the protocol research.
 
 ## Build and verify
 

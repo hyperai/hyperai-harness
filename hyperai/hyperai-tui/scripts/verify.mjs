@@ -95,6 +95,25 @@ check('logo data uses the whale letter-grid format (wide + compact)', () => {
   const hdDigest = createHash('sha256').update(png).digest('hex')
   const recorded = /export const HYPERAI_LOGO_HD_SHA256 = "([0-9a-f]{64})"/u.exec(art)
   if (recorded === null || recorded[1] !== hdDigest) throw new Error('HD PNG sha256 mismatch')
+
+  // Light-background variants: official art + a rim on the circle edge in the
+  // SVG's own icon accent, so the white plate stays visible on white terminals.
+  const lightSprite = /export const HYPERAI_LOGO_SPRITE_WIDE_LIGHT = \[([^\]]+)\]/u.exec(art)?.[1] ?? ''
+  const lightCompact = /export const HYPERAI_LOGO_SPRITE_COMPACT_LIGHT = \[([^\]]+)\]/u.exec(art)?.[1] ?? ''
+  const lightRim = (lightSprite.match(/K/gu) ?? []).length
+  const lightCompactRim = (lightCompact.match(/K/gu) ?? []).length
+  if (lightRim === 0 || lightCompactRim === 0) throw new Error('light sprites are missing the contrast rim')
+  if (lightSprite.includes('R') === false) throw new Error('light sprite lost the icon')
+  const darkSprite = /export const HYPERAI_LOGO_SPRITE_WIDE = \[([^\]]+)\]/u.exec(art)?.[1] ?? ''
+  if (darkSprite.includes('K')) throw new Error('dark sprite must not carry the light-theme rim')
+  const lightPngMatch = /export const HYPERAI_LOGO_HD_PNG_BASE64_LIGHT = "([^"]+)"/u.exec(art)
+  if (lightPngMatch === null) throw new Error('light HD PNG missing')
+  const lightPng = Buffer.from(lightPngMatch[1], 'base64')
+  if (lightPng.subarray(0, 8).toString('hex') !== '89504e470d0a1a0a') throw new Error('light HD payload is not a PNG')
+  if (lightPng.readUInt32BE(16) !== 512 || lightPng.readUInt32BE(20) !== 512) throw new Error('light HD PNG is not 512x512')
+  const lightRecorded = /export const HYPERAI_LOGO_HD_SHA256_LIGHT = "([0-9a-f]{64})"/u.exec(art)
+  const lightDigest = createHash('sha256').update(lightPng).digest('hex')
+  if (lightRecorded === null || lightRecorded[1] !== lightDigest) throw new Error('light HD PNG sha256 mismatch')
   return `${summaries.join(' + ')} letter grids + 512x512 HD PNG, ${letters.size} palette colors (white + SVG rose)`
 })
 
@@ -123,6 +142,9 @@ check('branding patch targets only documented upstream files', () => {
   if (!patch.includes("from './Whale.js'")) throw new Error('hyperaiLogo does not reuse the whale renderer module')
   if (!patch.includes('renderSpriteRows')) throw new Error('hyperaiLogo does not call renderSpriteRows')
   if (!patch.includes('HYPERAI_LOGO_SPRITE_WIDE')) throw new Error('patched logo rows are missing the wide sprite data')
+  if (!patch.includes('HYPERAI_LOGO_SPRITE_WIDE_LIGHT')) throw new Error('patched logo rows are missing the light wide sprite')
+  if (!patch.includes('HYPERAI_LOGO_HD_PNG_BASE64_LIGHT')) throw new Error('patched logo rows are missing the light HD PNG')
+  if (!patch.includes('isLightThemeActive')) throw new Error('hyperaiLogo does not adapt to light terminals')
   if (!patch.includes('HYPERAI_LOGO_SPRITE_COMPACT')) throw new Error('patched logo rows are missing the compact sprite data')
   if (!patch.includes('HYPERAI_LOGO_WIDE_MIN_ROWS')) throw new Error('patched logo rows are missing the wide/compact row threshold')
   if (!patch.includes('hyperaiArtRows')) throw new Error('splash layout does not use the dynamic art height')
@@ -217,6 +239,15 @@ check('installer dry-run plans a managed profile', () => {
   } finally {
     rmSync(home, { recursive: true, force: true })
   }
+})
+
+check('terminal diagnostics probes the real terminal without reading secrets', () => {
+  const script = readFileSync(join(PKG, 'scripts', 'diagnose-terminal.mjs'), 'utf8')
+  for (const marker of ['probes.kitty', '/dev/tty', '\\x1b[c', '\\x1b[16t', '\\x1b]11;?', '--json', 'fallbackReasons']) {
+    if (!script.includes(marker)) throw new Error(`diagnose-terminal is missing ${JSON.stringify(marker)}`)
+  }
+  if (/API_KEY|TOKEN|SECRET|PASSWORD/iu.test(script)) throw new Error('diagnose-terminal must not read secrets')
+  return 'real Kitty/Sixel/DA1/OSC 11 probes, JSON mode, no secrets'
 })
 
 check('installer refuses to overwrite a foreign profile', () => {

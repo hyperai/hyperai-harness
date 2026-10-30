@@ -26,79 +26,114 @@
  */
 import React from 'react'
 import { jsx as _jsx } from 'react/jsx-runtime'
-import { Box, Image, Text, useTerminalImageCellSize, useTerminalImages, useTerminalSize } from '../ui.js'
+import { Box, Image, Text, useTerminalImageCellSize, useTerminalImages, useTerminalSize, useTheme } from '../ui.js'
+import { isLightThemeActive } from '../theme.js'
 import { DEFAULT_TERMINAL_CELL_SIZE } from '../ink/terminal-image.js'
 import { loadSharp } from '../dsh-adapter/sharp.js'
 import { renderSpriteRows } from './Whale.js'
 import {
   HYPERAI_LOGO_COLUMNS,
   HYPERAI_LOGO_HD_PNG_BASE64,
+  HYPERAI_LOGO_HD_PNG_BASE64_LIGHT,
   HYPERAI_LOGO_HD_SIZE,
   HYPERAI_LOGO_PALETTE,
+  HYPERAI_LOGO_PALETTE_LIGHT,
   HYPERAI_LOGO_SPRITE_COMPACT,
+  HYPERAI_LOGO_SPRITE_COMPACT_LIGHT,
   HYPERAI_LOGO_SPRITE_ROWS_COMPACT,
   HYPERAI_LOGO_SPRITE_ROWS_WIDE,
   HYPERAI_LOGO_SPRITE_WIDE,
+  HYPERAI_LOGO_SPRITE_WIDE_LIGHT,
   HYPERAI_LOGO_WIDE_MIN_ROWS,
 } from './hyperaiLogoRows.js'
 
-/** Pre-rendered ANSI rows for both variants, computed once at module load — same path as the whale frames. */
-const RENDERED_WIDE = renderSpriteRows(HYPERAI_LOGO_SPRITE_WIDE, HYPERAI_LOGO_PALETTE)
-const RENDERED_COMPACT = renderSpriteRows(HYPERAI_LOGO_SPRITE_COMPACT, HYPERAI_LOGO_PALETTE)
+/**
+ * Pre-rendered ANSI rows, one per variant, computed once at module load — the
+ * same whale renderer path as the upstream frames.
+ *
+ * `light` variants add a rim along the circle's existing edge using the SVG's
+ * own icon accent: the official white plate (#FFFFFF) has 1:1 contrast on a
+ * pure-white terminal background (Orca / VS Code / iTerm2 light themes), where
+ * the mark otherwise disappears. Dark terminals keep the exact official art.
+ */
+const RENDERED = {
+  dark: {
+    wide: renderSpriteRows(HYPERAI_LOGO_SPRITE_WIDE, HYPERAI_LOGO_PALETTE),
+    compact: renderSpriteRows(HYPERAI_LOGO_SPRITE_COMPACT, HYPERAI_LOGO_PALETTE),
+  },
+  light: {
+    wide: renderSpriteRows(HYPERAI_LOGO_SPRITE_WIDE_LIGHT, HYPERAI_LOGO_PALETTE_LIGHT),
+    compact: renderSpriteRows(HYPERAI_LOGO_SPRITE_COMPACT_LIGHT, HYPERAI_LOGO_PALETTE_LIGHT),
+  },
+}
 
-/** Decoded high-definition RGBA source, cached for the process lifetime. */
-let hdSourceCache
-/** Whether the HD decode has run (a failed decode is not retried every render). */
-let hdSourceResolved = false
+/** HD PNG payload per variant (dark = official render, light = official + rim). */
+const HD_PAYLOAD = {
+  dark: HYPERAI_LOGO_HD_PNG_BASE64,
+  light: HYPERAI_LOGO_HD_PNG_BASE64_LIGHT,
+}
+/** Decoded high-definition RGBA sources, cached per variant for the process lifetime. */
+const hdSourceCache = new Map()
+/** In-flight / failed decode markers per variant (a failure is not retried every render). */
+const hdDecode = new Map()
 
 /**
- * Decode the embedded 512x512 PNG through the same `sharp` loader upstream
+ * Decode one embedded 512x512 PNG through the same `sharp` loader upstream
  * portraits use (host copy first, this package's optional copy second).
+ * A failed decode is remembered so it never stalls a frame.
+ * @param {'dark'|'light'} variant - Which embedded payload to decode.
  * @returns The RGBA source, or `undefined` when decoding is unavailable.
  */
-async function decodeHdLogo() {
-  if (hdSourceResolved) return hdSourceCache
-  hdSourceResolved = true
-  try {
-    const sharp = await loadSharp()
-    if (sharp === undefined) return undefined
-    const decoded = await sharp(Buffer.from(HYPERAI_LOGO_HD_PNG_BASE64, 'base64'), { failOn: 'error' })
-      .toColourspace('srgb')
-      .ensureAlpha()
-      .raw()
-      .toBuffer({ resolveWithObject: true })
-    const { channels, width, height } = decoded.info
-    if (channels !== 4 || width !== HYPERAI_LOGO_HD_SIZE || height !== HYPERAI_LOGO_HD_SIZE) {
+async function decodeHdLogo(variant) {
+  if (hdSourceCache.has(variant)) return hdSourceCache.get(variant)
+  if (hdDecode.has(variant)) return hdDecode.get(variant)
+  const pending = (async () => {
+    try {
+      const sharp = await loadSharp()
+      if (sharp === undefined) return undefined
+      const decoded = await sharp(Buffer.from(HD_PAYLOAD[variant], 'base64'), { failOn: 'error' })
+        .toColourspace('srgb')
+        .ensureAlpha()
+        .raw()
+        .toBuffer({ resolveWithObject: true })
+      const { channels, width, height } = decoded.info
+      if (channels !== 4 || width !== HYPERAI_LOGO_HD_SIZE || height !== HYPERAI_LOGO_HD_SIZE) {
+        return undefined
+      }
+      const source = {
+        data: new Uint8Array(decoded.data.buffer, decoded.data.byteOffset, decoded.data.byteLength),
+        width,
+        height,
+      }
+      hdSourceCache.set(variant, source)
+      return source
+    } catch {
       return undefined
     }
-    hdSourceCache = {
-      data: new Uint8Array(decoded.data.buffer, decoded.data.byteOffset, decoded.data.byteLength),
-      width,
-      height,
-    }
-    return hdSourceCache
-  } catch {
-    return undefined
-  }
+  })()
+  hdDecode.set(variant, pending)
+  return pending
 }
 
 /**
  * Decode lazily, only after the renderer confirms terminal image capability.
  * @param enabled - `useTerminalImages()` result; decode is skipped when false.
+ * @param variant - Theme-selected payload (dark = official, light = rimmed).
  * @returns The RGBA source once decoded, else `undefined` (sprite fallback).
  */
-function useHdLogo(enabled) {
+function useHdLogo(enabled, variant) {
   const [source, setSource] = React.useState(undefined)
   React.useEffect(() => {
     if (!enabled) return
     let live = true
-    void decodeHdLogo().then(next => {
+    setSource(undefined)
+    void decodeHdLogo(variant).then(next => {
       if (live && next !== undefined) setSource(next)
     })
     return () => {
       live = false
     }
-  }, [enabled])
+  }, [enabled, variant])
   return enabled ? source : undefined
 }
 
@@ -112,9 +147,13 @@ export function HyperAILogoArt({ width }) {
   const { rows: terminalRows } = useTerminalSize()
   const wide = terminalRows >= HYPERAI_LOGO_WIDE_MIN_ROWS
   const artRows = (wide ? HYPERAI_LOGO_SPRITE_ROWS_WIDE : HYPERAI_LOGO_SPRITE_ROWS_COMPACT) / 2
-  const rendered = wide ? RENDERED_WIDE : RENDERED_COMPACT
+  // Light terminals (pure-white Orca/VS Code/iTerm2 backgrounds) need the
+  // contrast rim, otherwise the white plate vanishes into the background.
+  const [themeName] = useTheme()
+  const variant = isLightThemeActive(themeName) ? 'light' : 'dark'
+  const rendered = RENDERED[variant][wide ? 'wide' : 'compact']
   const imagesAvailable = useTerminalImages(true)
-  const source = useHdLogo(imagesAvailable)
+  const source = useHdLogo(imagesAvailable, variant)
   const cell = useTerminalImageCellSize() ?? DEFAULT_TERMINAL_CELL_SIZE
 
   const sprite = _jsx(Box, {

@@ -92,6 +92,71 @@ test('both sprites use the whale letter-grid shape and keep transparency', () =>
   }
 })
 
+test('light sprites only repaint the circle edge with the SVG accent rim', () => {
+  const art = buildLogoArt(SOURCE)
+  assert.deepEqual(art.lightPalette.K, art.accent, 'rim uses the SVG icon accent, no invented colour')
+  for (const [darkName, lightName] of [['wide', 'wideLight'], ['compact', 'compactLight']]) {
+    const dark = art[darkName].sprite
+    const light = art[lightName].sprite
+    assert.equal(light.length, dark.length)
+    let rimCells = 0
+    for (let y = 0; y < dark.length; y++) {
+      assert.equal(light[y].length, dark[y].length)
+      for (let x = 0; x < dark[y].length; x++) {
+        if (light[y][x] === 'K') {
+          rimCells++
+          assert.notEqual(dark[y][x], '.', 'the rim may only replace opaque plate cells')
+            // rim cells must touch transparency (the circle's outer edge)
+          const touches =
+            y === 0 || x === 0 || y === dark.length - 1 || x === dark[y].length - 1 ||
+            dark[y - 1][x] === '.' || dark[y + 1][x] === '.' ||
+            dark[y][x - 1] === '.' || dark[y][x + 1] === '.'
+          assert.ok(touches, `rim cell ${x},${y} is not on the circle edge`)
+        } else {
+          assert.equal(light[y][x], dark[y][x], 'only the rim may differ from the official sprite')
+        }
+      }
+    }
+    assert.ok(rimCells > 60, `${lightName} rim is too sparse (${rimCells} cells)`)
+    assert.equal(dark.join('').includes('K'), false, 'dark sprites must stay official')
+  }
+})
+
+test('light HD PNG adds the accent rim and keeps transparency/white plate', () => {
+  const art = buildLogoArt(SOURCE)
+  assert.match(art.lightHdSha256, /^[0-9a-f]{64}$/u)
+  const dark = decodePng(art.hdPng)
+  const light = decodePng(art.lightHdPng)
+  assert.equal(light.width, 512)
+  assert.equal(light.height, 512)
+  let transparent = 0
+  let white = 0
+  let rose = 0
+  let changed = 0
+  for (let i = 0; i < light.width * light.height; i++) {
+    const o = i * 4
+    const [r, g, b, a] = [light.data[o], light.data[o + 1], light.data[o + 2], light.data[o + 3]]
+    if (a < 8) transparent++
+    else if (min(r, g, b) > 240) white++
+    else if (r > 200 && g < 120 && b < 140) rose++
+    if (light.data[o] !== dark.data[o] || light.data[o + 1] !== dark.data[o + 1] || light.data[o + 2] !== dark.data[o + 2]) {
+      changed++
+    }
+  }
+  const total = light.width * light.height
+  assert.ok(transparent / total > 0.2, 'light HD PNG must keep the transparent background')
+  assert.ok(white / total > 0.2, 'light HD PNG must keep the official white plate')
+  assert.ok(rose > 0, 'light HD PNG must keep the rose icon')
+  assert.ok(changed > 500, 'light HD PNG must add a visible rim')
+  assert.ok(changed < total * 0.08, 'the light rim must stay a thin edge treatment')
+  // identical outside the circle rim: the icon centre is untouched
+  const centre = (256 * 512 + 256) * 4
+  assert.deepEqual(
+    [light.data[centre], light.data[centre + 1], light.data[centre + 2], light.data[centre + 3]],
+    [dark.data[centre], dark.data[centre + 1], dark.data[centre + 2], dark.data[centre + 3]],
+  )
+})
+
 test('the committed generated module matches a fresh render', () => {
   const art = buildLogoArt(SOURCE)
   const committed = readFileSync(join(PKG, 'brand', 'generated', 'hyperai-logo.js'), 'utf8')
@@ -107,6 +172,10 @@ test('generated module exports both sprites and the width threshold', () => {
   assert.match(module, /export const HYPERAI_LOGO_SPRITE_WIDE = \[/u)
   assert.match(module, /export const HYPERAI_LOGO_SPRITE_COMPACT = \[/u)
   assert.match(module, /export const HYPERAI_LOGO_PALETTE = \{/u)
+  assert.match(module, /export const HYPERAI_LOGO_PALETTE_LIGHT = \{/u)
+  assert.match(module, /export const HYPERAI_LOGO_SPRITE_WIDE_LIGHT = \[/u)
+  assert.match(module, /export const HYPERAI_LOGO_SPRITE_COMPACT_LIGHT = \[/u)
+  assert.match(module, /export const HYPERAI_LOGO_HD_PNG_BASE64_LIGHT = "/u)
 })
 
 test('embedded HD PNG is a 512x512 RGBA render of the SVG', () => {

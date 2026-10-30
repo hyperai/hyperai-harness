@@ -49,6 +49,12 @@ through the upstream whale's `renderSpriteRows` (true-color half blocks, termina
 background through transparent cells). No separate PNG file is committed — the
 canonical SVG remains the only source.
 
+Light-background variants are derived from the same data at build time: only the
+circle's existing outer edge is repainted with the SVG's own icon accent (a thin
+rim), because the official white plate is invisible on a pure-white terminal
+background. Dark backgrounds keep the official rendering; no colour outside the
+SVG's white→rose blend line is introduced.
+
 ## Replacement
 
 When the official logo is updated, replace this file (keep the filename

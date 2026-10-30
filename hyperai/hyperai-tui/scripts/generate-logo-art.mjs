@@ -64,6 +64,19 @@ const SUPERSAMPLE = 4
 const ALPHA_MIN = 128
 /** High-definition raster size embedded for the terminal image protocol path. */
 export const HD_SIZE = 512
+/**
+ * Light-theme contrast rim.
+ *
+ * The official mark is a white circle on transparency; on a pure-white terminal
+ * background (Orca light, VS Code light, iTerm2 light, ...) that plate has 1:1
+ * contrast and disappears. Light-background variants therefore draw a thin
+ * rim along the circle's existing edge using the SVG's own icon accent (no new
+ * colours are invented, the SVG itself stays untouched). Dark-background
+ * terminals keep the exact official rendering.
+ */
+export const LIGHT_RIM_LETTER = 'K'
+/** Rim thickness in SVG viewBox units; only the outer circle edge is repainted. */
+export const LIGHT_RIM_WIDTH = 1.2
 
 const CRC_TABLE = (() => {
   const table = new Uint32Array(256)
@@ -482,13 +495,87 @@ function quantize(pixel, palette) {
   return best
 }
 
+/** Light palette: the official blend line plus the rim letter (icon accent). */
+export function buildLightPalette(palette, accent) {
+  return { ...palette, [LIGHT_RIM_LETTER]: accent }
+}
+
+/**
+ * Repaint every opaque cell that touches transparency with the rim letter.
+ * The only transparent region is outside the circle, so this outlines exactly
+ * the plate's edge and never touches the icon (it sits on opaque plate cells).
+ * @param {string[]} sprite - letter-grid rows.
+ * @returns {string[]} A new sprite with the light-theme rim.
+ */
+export function withContrastRim(sprite) {
+  const rows = sprite.map(row => [...row])
+  const height = rows.length
+  const width = rows[0]?.length ?? 0
+  const out = rows.map(row => row.slice())
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      if (rows[y][x] === '.') continue
+      let edge = false
+      for (const [dy, dx] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+        const ny = y + dy
+        const nx = x + dx
+        if (ny < 0 || nx < 0 || ny >= height || nx >= width || rows[ny][nx] === '.') {
+          edge = true
+          break
+        }
+      }
+      if (edge) out[y][x] = LIGHT_RIM_LETTER
+    }
+  }
+  return out.map(row => row.join(''))
+}
+
+/**
+ * Add the same contrast rim to the high-definition RGBA raster: blend the
+ * outermost band of the circle toward the icon accent while preserving the
+ * source alpha (so the rim keeps the mark's anti-aliased outer edge).
+ * @param {{width:number,height:number,data:Uint8Array}} raster - RGBA render.
+ * @param {ReturnType<typeof parseLogoSvg>} parsed - SVG composition.
+ * @param {number[]} accent - icon RGB.
+ * @param {number} [width] - rim thickness in viewBox units.
+ * @returns {{width:number,height:number,data:Uint8Array}} A new RGBA raster.
+ */
+export function addContrastRim(raster, parsed, accent, width = LIGHT_RIM_WIDTH) {
+  const { width: pixelsWide, height: pixelsHigh, data } = raster
+  const view = parsed.viewBox
+  const { cx, cy, r } = parsed.circle
+  const scaleX = view.width / pixelsWide
+  const scaleY = view.height / pixelsHigh
+  const out = new Uint8Array(data)
+  for (let y = 0; y < pixelsHigh; y++) {
+    for (let x = 0; x < pixelsWide; x++) {
+      const o = (y * pixelsWide + x) * 4
+      if (data[o + 3] === 0) continue
+      const vx = (x + 0.5) * scaleX
+      const vy = (y + 0.5) * scaleY
+      const distance = Math.hypot(vx - cx, vy - cy)
+      if (distance > r || distance < r - width) continue
+      const weight = Math.min(1, (r - distance) / width)
+      for (let c = 0; c < 3; c++) {
+        out[o + c] = Math.round(data[o + c] * (1 - weight) + accent[c] * weight)
+      }
+    }
+  }
+  return { width: pixelsWide, height: pixelsHigh, data: out }
+}
+
 /**
  * Render the SVG to a square sprite of `size` x `size` palette letters padded
  * into the 40-column whale art slot.
+ * @param {ReturnType<typeof parseLogoSvg>} parsed - SVG composition.
+ * @param {Record<string, number[]>} palette - letter -> RGB.
+ * @param {number} size - sprite grid edge (`GRID_WIDE` / `GRID_COMPACT`).
+ * @param {{light?:boolean,raster?:{width:number,height:number,data:Uint8Array}}} [options]
+ *   `light` adds the light-theme contrast rim; `raster` reuses one SVG render.
  * @returns {{grid:number,sprite:string[]}} Sprite size and letter rows.
  */
-export function buildSprite(parsed, palette, size) {
-  const raster = renderLogoSvg(parsed)
+export function buildSprite(parsed, palette, size, options = {}) {
+  const { light = false, raster = renderLogoSvg(parsed) } = options
   const box = alphaBox(raster)
   const grid = downsampleSquare(raster, box, size)
   const xOffset = Math.floor((ART_COLUMNS - size) / 2)
@@ -498,7 +585,7 @@ export function buildSprite(parsed, palette, size) {
     for (let x = 0; x < size; x++) row[xOffset + x] = quantize(grid[y][x], palette)
     rows.push(row.join(''))
   }
-  return { grid: size, sprite: rows }
+  return { grid: size, sprite: light ? withContrastRim(rows) : rows }
 }
 
 const monoSymbols = { '.': ' ', W: '#', a: '+', b: '-', c: '=', R: '*' }
@@ -516,16 +603,31 @@ export function buildLogoArt(sourcePath = SOURCE) {
   const white = [255, 255, 255]
   const accent = iconColor(parsed.icon)
   const palette = buildPalette(white, accent)
-  const wide = buildSprite(parsed, palette, GRID_WIDE)
-  const compact = buildSprite(parsed, palette, GRID_COMPACT)
-  const hdPng = encodePng(renderLogoSvg(parsed, HD_SIZE))
+  const raster = renderLogoSvg(parsed, HD_SIZE)
+  const lightPalette = buildLightPalette(palette, accent)
+  const wide = buildSprite(parsed, palette, GRID_WIDE, { raster })
+  const compact = buildSprite(parsed, palette, GRID_COMPACT, { raster })
+  const wideLight = buildSprite(parsed, palette, GRID_WIDE, { raster, light: true })
+  const compactLight = buildSprite(parsed, palette, GRID_COMPACT, { raster, light: true })
+  const hdPng = encodePng(raster)
   const hdSha256 = createHash('sha256').update(hdPng).digest('hex')
-  return { parsed, palette, white, accent, wide, compact, hdPng, hdSha256 }
+  const lightRaster = addContrastRim(raster, parsed, accent)
+  const lightHdPng = encodePng(lightRaster)
+  const lightHdSha256 = createHash('sha256').update(lightHdPng).digest('hex')
+  return {
+    parsed, palette, lightPalette, white, accent,
+    wide, compact, wideLight, compactLight,
+    hdPng, hdSha256, lightHdPng, lightHdSha256,
+  }
 }
 
 /** Render the committed JS module. */
 export function renderModule(art) {
-  const { parsed, palette, white, accent, wide, compact, hdPng, hdSha256 } = art
+  const {
+    parsed, palette, lightPalette, white, accent,
+    wide, compact, wideLight, compactLight,
+    hdPng, hdSha256, lightHdPng, lightHdSha256,
+  } = art
   const mono = monoRows(wide.sprite).join('\n')
   return `/**
  * GENERATED FILE — do not edit by hand.
@@ -550,6 +652,11 @@ export function renderModule(art) {
  * for the terminal image protocol path (Kitty Graphics / Sixel): terminals that
  * report graphics support show that PNG directly through the renderer's Image
  * component; everything else keeps the letter-grid fallback above.
+ *
+ * Light-theme variants: on light terminal backgrounds the official white plate
+ * has no contrast (white on white), so the light sprites/PNG add a thin rim
+ * along the circle's existing edge using the SVG's own icon accent. No colour
+ * is invented and the dark variants stay byte-identical to the official render.
  *
  * Regenerate with:
  *
@@ -585,6 +692,20 @@ export const HYPERAI_LOGO_HD_SHA256 = ${JSON.stringify(hdSha256)}
 
 /** Base64 of the ${HD_SIZE}x${HD_SIZE} RGBA PNG generated from the canonical SVG. */
 export const HYPERAI_LOGO_HD_PNG_BASE64 = ${JSON.stringify(hdPng.toString('base64'))}
+
+/** Light-theme palette: the official blend line + \`K\` rim in the icon accent. */
+export const HYPERAI_LOGO_PALETTE_LIGHT = ${JSON.stringify(lightPalette)}
+
+/** Light-background sprites (official art + contrast rim on the circle edge). */
+export const HYPERAI_LOGO_SPRITE_WIDE_LIGHT = ${JSON.stringify(wideLight.sprite, null, 0)}
+
+export const HYPERAI_LOGO_SPRITE_COMPACT_LIGHT = ${JSON.stringify(compactLight.sprite, null, 0)}
+
+/** sha256 of the embedded light-background HD PNG. */
+export const HYPERAI_LOGO_HD_SHA256_LIGHT = ${JSON.stringify(lightHdSha256)}
+
+/** Base64 of the light-background ${HD_SIZE}x${HD_SIZE} RGBA PNG (official art + rim). */
+export const HYPERAI_LOGO_HD_PNG_BASE64_LIGHT = ${JSON.stringify(lightHdPng.toString('base64'))}
 
 /** Colorless preview of the wide sprite (docs / no-color logs). */
 export const HYPERAI_LOGO_MONO = ${JSON.stringify(mono)}
