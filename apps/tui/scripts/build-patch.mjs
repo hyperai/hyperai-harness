@@ -444,7 +444,61 @@ export const DATA_DIR = join(homeDir(), dataDirName());`,
       find: "    'logo-star-ask': { zh: '喜欢 dshTUI 的话，顺手点亮一颗 {{star}}？（点这一行或 {{key}} 一键支持）', en: 'If you like dsh-TUI, would you light a {{star}}? (click this line or {{key}})' },",
       replace: `    'logo-star-ask': { zh: ${q(`喜欢 ${plugin} 的话，顺手点亮一颗 {{star}}？（点这一行或 {{key}} 一键支持`)}, en: ${q(`If you like ${plugin}, would you light a {{star}}? (click this line or {{key}})`) } },`,
     },
+    {
+      file: 'lib/types/commands.js',
+      why: 'HyperAI Skills update command',
+      find: "    { name: 'skills', description: 'List available skills' },",
+      replace: `    { name: 'skills', description: 'List available skills' },
+    { name: 'skills-update', description: 'Check for HyperAI Skills updates and install them' },`,
+    },
+    {
+      file: 'lib/types/screens/Chat.js',
+      why: 'import the HyperAI skills updater UI bridge',
+      find: "import { WORKING_GATE_NOTICES } from '../commands.js';",
+      replace: `import { WORKING_GATE_NOTICES } from '../commands.js';
+import { useSkillsUpdate } from '../hyperaiSkills.js';`,
+    },
+    {
+      file: 'lib/types/screens/Chat.js',
+      why: 'mount the HyperAI skills updater hook',
+      find: "    const dialogSnapshot = React.useSyncExternalStore(listener => dialogs.subscribe(listener), () => dialogs.getSnapshot());",
+      replace: `    const dialogSnapshot = React.useSyncExternalStore(listener => dialogs.subscribe(listener), () => dialogs.getSnapshot());
+    // hyperai-tui: asynchronous HyperAI Skills update hint + explicit install flow.
+    const skillsUpdate = useSkillsUpdate({ channel, dialogs });`,
+    },
+    {
+      file: 'lib/types/screens/Chat.js',
+      why: 'render the non-blocking HyperAI Skills update hint',
+      find: "statusEntries.length > 0 && (_jsx(Text, { dimColor: true, wrap: \"truncate\", children: statusEntries.map(entry => entry.text).join(' · ') })),",
+      replace: `statusEntries.length > 0 && (_jsx(Text, { dimColor: true, wrap: \"truncate\", children: statusEntries.map(entry => entry.text).join(' · ') })),
+                                    skillsUpdate.notice !== null && (_jsx(Box, { onClick: () => { void skillsUpdate.open(); }, children: _jsx(Text, { color: \"warning\", wrap: \"truncate\", children: skillsUpdate.notice }) })),`,
+    },
+    {
+      file: 'lib/types/screens/Chat.js',
+      why: 'dispatch /skills-update',
+      find: "            case 'skills': {",
+      replace: `            case 'skills-update': {
+                setHelpOpen(false);
+                setLaunchpadOpen(false);
+                void skillsUpdate.open();
+                return true;
+            }
+            case 'skills': {`,
+    },
   ]
+}
+
+/** New HyperAI TUI files added to the patched package. */
+const EXTRA_FILES = [
+  ['hyperaiSkillsCore.js', 'lib/types/hyperaiSkillsCore.js'],
+  ['hyperaiSkills.js', 'lib/types/hyperaiSkills.js'],
+]
+
+/** Copy the HyperAI-owned UI modules into the patched package source. */
+function addExtraFiles(dir) {
+  for (const [source, target] of EXTRA_FILES) {
+    writeFileSync(join(dir, target), readFileSync(join(PKG, 'src', source), 'utf8'))
+  }
 }
 
 /** Files the patch is expected to touch, used as a build self-check. */
@@ -459,6 +513,10 @@ const EXPECTED_FILES = [
   'lib/types/screens/Launchpad.js',
   'lib/types/update.js',
   'lib/types/components/splashEggs.js',
+  'lib/types/commands.js',
+  'lib/types/screens/Chat.js',
+  'lib/types/hyperaiSkills.js',
+  'lib/types/hyperaiSkillsCore.js',
 ]
 
 /** Build the patch text from the pinned upstream package. */
@@ -467,6 +525,7 @@ export function buildPatch({ from, version = BRAND.upstream.version } = {}) {
   try {
     const git = initRepo(dir)
     for (const edit of edits()) replaceOne(dir, edit)
+    addExtraFiles(dir)
     git('add', '-A')
     const patch = git('diff', '--cached', '--binary', '--no-color')
     const changed = [...patch.matchAll(/^diff --git a\/(\S+) b\//gmu)].map(match => match[1])

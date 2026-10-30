@@ -11,13 +11,14 @@
  *
  * Exit code 0 = every check passed.
  */
-import { existsSync, readFileSync, readdirSync } from 'node:fs'
+import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const HERE = dirname(fileURLToPath(import.meta.url))
 const PKG = resolve(HERE, '..')
 const checks = []
+const requireStat = file => statSync(file)
 
 function check(name, fn) {
   try {
@@ -101,6 +102,10 @@ check('patch touches only the documented upstream files', () => {
     'lib/types/screens/Launchpad.js',
     'lib/types/update.js',
     'lib/types/components/splashEggs.js',
+    'lib/types/commands.js',
+    'lib/types/screens/Chat.js',
+    'lib/types/hyperaiSkills.js',
+    'lib/types/hyperaiSkillsCore.js',
   ]
   const unexpected = changed.filter(file => !expected.includes(file))
   const missing = expected.filter(file => !changed.includes(file))
@@ -151,6 +156,40 @@ check('the TUI tree carries no logo toolchain or generated art', () => {
   walk(join(PKG, 'src'))
   walk(join(PKG, 'patches'))
   return 'src/ holds brand data only; no svg/png/generated payloads'
+})
+
+check('the patch carries the HyperAI Skills update bridge without a second scanner', () => {
+  const chat = readFileSync(join(PKG, 'src', 'hyperaiSkills.js'), 'utf8')
+  const core = readFileSync(join(PKG, 'src', 'hyperaiSkillsCore.js'), 'utf8')
+  for (const marker of ['skills-update.mjs', 'check', '--manual', '--auto', '--ref', 'dialogs.ask', 'fingerprint', 'update', '--yes']) {
+    if (!chat.includes(marker)) throw new Error(`hyperaiSkills.js is missing ${JSON.stringify(marker)}`)
+  }
+  for (const marker of ['fingerprint', 'noticeText', 'choices', 'detailOptions', 'resultText']) {
+    if (!core.includes(marker)) throw new Error(`hyperaiSkillsCore.js is missing ${marker}`)
+  }
+  for (const marker of ["name: 'skills-update'", 'useSkillsUpdate', 'skillsUpdate.notice']) {
+    if (!patch.includes(marker)) throw new Error(`patch is missing ${JSON.stringify(marker)}`)
+  }
+  // The TUI must not implement a second remote scanner.
+  for (const banned of ['ls-remote', 'discoverSkills', 'SKILL.md', 'manifest.json']) {
+    if (chat.includes(banned) || core.includes(banned)) throw new Error(`TUI bridge duplicates profile logic: ${banned}`)
+  }
+  return 'CLI bridge only; scanning/install stays in apps/profiles/hyperai'
+})
+
+check('the skills update screenshots exist', () => {
+  for (const file of [
+    'skills-update-prompt-dark.png',
+    'skills-update-prompt-light.png',
+    'skills-update-prompt-small.png',
+    'skills-update-dialog-light.png',
+  ]) {
+    const path = join(PKG, 'docs', 'screenshots', file)
+    if (!existsSync(path)) throw new Error(`missing screenshot ${file}`)
+    const { size } = requireStat(path)
+    if (size < 10_000) throw new Error(`screenshot ${file} looks empty (${size} bytes)`)
+  }
+  return 'dark/light/small prompt + dialog captures present'
 })
 
 check('documentation describes the no-logo brand and the build chain', () => {

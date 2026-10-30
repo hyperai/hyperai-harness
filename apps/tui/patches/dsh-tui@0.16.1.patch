@@ -52,6 +52,18 @@ index e20c590..bfb6f7b 100644
      { value: 'claude', label: 'Claude Code (orange)', descriptions: { zh: 'Claude Code（橙）' } },
      { value: 'codex', label: 'Codex (lavender)', descriptions: { zh: 'Codex（薰衣草紫）' } },
  ];
+diff --git a/lib/types/commands.js b/lib/types/commands.js
+index 0806732..f7270e2 100644
+--- a/lib/types/commands.js
++++ b/lib/types/commands.js
+@@ -84,6 +84,7 @@ export const LOCAL_COMMANDS = [
+     { name: 'hooks', description: 'Show hooks status' },
+     { name: 'mcp', description: 'Show MCP status' },
+     { name: 'skills', description: 'List available skills' },
++    { name: 'skills-update', description: 'Check for HyperAI Skills updates and install them' },
+     { name: 'plugin', description: 'Show plugin diagnostics, and the plugins this profile added' },
+     { name: 'update', description: 'Update dsh-tui and restart' },
+     // Skills are discovered through the DSH registry and added at runtime.
 diff --git a/lib/types/components/LogoV2.js b/lib/types/components/LogoV2.js
 index ed2f7f3..8f565de 100644
 --- a/lib/types/components/LogoV2.js
@@ -220,6 +232,415 @@ index 71e32df..91f7aa6 100644
      // 品牌镜像初值（branding.ts）：首帧渲染前铺好，避免 Claude 后端先画一屏
      // 蓝再变橙。Chat 里的 effect 会在品牌解析变化时跟进更新这个镜像。
      setActiveBrand(resolveBrand(config.brand, backendChoice));
+diff --git a/lib/types/hyperaiSkills.js b/lib/types/hyperaiSkills.js
+new file mode 100644
+index 0000000..9864ac1
+--- /dev/null
++++ b/lib/types/hyperaiSkills.js
+@@ -0,0 +1,265 @@
++/**
++ * HyperAI skills updater bridge for the TUI.
++ *
++ * The TUI owns presentation and user choice; the profile's
++ * `scripts/skills-update.mjs` owns remote scanning, SHA pinning, download,
++ * install, backups and rollback. This module only:
++ *
++ * - runs the profile CLI asynchronously (never in the first-frame path),
++ * - shows a non-blocking inline notice + the existing notification toast,
++ * - opens the existing managed dialog for install / details / later,
++ * - calls `update --yes` only after the person confirmed in that dialog, and
++ * - pins the install to the exact SHA shown by check.
++ *
++ * It is copied into the patched dsh-tui package by
++ * `apps/tui/scripts/build-patch.mjs`; no upstream dependency is added.
++ */
++import React from 'react'
++import { spawn } from 'node:child_process'
++import { existsSync } from 'node:fs'
++import { homedir } from 'node:os'
++import { join } from 'node:path'
++import { getLang } from './i18n.js'
++import { resolveDshProfileName } from './update.js'
++import {
++  choices, confirmMessage, currentText, detailOptions, dialogTitle, errorText, fingerprint,
++  itemLine, laterText, normalizeCheck, noticeText, resultText,
++} from './hyperaiSkillsCore.js'
++
++const AUTO_DELAY_MS = 1500
++const CHECK_TIMEOUT_MS = 45_000
++const INSTALL_TIMEOUT_MS = 180_000
++
++/** Current UI language (`zh` / `en`). Resolved at call time, so `/lang` works. */
++function lang() {
++  return getLang() === 'zh' ? 'zh' : 'en'
++}
++
++/** Locate the installed updater for this profile; undefined when unavailable. */
++export function resolveUpdaterContext(env = process.env, argv = process.argv) {
++  let profile = resolveDshProfileName(argv)
++  profile ??= env.DSH_TUI_PROFILE
++  profile ??= 'hyperai'
++  const dshHome = env.DSH_HOME || join(homedir(), '.dsh')
++  const script = join(dshHome, 'profiles', profile, 'scripts', 'skills-update.mjs')
++  return {
++    profile,
++    dshHome,
++    script,
++    available: profile === 'hyperai' && existsSync(script),
++    // Test-only injection: never persisted and never used by default launches.
++    testRef: env.HYPERAI_SKILLS_TUI_REF || undefined,
++    testSource: env.HYPERAI_SKILLS_TUI_SOURCE || undefined,
++    disabled: env.HYPERAI_SKILLS_TUI_DISABLE === '1' || env.HYPERAI_SKILLS_TUI_AUTO === '0',
++  }
++}
++
++/** Run the profile CLI and collect a bounded stdout/stderr. */
++function runUpdater(context, args, timeoutMs) {
++  return new Promise(resolve => {
++    let stdout = ''
++    let stderr = ''
++    let timedOut = false
++    const child = spawn(process.execPath, [context.script, ...args], {
++      env: { ...process.env },
++      stdio: ['ignore', 'pipe', 'pipe'],
++    })
++    const timer = setTimeout(() => {
++      timedOut = true
++      child.kill('SIGTERM')
++    }, timeoutMs)
++    child.stdout?.setEncoding('utf8')
++    child.stderr?.setEncoding('utf8')
++    child.stdout?.on('data', chunk => {
++      if (stdout.length < 2_000_000) stdout += chunk
++    })
++    child.stderr?.on('data', chunk => {
++      if (stderr.length < 200_000) stderr += chunk
++    })
++    child.on('error', error => {
++      clearTimeout(timer)
++      resolve({ code: -1, stdout, stderr: `${stderr}\n${error instanceof Error ? error.message : String(error)}`, timedOut })
++    })
++    child.on('close', code => {
++      clearTimeout(timer)
++      resolve({ code: code ?? -1, stdout, stderr, timedOut })
++    })
++  })
++}
++
++/** Parse the CLI's single JSON document, tolerating a leading warning line. */
++function parseJson(text) {
++  const trimmed = text.trim()
++  if (trimmed === '') throw new Error('empty response')
++  try {
++    return JSON.parse(trimmed)
++  } catch {
++    const start = trimmed.lastIndexOf('\n{')
++    if (start >= 0) return JSON.parse(trimmed.slice(start + 1))
++    throw new Error('response was not JSON')
++  }
++}
++
++/** Run check through the profile CLI. `resolvedRef` pins a re-check. */
++async function check(context, { manual, resolvedRef } = {}) {
++  const args = ['check', '--json', manual ? '--manual' : '--auto', '--dsh-home', context.dshHome, '--profile', context.profile, '--timeout', '30000']
++  if (resolvedRef !== undefined) args.push('--ref', resolvedRef)
++  else if (context.testRef !== undefined) args.push('--ref', context.testRef)
++  if (context.testSource !== undefined) args.push('--source', context.testSource)
++  const result = await runUpdater(context, args, CHECK_TIMEOUT_MS)
++  if (result.timedOut) throw new Error('check timed out')
++  if (result.code !== 0 && result.code !== 2) throw new Error(result.stderr.trim() || `check exited ${result.code}`)
++  return normalizeCheck(parseJson(result.stdout))
++}
++
++/** Remember a dismissed batch in the profile state (not the TUI state dir). */
++async function dismiss(context, checked) {
++  if (checked.resolvedRef === '') return
++  const args = ['dismiss', '--json', '--ref', checked.resolvedRef, '--dsh-home', context.dshHome, '--profile', context.profile]
++  for (const item of checked.updates) args.push('--skill', item.name)
++  const result = await runUpdater(context, args, 15_000)
++  if (result.code !== 0) throw new Error(result.stderr.trim() || `dismiss exited ${result.code}`)
++}
++
++/** Install exactly the checked SHA; never resolves a branch again. */
++async function install(context, checked) {
++  if (!/^[0-9a-f]{40}$/u.test(checked.resolvedRef)) throw new Error('the update check did not return a pinned commit SHA')
++  const args = ['update', '--json', '--yes', '--ref', checked.resolvedRef, '--dsh-home', context.dshHome, '--profile', context.profile, '--timeout', '30000']
++  if (context.testSource !== undefined) args.push('--source', context.testSource)
++  const result = await runUpdater(context, args, INSTALL_TIMEOUT_MS)
++  if (result.timedOut) throw new Error('install timed out')
++  if (result.code !== 0) throw new Error(result.stderr.trim() || `update exited ${result.code}`)
++  return parseJson(result.stdout)
++}
++
++/**
++ * React hook used by the chat screen.
++ * @param {{channel: object, dialogs: {ask: Function}}} input
++ */
++export function useSkillsUpdate({ channel, dialogs }) {
++  const contextRef = React.useRef(undefined)
++  if (contextRef.current === undefined) contextRef.current = resolveUpdaterContext()
++  const context = contextRef.current
++  const [notice, setNotice] = React.useState(null)
++  const notifiedRef = React.useRef(null)
++  const busyRef = React.useRef(false)
++  const aliveRef = React.useRef(true)
++  React.useEffect(() => () => { aliveRef.current = false }, [])
++
++  const notify = React.useCallback((text, options) => {
++    try {
++      channel.notify(text, options)
++    } catch { /* the notification surface is best-effort */ }
++  }, [channel])
++
++  const present = React.useCallback(async checked => {
++    let current = checked
++    while (aliveRef.current) {
++      const choice = await dialogs.ask({
++        kind: 'select',
++        title: dialogTitle(current, lang()),
++        options: choices(current, lang()),
++      }, undefined, 120_000)
++      if (choice === undefined || choice === 'later') {
++        if (choice === 'later') {
++          try { await dismiss(context, current) } catch { /* session hint still suppresses */ }
++          notifiedRef.current = fingerprint(current)
++          setNotice(null)
++          notify(laterText(lang()), { timeoutMs: 4000 })
++        }
++        return
++      }
++      if (choice === 'details') {
++        let detail = 'details'
++        while (detail === 'details' && aliveRef.current) {
++          const picked = await dialogs.ask({
++            kind: 'select',
++            title: lang() === 'zh' ? 'HyperAI Skills 更新详情' : 'HyperAI Skills update details',
++            options: detailOptions(current, lang()),
++          }, undefined, 120_000)
++          if (picked === 'back') detail = 'back'
++          else if (picked === undefined) return
++        }
++        continue
++      }
++      if (choice === 'install') {
++        const confirmed = await dialogs.ask({
++          kind: 'confirm',
++          title: lang() === 'zh' ? '确认安装 HyperAI Skills？' : 'Install HyperAI Skills?',
++          message: confirmMessage(current, lang()),
++          confirmLabel: lang() === 'zh' ? '安装' : 'Install',
++          cancelLabel: lang() === 'zh' ? '取消' : 'Cancel',
++        }, undefined, 120_000)
++        if (confirmed !== true) continue
++        // Re-check the exact pinned SHA: a changed plan must be shown and
++        // confirmed again, never installed silently.
++        notify(lang() === 'zh' ? '正在安装 HyperAI Skills…' : 'Installing HyperAI Skills…', { timeoutMs: 4000 })
++        try {
++          const fresh = await check(context, { manual: true, resolvedRef: current.resolvedRef })
++          if (!fresh.changes) {
++            setNotice(null)
++            notify(currentText(lang()), { color: 'success' })
++            return
++          }
++          if (fingerprint(fresh) !== fingerprint(current)) {
++            setNotice(noticeText(fresh, lang()))
++            notify(lang() === 'zh' ? '更新计划已变化，请重新确认' : 'The update plan changed; please confirm again', { color: 'warning', timeoutMs: 6000 })
++            current = fresh
++            continue
++          }
++          const result = await install(context, current)
++          setNotice(null)
++          notifiedRef.current = null
++          const failed = Array.isArray(result.failed) && result.failed.length > 0
++          notify(resultText(result, lang()), { color: failed ? 'error' : 'success', timeoutMs: failed ? 10_000 : 5000 })
++          return
++        } catch (error) {
++          notify(errorText(error, lang()), { color: 'error', timeoutMs: 10_000 })
++          return
++        }
++      }
++    }
++  }, [context, dialogs, notify])
++
++  const open = React.useCallback(async () => {
++    if (!context.available) {
++      notify(lang() === 'zh' ? '此 Profile 未安装 HyperAI Skills 更新器' : 'This profile has no HyperAI Skills updater installed', { color: 'warning' })
++      return
++    }
++    if (busyRef.current) return
++    busyRef.current = true
++    try {
++      notify(lang() === 'zh' ? '正在检查 HyperAI Skills…' : 'Checking HyperAI Skills…', { timeoutMs: 2500 })
++      const checked = await check(context, { manual: true })
++      if (!checked.changes) {
++        setNotice(null)
++        notify(currentText(lang()), { color: 'success' })
++        return
++      }
++      setNotice(noticeText(checked, lang()))
++      await present(checked)
++    } catch (error) {
++      notify(errorText(error, lang()), { color: 'error', timeoutMs: 10_000 })
++    } finally {
++      busyRef.current = false
++    }
++  }, [context, notify, present])
++
++  React.useEffect(() => {
++    if (!context.available || context.disabled) return undefined
++    let cancelled = false
++    const timer = setTimeout(() => {
++      void check(context, { manual: false }).then(checked => {
++        if (cancelled || !checked.changes || checked.dismissed || checked.skipped) return
++        const key = fingerprint(checked)
++        if (notifiedRef.current === key) return
++        notifiedRef.current = key
++        setNotice(noticeText(checked, lang()))
++        notify(noticeText(checked, lang()), { timeoutMs: 12_000 })
++      }).catch(() => { /* automatic checks fail silently; chat stays usable */ })
++    }, AUTO_DELAY_MS)
++    return () => { cancelled = true; clearTimeout(timer) }
++  }, [context, notify])
++
++  return { notice, open }
++}
+diff --git a/lib/types/hyperaiSkillsCore.js b/lib/types/hyperaiSkillsCore.js
+new file mode 100644
+index 0000000..c552ead
+--- /dev/null
++++ b/lib/types/hyperaiSkillsCore.js
+@@ -0,0 +1,132 @@
++/**
++ * Pure formatting/validation for the HyperAI skills-update TUI bridge.
++ *
++ * Kept dependency-free (no React, no child_process) so the prompt copy, the
++ * plan fingerprint and the SHA-pinning comparison can be unit-tested offline.
++ * `hyperaiSkills.js` is the thin React/spawn layer on top.
++ */
++
++/** Normalize the compact `skills-update check --json` payload. */
++export function normalizeCheck(raw) {
++  if (raw === null || typeof raw !== 'object') throw new Error('skills-update returned no object')
++  const source = raw.source !== null && typeof raw.source === 'object' ? raw.source : {}
++  const updates = Array.isArray(raw.updates)
++    ? raw.updates
++      .filter(item => item !== null && typeof item === 'object' && typeof item.name === 'string')
++      .map(item => ({
++        name: item.name,
++        action: item.action === 'update' ? 'update' : 'add',
++        version: typeof item.version === 'string' ? item.version : undefined,
++        description: typeof item.description === 'string' ? item.description : undefined,
++        files: typeof item.files === 'number' ? item.files : 0,
++        bytes: typeof item.bytes === 'number' ? item.bytes : 0,
++        digest: typeof item.digest === 'string' ? item.digest : '',
++      }))
++    : []
++  return {
++    resolvedRef: typeof source.resolvedRef === 'string' ? source.resolvedRef : '',
++    requestedRef: typeof source.requestedRef === 'string' ? source.requestedRef : 'master',
++    channel: source.channel === 'stable' ? 'stable' : 'prerelease',
++    changes: raw.changes === true || updates.length > 0,
++    count: updates.length,
++    updates,
++    dismissed: raw.dismissed === true,
++    skipped: raw.skipped === true,
++    skippedReason: typeof raw.skippedReason === 'string' ? raw.skippedReason : undefined,
++  }
++}
++
++/** Stable identity of one checked batch: the SHA plus the shown content. */
++export function fingerprint(check) {
++  const normalized = normalizeCheck(check)
++  const items = normalized.updates
++    .map(item => `${item.action}:${item.name}:${item.digest}`)
++    .sort()
++    .join('|')
++  return `${normalized.resolvedRef}|${items}`
++}
++
++/** Localized one-line summary shown in the transcript hint and notification. */
++export function noticeText(check, lang = 'zh') {
++  const { count, resolvedRef } = normalizeCheck(check)
++  const suffix = resolvedRef === '' ? '' : ` · ${resolvedRef.slice(0, 8)}`
++  return lang === 'zh'
++    ? `HyperAI Skills 有 ${count} 项可安装更新 · 输入 /skills-update${suffix}`
++    : `HyperAI Skills: ${count} update${count === 1 ? '' : 's'} available · run /skills-update${suffix}`
++}
++
++/** Per-item one-line label, e.g. `+ ppt-generation 新增 · v1.1.0`. */
++export function itemLine(item, lang = 'zh') {
++  const action = item.action === 'update' ? (lang === 'zh' ? '更新' : 'update') : (lang === 'zh' ? '新增' : 'new')
++  const version = item.version === undefined ? '' : ` · v${item.version}`
++  const mark = item.action === 'update' ? '↑' : '+'
++  return `${mark} ${item.name}  ${action}${version}`
++}
++
++/** Dialog title for the plan. */
++export function dialogTitle(check, lang = 'zh') {
++  const { count } = normalizeCheck(check)
++  return lang === 'zh' ? `HyperAI Skills · ${count} 项可安装` : `HyperAI Skills · ${count} available`
++}
++
++/** Top-level dialog choices. */
++export function choices(check, lang = 'zh') {
++  const { count, updates } = normalizeCheck(check)
++  const names = updates.map(item => item.name).join(', ')
++  return [
++    { id: 'install', label: lang === 'zh' ? `安装更新（${count} 项）` : `Install updates (${count})`, description: names },
++    { id: 'details', label: lang === 'zh' ? '查看详情' : 'View details' },
++    { id: 'later', label: lang === 'zh' ? '稍后再说' : 'Later' },
++  ]
++}
++
++/** Detail rows; `back` returns to the choices dialog. */
++export function detailOptions(check, lang = 'zh') {
++  const { updates } = normalizeCheck(check)
++  return [
++    ...updates.map(item => ({
++      id: `item:${item.name}`,
++      label: itemLine(item, lang),
++      description: item.description ?? `${item.files} files · ${item.bytes} B`,
++    })),
++    { id: 'back', label: lang === 'zh' ? '返回' : 'Back' },
++  ]
++}
++
++/** Message inside the final install confirmation. */
++export function confirmMessage(check, lang = 'zh') {
++  const { updates } = normalizeCheck(check)
++  const rows = updates.map(item => itemLine(item, lang)).join('\n')
++  return lang === 'zh'
++    ? `\n${rows}\n\n将下载并安装这些 Skill；安装前会备份旧版本。`
++    : `\n${rows}\n\nThese skills will be downloaded and installed; old versions are backed up first.`
++}
++
++/** Text after a successful install/update. */
++export function resultText(result, lang = 'zh') {
++  const installed = Array.isArray(result?.installed) ? result.installed : []
++  const updated = Array.isArray(result?.updated) ? result.updated : []
++  const failed = Array.isArray(result?.failed) ? result.failed : []
++  const parts = []
++  if (installed.length > 0) parts.push(lang === 'zh' ? `已安装 ${installed.join(', ')}` : `Installed ${installed.join(', ')}`)
++  if (updated.length > 0) parts.push(lang === 'zh' ? `已更新 ${updated.join(', ')}` : `Updated ${updated.join(', ')}`)
++  if (failed.length > 0) parts.push(lang === 'zh' ? `失败：${failed.map(item => item.name).join(', ')}` : `Failed: ${failed.map(item => item.name).join(', ')}`)
++  return parts.join(lang === 'zh' ? '；' : '; ') || (lang === 'zh' ? '安装完成' : 'Update finished')
++}
++
++/** Short, user-facing error line (never a stack trace or a token). */
++export function errorText(error, lang = 'zh') {
++  const detail = typeof error === 'string' ? error : error instanceof Error ? error.message : String(error)
++  const cleaned = detail.replace(/\s+/gu, ' ').trim().slice(0, 180)
++  return lang === 'zh' ? `HyperAI Skills 检查失败：${cleaned}` : `HyperAI Skills check failed: ${cleaned}`
++}
++
++/** Text for a dismissed batch. */
++export function laterText(lang = 'zh') {
++  return lang === 'zh' ? '已稍后再说；本会话不再提示这批更新' : 'Later; this batch will not be shown again this session'
++}
++
++/** Text after a manual check with no pending updates. */
++export function currentText(lang = 'zh') {
++  return lang === 'zh' ? 'HyperAI Skills 已是最新' : 'HyperAI Skills is up to date'
++}
 diff --git a/lib/types/i18n.js b/lib/types/i18n.js
 index d7db9d3..ae0cba4 100644
 --- a/lib/types/i18n.js
@@ -337,6 +758,50 @@ index d7db9d3..ae0cba4 100644
      'onboarding-conn-ok': { zh: '连通正常', en: 'Connected' },
      'onboarding-conn-models': { zh: '{{count}} 个可用模型', en: '{{count}} models available' },
      'onboarding-conn-balance': { zh: '余额 {{amount}}', en: 'Balance {{amount}}' },
+diff --git a/lib/types/screens/Chat.js b/lib/types/screens/Chat.js
+index 050c07c..9fda505 100644
+--- a/lib/types/screens/Chat.js
++++ b/lib/types/screens/Chat.js
+@@ -24,6 +24,7 @@ import { execFileNoThrow } from '../utils/execFileNoThrow.js';
+ import { cleanBlockLines, cleanRenderText, cleanScalarText } from '../dsh-adapter/sanitize.js';
+ import { readModelRecents, recordModelUse } from '../modelRecents.js';
+ import { WORKING_GATE_NOTICES } from '../commands.js';
++import { useSkillsUpdate } from '../hyperaiSkills.js';
+ import { TuiDialogStore } from '../dsh-adapter/dialogs.js';
+ import { TuiStatusStore } from '../dsh-adapter/status.js';
+ import { ActivityStore, useActivity } from '../dsh-adapter/activity-store.js';
+@@ -361,6 +362,8 @@ export function Chat({ channel, questionStore, approvalStore, extensionDialogs,
+     // extensions row share one inert store that never holds a dialog.
+     const dialogs = extensionDialogs ?? (fallbackDialogStore ??= new TuiDialogStore());
+     const dialogSnapshot = React.useSyncExternalStore(listener => dialogs.subscribe(listener), () => dialogs.getSnapshot());
++    // hyperai-tui: asynchronous HyperAI Skills update hint + explicit install flow.
++    const skillsUpdate = useSkillsUpdate({ channel, dialogs });
+     const coupon = React.useSyncExternalStore(bonusNotices?.subscribe ?? noCouponSubscription, bonusNotices?.getSnapshot ?? noCouponSnapshot);
+     // Plugin status contributions: text keys join into one line; bounded rich
+     // views keep their own rows immediately above the prompt.
+@@ -2918,6 +2921,12 @@ export function Chat({ channel, questionStore, approvalStore, extensionDialogs,
+                     });
+                 return true;
+             }
++            case 'skills-update': {
++                setHelpOpen(false);
++                setLaunchpadOpen(false);
++                void skillsUpdate.open();
++                return true;
++            }
+             case 'skills': {
+                 // issue #204: 列出当前 agent 的完整技能目录（名称 + 来源 + 简述），
+                 // Enter 把可直调技能以 `/name ` 填回输入行（completion-only 分发的
+@@ -6285,7 +6294,8 @@ export function Chat({ channel, questionStore, approvalStore, extensionDialogs,
+                                         // inflating the reading next to a real upload number). An
+                                         // automatic compaction mid-turn badges THIS line too — it is
+                                         // the spinner slot whenever real activity data exists.
+-                                        suffix: `${lastUploadTokens > 0 ? ` · ↑ ${formatTokens(lastUploadTokens)}` : ''} · ↓ ${formatTokens(Math.round(channel.responseChars / 4))} tokens${compactionBadge === undefined ? '' : ` · ${compactionBadge}`}` }) })) : (_jsx(WorkingSpinner, { mode: channel.spinnerMode, hasActiveTools: channel.activeToolCount > 0, responseLengthRef: responseLengthRef, uploadTokensRef: uploadTokensRef, loadingStartTimeRef: loadingStartTimeRef, totalPausedMsRef: totalPausedMsRef, pauseStartTimeRef: pauseStartTimeRef, thinkingStatus: thinkingStatus, suffix: compactionBadge }))), !channel.working && channel.compaction !== undefined && (_jsx(CompactionStatusRow, { compaction: channel.compaction, activityPreset: activitySlot ? channel.activityFrames : undefined })), !(sidePanel.split && sidePanel.enabledPanelIds.includes('todo')) && (_jsx(GoalTodoPanel, { channel: channel, collapsed: todoCollapsed, onToggle: () => setTodoCollapsed(previous => !previous) })), recap !== null && recap.auto && !recap.expanded && (_jsx(AutoRecapRow, { summary: recap.summary, streaming: !recap.done, onExpand: () => setRecap(prev => (prev ? { ...prev, expanded: true } : prev)), onDismiss: () => closeRecap() })), balance !== null && (_jsx(BalanceReportRow, { result: balance.result, refreshing: balance.refreshing, tokens: channel.tokens, model: channel.modelDisplay ?? channel.model, provider: channel.provider, mainCost: channel.mainCost, subagentCost: channel.subagentCost, onRefresh: runBalance, onDismiss: () => setBalance(null) })), statusEntries.length > 0 && (_jsx(Text, { dimColor: true, wrap: "truncate", children: statusEntries.map(entry => entry.text).join(' · ') })), activePreview === null && statusViews.map(view => (_jsx(PluginStatusViewBoundary, { viewKey: view.key, onError: (key, error) => statusContributions.reportViewError(key, error), children: _jsx(Box, { flexDirection: "column", flexShrink: 0, maxHeight: view.maxRows, overflow: "hidden", children: _jsx(Box, { flexDirection: "column", flexShrink: 0, children: React.createElement(view.component, {
++                                        suffix: `${lastUploadTokens > 0 ? ` · ↑ ${formatTokens(lastUploadTokens)}` : ''} · ↓ ${formatTokens(Math.round(channel.responseChars / 4))} tokens${compactionBadge === undefined ? '' : ` · ${compactionBadge}`}` }) })) : (_jsx(WorkingSpinner, { mode: channel.spinnerMode, hasActiveTools: channel.activeToolCount > 0, responseLengthRef: responseLengthRef, uploadTokensRef: uploadTokensRef, loadingStartTimeRef: loadingStartTimeRef, totalPausedMsRef: totalPausedMsRef, pauseStartTimeRef: pauseStartTimeRef, thinkingStatus: thinkingStatus, suffix: compactionBadge }))), !channel.working && channel.compaction !== undefined && (_jsx(CompactionStatusRow, { compaction: channel.compaction, activityPreset: activitySlot ? channel.activityFrames : undefined })), !(sidePanel.split && sidePanel.enabledPanelIds.includes('todo')) && (_jsx(GoalTodoPanel, { channel: channel, collapsed: todoCollapsed, onToggle: () => setTodoCollapsed(previous => !previous) })), recap !== null && recap.auto && !recap.expanded && (_jsx(AutoRecapRow, { summary: recap.summary, streaming: !recap.done, onExpand: () => setRecap(prev => (prev ? { ...prev, expanded: true } : prev)), onDismiss: () => closeRecap() })), balance !== null && (_jsx(BalanceReportRow, { result: balance.result, refreshing: balance.refreshing, tokens: channel.tokens, model: channel.modelDisplay ?? channel.model, provider: channel.provider, mainCost: channel.mainCost, subagentCost: channel.subagentCost, onRefresh: runBalance, onDismiss: () => setBalance(null) })), statusEntries.length > 0 && (_jsx(Text, { dimColor: true, wrap: "truncate", children: statusEntries.map(entry => entry.text).join(' · ') })),
++                                    skillsUpdate.notice !== null && (_jsx(Box, { onClick: () => { void skillsUpdate.open(); }, children: _jsx(Text, { color: "warning", wrap: "truncate", children: skillsUpdate.notice }) })), activePreview === null && statusViews.map(view => (_jsx(PluginStatusViewBoundary, { viewKey: view.key, onError: (key, error) => statusContributions.reportViewError(key, error), children: _jsx(Box, { flexDirection: "column", flexShrink: 0, maxHeight: view.maxRows, overflow: "hidden", children: _jsx(Box, { flexDirection: "column", flexShrink: 0, children: React.createElement(view.component, {
+                                             React,
+                                             ui: STATUS_VIEW_UI,
+                                         }) }) }) }, `${view.key}:${view.registrationId}`))), _jsxs(Box, { flexDirection: "column", flexShrink: 0, children: [approvalPanelNode !== null ? (approvalPanelNode) : dialogSnapshot !== null ? (_jsx(ExtensionDialog, { dialog: dialogSnapshot, onDecide: value => dialogs.decide(dialogSnapshot.key, value), onCancel: () => dialogs.cancel(dialogSnapshot.key) }, dialogSnapshot.key)) : overlay.kind === 'tips' ? (_jsx(Box, { flexDirection: "column", marginTop: 1, children: _jsx(TipsPanel, { onClose: () => dispatchOverlay({ type: 'close-if', kind: 'tips' }) }) })) : recap !== null && (!recap.auto || recap.expanded) ? (_jsx(Box, { flexDirection: "column", marginTop: 1, children: _jsx(RecapPanel, { summary: recap.summary, title: recap.title, error: recap.error, streaming: !recap.done, titleApplied: recap.titleApplied, onClose: () => {
 diff --git a/lib/types/screens/Launchpad.js b/lib/types/screens/Launchpad.js
 index d8a8835..5b3cbf3 100644
 --- a/lib/types/screens/Launchpad.js

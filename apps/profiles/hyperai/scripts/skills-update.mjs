@@ -6,14 +6,17 @@
  *   node scripts/skills-update.mjs update [--dry-run] [--yes] [--skill <name>]
  *   node scripts/skills-update.mjs catalog
  *   node scripts/skills-update.mjs rollback [--list] [--to <backup-id>] [--yes]
+ *   node scripts/skills-update.mjs dismiss --ref <resolved-sha> [--skill <name>...]
  *
- * The updater never runs from the TUI, never touches model/provider config and
- * keeps the DSH-native loading path unchanged. It reads `skills/` from a pinned
- * commit of the HyperAI skills repository, compares content digests with the
- * local manifest, asks before writing, and only replaces the managed skill
- * directories it owns. See docs/skills.md for the design.
+ * The updater never touches model/provider config and keeps the DSH-native
+ * loading path unchanged. It reads `skills/` from a pinned commit of the
+ * HyperAI skills repository, compares content digests with the local manifest,
+ * asks before writing, and only replaces the managed skill directories it owns.
+ * `check --auto/--manual/--json` and `dismiss` are the machine-readable bridge
+ * used by the HyperAI TUI; `check --auto` records the 24h auto-check slot and
+ * suppresses a dismissed batch. See docs/skills.md for the design.
  */
-import { existsSync } from 'node:fs'
+import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -43,10 +46,13 @@ export function parseArgs(argv) {
     to: undefined,
     skills: [],
     timeoutMs: 120_000,
+    auto: false,
+    manual: false,
+    intervalHours: 24,
   }
   for (let index = 0; index < argv.length; index++) {
     const arg = argv[index]
-    if (arg === 'check' || arg === 'update' || arg === 'catalog' || arg === 'rollback') options.command = arg
+    if (arg === 'check' || arg === 'update' || arg === 'catalog' || arg === 'rollback' || arg === 'dismiss') options.command = arg
     else if (arg === '--dsh-home') options.dshHome = argv[++index]
     else if (arg === '--profile') options.profile = argv[++index]
     else if (arg === '--repo') options.repo = argv[++index]
@@ -59,6 +65,9 @@ export function parseArgs(argv) {
     else if (arg === '--to') options.to = argv[++index]
     else if (arg === '--skill') options.skills.push(argv[++index])
     else if (arg === '--timeout') options.timeoutMs = Number(argv[++index])
+    else if (arg === '--auto') options.auto = true
+    else if (arg === '--manual') options.manual = true
+    else if (arg === '--interval-hours') options.intervalHours = Number(argv[++index])
     else if (arg === '--help' || arg === '-h') options.help = true
     else throw new SkillsError(`unknown argument ${JSON.stringify(arg)}`)
   }
@@ -99,6 +108,97 @@ function printHeader(source, options) {
   process.stdout.write(`target: ${options.skillsDir}\n\n`)
 }
 
+/** Machine state used by the TUI: auto-check throttle and dismissed batch. */
+function tuiStatePath(options) {
+  return join(options.stateDir, 'tui-state.json')
+}
+
+/** Read the TUI bridge state; corruption is treated as no state. */
+function readTuiState(options) {
+  const path = tuiStatePath(options)
+  if (!existsSync(path)) return { version: 1 }
+  try {
+    const parsed = JSON.parse(readFileSync(path, 'utf8'))
+    return parsed !== null && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : { version: 1 }
+  } catch {
+    return { version: 1 }
+  }
+}
+
+/** Atomic state write; never blocks the TUI check on a stats-only side file. */
+function writeTuiState(options, state) {
+  mkdirSync(options.stateDir, { recursive: true })
+  const path = tuiStatePath(options)
+  const temp = `${path}.tmp-${process.pid}-${Date.now()}`
+  writeFileSync(temp, `${JSON.stringify({ version: 1, ...state }, undefined, 2)}\n`)
+  renameSync(temp, path)
+}
+
+/** Whether the 24h auto-check slot is exhausted. */
+function autoCheckDue(state, options) {
+  const rawHours = Number(options.intervalHours)
+  const hours = Number.isFinite(rawHours) ? Math.max(0, rawHours) : 24
+  const interval = hours * 60 * 60 * 1000
+  const last = Date.parse(state.lastAutoCheckAt ?? '')
+  if (!Number.isFinite(last)) return true
+  return Date.now() - last >= interval
+}
+
+/** Compact machine-readable check payload for the TUI (full plan kept for CLI). */
+function tuiCheckPayload(source, plan, extra = {}) {
+  const updates = [
+    ...plan.adds.map(item => ({
+      name: item.name,
+      action: 'add',
+      version: item.remote.version,
+      description: item.remote.description,
+      files: Object.keys(item.remote.files).length,
+      bytes: item.remote.bytes,
+      sourcePath: item.remote.sourcePath,
+      digest: item.remote.digest,
+    })),
+    ...plan.updates.map(item => ({
+      name: item.name,
+      action: 'update',
+      version: item.remote.version,
+      description: item.remote.description,
+      files: Object.keys(item.remote.files).length,
+      bytes: item.remote.bytes,
+      sourcePath: item.remote.sourcePath,
+      digest: item.remote.digest,
+      fromDigest: item.fromDigest,
+    })),
+  ]
+  return {
+    source: {
+      repo: source.repo,
+      requestedRef: source.requestedRef,
+      resolvedRef: source.resolvedRef,
+      channel: channelOf(source.requestedRef),
+    },
+    changes: planHasChanges(plan),
+    count: updates.length,
+    updates,
+    dismissed: extra.dismissed ?? false,
+    skippedReason: extra.skippedReason,
+    ...extra.extra,
+    plan,
+  }
+}
+
+/** Whether a dismissed batch still matches the current plan exactly. */
+function isDismissed(state, source, plan) {
+  const ignored = state.ignored
+  if (ignored === null || typeof ignored !== 'object') return false
+  if (ignored.resolvedRef !== source.resolvedRef) return false
+  const names = [
+    ...plan.adds.map(item => item.name),
+    ...plan.updates.map(item => item.name),
+  ].sort()
+  const dismissedNames = Array.isArray(ignored.names) ? [...ignored.names].sort() : []
+  return names.length > 0 && (dismissedNames.length === 0 || JSON.stringify(dismissedNames) === JSON.stringify(names))
+}
+
 /** Interactive confirmation; --yes skips it, non-TTY without --yes refuses. */
 async function confirm(message) {
   if (!process.stdin.isTTY) throw new SkillsError('refusing to write without confirmation in a non-interactive shell; pass --yes')
@@ -128,6 +228,7 @@ async function main() {
       '  update     check, confirm, then transactionally install/update skills',
       '  catalog    list installed/managed/local-only skills (offline)',
       '  rollback   restore a backup snapshot (--list to see snapshots)',
+      '  dismiss    remember a dismissed update batch (resolved SHA + names)',
       '',
       'options:',
       '  --ref <ref>      branch, tag or commit (default: master; non-master = prerelease)',
@@ -138,12 +239,26 @@ async function main() {
       '  --skill <name>   limit update to a skill (repeatable)',
       '  --dry-run        print the plan/result without writing',
       '  --yes            skip interactive confirmation',
-      '  --json           machine-readable output',
+      '  --json           machine-readable output (check includes a compact TUI payload)',
+      '  --auto           apply the 24h auto-check interval and suppression',
+      '  --manual         manual check: ignore the interval and dismissed batch',
+      '  --interval-hours auto-check interval (default 24)',
       '  --to <id>        rollback target snapshot',
       '  --list           list rollback snapshots',
       '  --timeout <ms>   git network timeout (default 120000)',
       '',
     ].join('\n'))
+    return
+  }
+  if (options.command === 'dismiss') {
+    if (!options.refExplicit || options.ref === '') throw new SkillsError('dismiss requires --ref <resolved-sha>')
+    if (!/^[0-9a-f]{40}$/u.test(options.ref)) throw new SkillsError('dismiss --ref must be the 40-char commit SHA shown by check')
+    const state = readTuiState(options)
+    const names = options.skills.filter(name => SKILL_NAME.test(name)).sort()
+    const next = { ...state, ignored: { resolvedRef: options.ref, names, at: new Date().toISOString() } }
+    writeTuiState(options, next)
+    if (options.json) process.stdout.write(`${JSON.stringify({ dismissed: true, resolvedRef: options.ref, names }, undefined, 2)}\n`)
+    else process.stdout.write(`dismissed ${options.ref}${names.length > 0 ? ` (${names.join(', ')})` : ''}\n`)
     return
   }
   if (options.command === 'catalog') {
@@ -194,18 +309,51 @@ async function main() {
     return
   }
   // check / update
+  if (options.auto && options.manual) throw new SkillsError('--auto and --manual are mutually exclusive')
+  const stateBefore = readTuiState(options)
+  if (options.command === 'check' && options.auto && !options.manual && !autoCheckDue(stateBefore, options)) {
+    const payload = {
+      skipped: true,
+      skippedReason: 'auto-interval',
+      nextAllowedAt: new Date(Date.parse(stateBefore.lastAutoCheckAt) + (Number.isFinite(Number(options.intervalHours)) ? Math.max(0, Number(options.intervalHours)) : 24) * 3600_000).toISOString(),
+      changes: false,
+      count: 0,
+      updates: [],
+      dismissed: false,
+    }
+    if (options.json) process.stdout.write(`${JSON.stringify(payload, undefined, 2)}\n`)
+    else process.stdout.write('auto check skipped: interval not elapsed\n')
+    return
+  }
+  if (options.command === 'check' && options.auto) {
+    writeTuiState(options, { ...stateBefore, lastAutoCheckAt: new Date().toISOString(), lastAutoCheckError: null })
+  }
   const { source, plan } = checkRemote(options)
   try {
+    const dismissed = options.command === 'check' && options.auto && !options.manual && isDismissed(stateBefore, source, plan)
+    const payload = tuiCheckPayload(source, plan, { dismissed })
+    if (options.command === 'check' && options.auto) {
+      writeTuiState(options, {
+        ...readTuiState(options),
+        lastAutoCheckAt: new Date().toISOString(),
+        lastAutoCheckError: null,
+        lastResolvedRef: source.resolvedRef,
+      })
+    }
     if (!options.json) printHeader(source, options)
     const lines = formatPlan(plan)
     if (options.json) {
-      process.stdout.write(`${JSON.stringify({ source: { repo: source.repo, requestedRef: source.requestedRef, resolvedRef: source.resolvedRef, channel: channelOf(source.requestedRef) }, plan, changes: planHasChanges(plan) }, undefined, 2)}\n`)
+      process.stdout.write(`${JSON.stringify(payload, undefined, 2)}\n`)
     } else if (lines.length === 0) {
       process.stdout.write('no skills found under skills/\n')
     } else {
       process.stdout.write(`${lines.join('\n')}\n\n`)
     }
     if (options.command === 'check') {
+      if (dismissed) {
+        process.exitCode = 0
+        return
+      }
       process.exitCode = planHasChanges(plan) ? 2 : 0
       return
     }
@@ -242,6 +390,10 @@ async function main() {
       for (const item of result.failed) process.stdout.write(`FAILED:    ${item.name}: ${item.error}\n`)
       if (result.backup !== undefined) process.stdout.write(`backup:    ${result.backup}\n`)
       if (result.failed.length === 0) process.stdout.write('done\n')
+    }
+    if (result.failed.length === 0) {
+      const state = readTuiState(options)
+      writeTuiState(options, { ...state, ignored: null, lastInstallAt: new Date().toISOString(), lastInstallRef: source.resolvedRef })
     }
     if (result.failed.length > 0) process.exitCode = 1
   } finally {

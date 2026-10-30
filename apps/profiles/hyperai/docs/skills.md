@@ -143,6 +143,36 @@ to schema 1 on the next write. Entries with `validated: false` that have no
 `managedBy` are the old `inbox/` installs and are treated as protected legacy
 content (kept, never auto-updated or deleted).
 
+### TUI bridge (`check --auto/--manual --json`, `dismiss`)
+
+The HyperAI TUI does not scan GitHub itself. It spawns this CLI asynchronously
+after the first TUI frame and consumes a compact JSON payload:
+
+```sh
+node skills-update.mjs check --auto --json       # 24h slot; dismissed batch suppressed
+node skills-update.mjs check --manual --json     # manual /skills-update, ignores interval
+node skills-update.mjs update --yes --ref <sha> --json   # only after TUI confirmation
+node skills-update.mjs dismiss --ref <sha> --skill <name> # "later" for this batch
+```
+
+- `--auto` writes `<profile>/.hyperai-skills/tui-state.json` with
+  `lastAutoCheckAt` and skips the network entirely until 24 hours have passed.
+  A network failure during the attempt still consumes the slot, so a broken
+  GitHub connection cannot retry on every launch.
+- The compact payload contains `source.resolvedRef`, `changes`, `count`,
+  `updates[]` (`name`, `action`, `version`, `description`, `files`, `bytes`,
+  `digest`), `dismissed` and the legacy full `plan` field.
+- `dismiss` stores `{resolvedRef, names, at}`. The next automatic check reports
+  `dismissed: true` only when the same SHA and shown names still match; a new
+  commit or new skill is not suppressed. Manual checks ignore the dismissed
+  batch.
+- A TUI install passes the exact 40-char SHA from check as `--ref`, so a branch
+  that moved after the prompt cannot install different content. The TUI
+  re-checks that exact SHA before confirming and re-prompts if the local plan
+  changed.
+- No token, URL with embedded credentials, or key material is printed in the
+  JSON/state; git uses the existing credential helper/SSH setup.
+
 ## Validation performed here
 
 - Repository validator (`scripts/validate_skill.py --all`): 0 errors, 5
@@ -150,13 +180,13 @@ content (kept, never auto-updated or deleted).
 - Repository LLM test runner (`tests/run_tests.py --all --dry-run`): 12/12.
 - All four `SKILL.md` files parse through the real `dsh-skill` /
   `dsh-skill-filesystem` packages (4/4 model-invocable; body loads).
-- `tests/skills-update.test.mjs`: 19 updater tests cover master/dev scanning,
+- `tests/skills-update.test.mjs`: 21 updater tests cover master/dev scanning,
   nested discovery/flattening, add/update/noop, local-modified skip, user-local
   and extra-file preservation, extra-file collision, duplicate names,
   missing-resource validation, remote-deleted keep, network/repository errors,
   interrupted add/update recovery, rollback, legacy-manifest compatibility,
-  dry-run/--skill, rejected-update preservation, and real DSH loading/watcher
-  refresh.
+  dry-run/--skill, rejected-update preservation, TUI auto interval/manual
+  bypass/dismiss state, and real DSH loading/watcher refresh.
 - The installed profile reports the skills in its loaded-context line — `技能 4`
   on a clean Harness home, `技能 10` on this Mac because the agent preset also
   discovers six pre-existing `~/.agents/skills` entries; a live model turn listed

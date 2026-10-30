@@ -319,6 +319,65 @@ test('a rejected remote update leaves the installed version untouched', async ()
   assert.equal(readFileSync(join(home.skillsDir, 'example', 'SKILL.md'), 'utf8'), before)
 })
 
+test('installing a checked SHA never picks up a later branch commit', () => {
+  const repo = standardRepo()
+  const home = createHome()
+  const checked = run(home, ['check', '--manual', '--json', '--source', repo])
+  assert.equal(checked.status, 2, checked.stderr)
+  const sha = JSON.parse(checked.stdout).source.resolvedRef
+  writeSkill(repo, 'skills/example', 'example', '9.9.9')
+  commit(repo, 'branch moved')
+  const installed = run(home, ['update', '--yes', '--ref', sha, '--source', repo])
+  assert.equal(installed.status, 0, installed.stderr)
+  assert.match(readFileSync(join(home.skillsDir, 'example', 'SKILL.md'), 'utf8'), /1\.0\.0/u)
+  assert.doesNotMatch(readFileSync(join(home.skillsDir, 'example', 'SKILL.md'), 'utf8'), /9\.9\.9/u)
+  const manifest = JSON.parse(readFileSync(join(home.stateDir, 'manifest.json'), 'utf8'))
+  assert.equal(manifest.skills.example.source.resolvedRef, sha)
+})
+
+test('auto interval, manual bypass and dismissal state are TUI-compatible', () => {
+  const repo = standardRepo()
+  const home = createHome()
+  const first = run(home, ['check', '--auto', '--json', '--source', repo])
+  assert.equal(first.status, 2, first.stderr)
+  const firstPayload = JSON.parse(first.stdout)
+  assert.equal(firstPayload.changes, true)
+  assert.equal(firstPayload.count, 2)
+  assert.deepEqual(firstPayload.updates.map(item => [item.name, item.action]), [['example', 'add'], ['excel', 'add']])
+  assert.ok(firstPayload.source.resolvedRef.length === 40)
+  const statePath = join(home.stateDir, 'tui-state.json')
+  assert.ok(existsSync(statePath))
+  assert.ok(JSON.parse(readFileSync(statePath, 'utf8')).lastAutoCheckAt)
+
+  // Within the interval, no repository access may happen: point at a missing repo.
+  const second = run(home, ['check', '--auto', '--json', '--repo', '/tmp/definitely-missing-skills-repo'])
+  assert.equal(second.status, 0, second.stderr)
+  const secondPayload = JSON.parse(second.stdout)
+  assert.equal(secondPayload.skipped, true)
+  assert.equal(secondPayload.skippedReason, 'auto-interval')
+
+  // Manual checks bypass the interval and use the local fixture.
+  const manual = run(home, ['check', '--manual', '--json', '--source', repo])
+  assert.equal(manual.status, 2, manual.stderr)
+  assert.equal(JSON.parse(manual.stdout).changes, true)
+
+  // Dismiss exactly the shown batch, then the next due auto check suppresses it.
+  const sha = firstPayload.source.resolvedRef
+  const names = firstPayload.updates.map(item => item.name)
+  const dismiss = run(home, ['dismiss', '--json', '--ref', sha, ...names.flatMap(name => ['--skill', name])])
+  assert.equal(dismiss.status, 0, dismiss.stderr)
+  const afterDismiss = run(home, ['check', '--auto', '--interval-hours', '0', '--json', '--source', repo])
+  assert.equal(afterDismiss.status, 0, afterDismiss.stderr)
+  const dismissedPayload = JSON.parse(afterDismiss.stdout)
+  assert.equal(dismissedPayload.dismissed, true)
+  assert.equal(dismissedPayload.count, 2)
+
+  // Manual checks ignore a dismissed batch.
+  const afterManual = run(home, ['check', '--manual', '--json', '--source', repo])
+  assert.equal(afterManual.status, 2, afterManual.stderr)
+  assert.equal(JSON.parse(afterManual.stdout).dismissed, false)
+})
+
 test('duplicate remote skill names are a hard error', () => {
   const repo = initRepo()
   writeSkill(repo, 'skills/a/dup', 'dup', '1.0.0')

@@ -6,12 +6,12 @@ Run from `apps/tui` unless stated otherwise.
 
 ```sh
 node scripts/build-patch.mjs        # rebuild patches/dsh-tui@0.16.1.patch
-node scripts/verify.mjs             # 8/8 distribution checks
-node --test tests/                  # 7/7 branding contract tests
+node scripts/verify.mjs             # 10/10 distribution checks
+node --test tests/                  # 12/12 branding + skills-bridge tests
 
 cd ../profiles/hyperai
-node scripts/verify.mjs             # 8/8 profile checks
-node --test tests/                  # 11/11 installer + skills tests
+node scripts/verify.mjs             # 9/9 profile checks
+node --test tests/                  # 32/32 installer + skills/updater tests
 ```
 
 `build-patch.mjs` unpacks the pinned upstream package with `npm pack`, applies
@@ -25,8 +25,10 @@ credential variable or default model), the TUI patch wiring, the pinned skills
 lock, the installer plan/refusal rules and the reinstall migration that keeps
 user provider/TUI rows while dropping the removed environment-driven preset.
 
-Measured: patch is **34,787 bytes / 10 upstream files** (the previous logo
+Measured: patch is **61,672 bytes (57,172 code points) / 14 upstream files** (the previous logo
 distribution carried >150 KB of embedded PNG/sprites; none of it remains).
+The two added files are the HyperAI Skills TUI bridge; Chat/commands only gain
+one command, one hook, one inline hint and the existing managed-dialog path.
 
 ## Real terminal acceptance (macOS 26.1, arm64)
 
@@ -63,6 +65,35 @@ Note: an Orca **window** screenshot could not be captured in this environment
 and `orca terminal switch` only changes the CLI-side focus); the terminal buffer
 above is the real rendered screen content. The visual acceptance therefore uses
 the real Terminal.app captures.
+
+### HyperAI Skills update prompt and install flow
+
+The TUI bridge is split from the profile updater:
+
+- `apps/profiles/hyperai/scripts/skills-update.mjs check --auto/--manual --json`
+  owns the remote scan, the 24h auto-check slot and the dismissed-batch state;
+- `apps/tui/src/hyperaiSkills.js` owns only presentation and choice, and calls
+  `update --yes --ref <resolved-sha>` after the person confirms in the
+  existing managed dialog;
+- `apps/tui/src/hyperaiSkillsCore.js` is the dependency-free copy/fingerprint
+  layer used by unit tests.
+
+Captures (rendered from a real PTY/pyte screen; terminal background supplied by
+the capture renderer, matching the real dark/light screens):
+
+| Capture | Result |
+|---|---|
+| `screenshots/skills-update-prompt-dark.png` | 启动后异步提示：`● HyperAI Skills 有 1 项可安装更新 · 输入 /skills-update`；该提示行可点击，聊天输入框可继续输入 |
+| `screenshots/skills-update-prompt-light.png` | 浅色主题同样的提示，品牌 `#FF6096` 像素标题不变 |
+| `screenshots/skills-update-prompt-small.png` | 80×24 小窗口：提示不挤占输入框，聊天/落地页保持可用 |
+| `screenshots/skills-update-dialog-light.png` | `/skills-update` 打开现有 managed-dialog：安装更新 / 查看详情 / 稍后再说，中文文案 |
+
+Real PTY acceptance used an isolated `DSH_HOME`/`HOME` copy of the profile and
+`HYPERAI_SKILLS_TUI_REF=feat/ppt-generation-upstream` with the local dev
+checkout as `HYPERAI_SKILLS_TUI_SOURCE` (network to GitHub was timing out during
+the last capture run). The installed manifest recorded the exact resolved SHA
+`34f0a1be0cb3ae9905aecebba13efae6a8657be1`; `ppt-generation` then appeared in
+the TUI `/skills` catalog and the DSH loader/`customSkillDirs` list.
 
 ### Functional regression (real model gateway)
 
@@ -108,6 +139,13 @@ configured with DSH's native `/provider` flow.
 - Orca **window screenshot** in this environment (see note above); the real
   terminal buffer is recorded instead.
 - Windows/Linux terminals are not available on this machine.
+- The auto-check prompt is a non-blocking inline hint plus the existing toast;
+  it deliberately does NOT auto-open a modal, so installing requires the
+  explicit `/skills-update` command or its completion. The install/later choice
+  itself uses the existing managed dialog.
+- GitHub Internal reachability was intermittent during the last capture run;
+  the TUI dev-branch install was verified with the local `feat/ppt-generation-upstream`
+  checkout and exact SHA, while the real remote `check` had succeeded earlier.
 - The branding patch is version-pinned to `@deepseek-harness-tui/dsh-tui@0.16.1`;
   upstream drift fails the exact-match build (see `README.md`). A native Cordis
   branding plugin is a follow-up, not part of this distribution.

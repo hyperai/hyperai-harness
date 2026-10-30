@@ -69,8 +69,12 @@ test('the patch touches only the documented upstream files and stays small', () 
     'lib/types/components/launchpadLayout.js',
     'lib/types/components/splashEggs.js',
     'lib/types/components/splashFonts.js',
+    'lib/types/commands.js',
     'lib/types/dsh-adapter/plugin.js',
+    'lib/types/hyperaiSkills.js',
+    'lib/types/hyperaiSkillsCore.js',
     'lib/types/i18n.js',
+    'lib/types/screens/Chat.js',
     'lib/types/screens/Launchpad.js',
     'lib/types/update.js',
     'lib/types/utils/paths.js',
@@ -92,6 +96,27 @@ test('profile isolation, version plate and branded links stay wired', () => {
     "return { kind: 'unknown' };",
   ]) {
     assert.ok(patch.includes(marker), marker)
+  }
+})
+
+test('the patch contains the skills update command and non-blocking hint', () => {
+  for (const marker of [
+    "name: 'skills-update'",
+    'useSkillsUpdate',
+    'skillsUpdate.notice',
+    'skillsUpdate.open',
+    'HyperAI Skills 有',
+    '--manual',
+    '--ref',
+  ]) {
+    assert.ok(patch.includes(marker), `patch marker ${marker}`)
+  }
+  const chat = readFileSync(join(PKG, 'src', 'hyperaiSkills.js'), 'utf8')
+  assert.match(chat, /dialogs\.ask/u)
+  assert.match(chat, /update.*--yes|--yes.*update/su)
+  // No second scanner / installer in the TUI layer.
+  for (const banned of ['ls-remote', 'discoverSkills', 'SKILL.md', 'manifest.json']) {
+    assert.equal(chat.includes(banned), false, `duplicated profile logic: ${banned}`)
   }
 })
 

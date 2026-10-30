@@ -84,9 +84,12 @@ The updater discovers `skills/**/SKILL.md` recursively, flattens categories to
 DSH's one-level layout, skips local-modified/user-installed skills, preserves
 user extra files, keeps skills removed upstream, and records backups/rollback
 snapshots in `<profile>/.hyperai-skills/`. It never touches model/provider
-configuration and never runs automatically at TUI startup. See
-[`docs/skills.md`](docs/skills.md) for the full mechanism, manifest schema and
-safety rules.
+configuration. The TUI checks it asynchronously after the first frame (at most
+once per 24h, silent when up to date) and shows a non-blocking hint; typing
+`/skills-update` opens the install/details/later dialog. Installation is always
+user-confirmed and pinned to the exact SHA shown by the check. See
+[`docs/skills.md`](docs/skills.md) for the full mechanism, manifest schema,
+TUI bridge and safety rules.
 
 ## Layout
 

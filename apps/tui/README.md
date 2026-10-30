@@ -51,6 +51,41 @@ exact-match brand edits and self-tests the result by applying the generated
 patch to a fresh copy. `--from <dir>` builds from a local pristine package
 instead of the registry.
 
+## HyperAI Skills updates
+
+`dsh --profile hyperai` starts checking the profile's HyperAI Skills updater
+asynchronously after the first frame. When new or updated skills exist, the
+chat/launchpad shows a non-blocking hint:
+
+```text
+● HyperAI Skills 有 1 项可安装更新 · 输入 /skills-update
+```
+
+Clicking the hint line, typing `/skills-update`, or using its command completion opens the existing managed dialog
+with **安装更新 / 查看详情 / 稍后再说**. Nothing is installed until the person
+confirms; installation then runs the profile's updater with the exact SHA that
+`check` resolved, so a moving branch cannot silently change the batch. The
+query layer, manifest, backups and rollback stay in
+`apps/profiles/hyperai/scripts/skills-update.mjs`; this package only renders
+the prompt and choices.
+
+Automatic checks are silent when there is no change, at most once per 24 hours
+(`check --auto`), and a dismissed batch is not shown again. A manual
+`/skills-update` bypasses the interval. Network failures are silent for the
+automatic path (the chat remains usable) and become a short toast for the
+manual path. The TUI never starts a second skills scanner.
+
+Test-only source injection (never persisted, no effect on normal launches):
+
+```sh
+HYPERAI_SKILLS_TUI_REF=feat/ppt-generation-upstream HYPERAI_SKILLS_TUI_SOURCE=/path/to/hyperai-skills-checkout   dsh --profile hyperai
+```
+
+Screenshots: [`docs/screenshots/skills-update-prompt-dark.png`](docs/screenshots/skills-update-prompt-dark.png),
+[`...-light.png`](docs/screenshots/skills-update-prompt-light.png),
+[`...-small.png`](docs/screenshots/skills-update-prompt-small.png) and
+[`skills-update-dialog-light.png`](docs/screenshots/skills-update-dialog-light.png).
+
 ## Brand contract
 
 | Item | Value |
@@ -92,6 +127,8 @@ approvals, model pickers, keyboard handling and all image features stay upstream
 ```
 apps/tui/
 ├── src/brand.json          single brand-data source (words, pink, upstream pin)
+├── src/hyperaiSkills.js    TUI bridge: async check + managed-dialog install
+├── src/hyperaiSkillsCore.js offline copy/fingerprint helpers
 ├── scripts/build-patch.mjs build the pnpm patch from src/brand.json
 ├── scripts/verify.mjs      offline distribution checks
 ├── patches/                committed generated patch
