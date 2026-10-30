@@ -25,7 +25,7 @@ credential variable or default model), the TUI patch wiring, the pinned skills
 lock, the installer plan/refusal rules and the reinstall migration that keeps
 user provider/TUI rows while dropping the removed environment-driven preset.
 
-Measured: patch is **61,672 bytes (57,172 code points) / 14 upstream files** (the previous logo
+Measured: patch is **63,294 bytes (58,757 code points) / 14 upstream files** (the previous logo
 distribution carried >150 KB of embedded PNG/sprites; none of it remains).
 The two added files are the HyperAI Skills TUI bridge; Chat/commands only gain
 one command, one hook, one inline hint and the existing managed-dialog path.
@@ -91,7 +91,20 @@ the capture renderer, matching the real dark/light screens):
 Real PTY acceptance used an isolated `DSH_HOME`/`HOME` copy of the profile and
 `HYPERAI_SKILLS_TUI_REF=feat/ppt-generation-upstream` with the local dev
 checkout as `HYPERAI_SKILLS_TUI_SOURCE` (network to GitHub was timing out during
-the last capture run). The installed manifest recorded the exact resolved SHA
+the last capture run).
+
+**Feedback fix (2026-10-30):** a live Orca terminal showed `/skills-update`
+spawning the manual check (the child process was running and `Checking…` was
+visible) but the final *up to date* / network-error feedback was only a
+2.5–10s toast; a GitHub `ls-remote` can block for 30s, so the toast expired or
+was repainted before the person saw it. The manual flow now keeps a persistent
+inline `正在检查…` notice and renders the result (`已是最新` / `检查失败` /
+`安装完成`) in the existing managed dialog until the user dismisses it. A
+fresh Orca terminal confirmed: persistent checking notice, persistent
+`HyperAI Skills is up to date · Source …` dialog, and a persistent
+`HyperAI Skills check failed: git ls-remote … ETIMEDOUT` dialog. A terminal
+started before the patch was installed still runs the old code and must be
+restarted. The installed manifest recorded the exact resolved SHA
 `34f0a1be0cb3ae9905aecebba13efae6a8657be1`; `ppt-generation` then appeared in
 the TUI `/skills` catalog and the DSH loader/`customSkillDirs` list.
 

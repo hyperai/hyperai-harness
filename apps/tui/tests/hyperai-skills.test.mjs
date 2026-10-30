@@ -5,8 +5,8 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import {
-  choices, confirmMessage, currentText, detailOptions, dialogTitle, errorText, fingerprint,
-  normalizeCheck, noticeText, resultText,
+  checkingText, choices, confirmMessage, currentText, detailOptions, dialogTitle, errorText,
+  errorTitle, fingerprint, normalizeCheck, noticeText, resultText,
 } from '../src/hyperaiSkillsCore.js'
 
 const payload = {
@@ -56,4 +56,6 @@ test('result/error/current copy stays short and non-verbose', () => {
   assert.match(errorText(new Error('git clone failed with a very long detail '.repeat(20)), 'en'), /check failed: git clone failed/u)
   assert.ok(errorText(new Error('x'.repeat(500))).length < 220)
   assert.match(currentText('zh'), /已是最新/u)
+  assert.match(checkingText('zh'), /正在检查/u)
+  assert.match(errorTitle('en'), /check failed/u)
 })

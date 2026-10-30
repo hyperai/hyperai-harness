@@ -61,7 +61,7 @@ chat/launchpad shows a non-blocking hint:
 ● HyperAI Skills 有 1 项可安装更新 · 输入 /skills-update
 ```
 
-Clicking the hint line, typing `/skills-update`, or using its command completion opens the existing managed dialog
+Clicking the hint line, typing `/skills-update`, or using its command completion opens the existing managed dialog. Manual checks keep a persistent `正在检查…` notice and show the up-to-date/failure result in that dialog until dismissed, so a slow GitHub check cannot disappear as a transient toast
 with **安装更新 / 查看详情 / 稍后再说**. Nothing is installed until the person
 confirms; installation then runs the profile's updater with the exact SHA that
 `check` resolved, so a moving branch cannot silently change the batch. The

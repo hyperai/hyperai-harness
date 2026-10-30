@@ -126,6 +126,16 @@ export function laterText(lang = 'zh') {
   return lang === 'zh' ? '已稍后再说；本会话不再提示这批更新' : 'Later; this batch will not be shown again this session'
 }
 
+/** Text while a manual check is running (kept visible, not a 2.5s toast). */
+export function checkingText(lang = 'zh') {
+  return lang === 'zh' ? '正在检查 HyperAI Skills…' : 'Checking HyperAI Skills…'
+}
+
+/** Title for a manual-check failure dialog. */
+export function errorTitle(lang = 'zh') {
+  return lang === 'zh' ? 'HyperAI Skills 检查失败' : 'HyperAI Skills check failed'
+}
+
 /** Text after a manual check with no pending updates. */
 export function currentText(lang = 'zh') {
   return lang === 'zh' ? 'HyperAI Skills 已是最新' : 'HyperAI Skills is up to date'

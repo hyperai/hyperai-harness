@@ -22,8 +22,8 @@ import { join } from 'node:path'
 import { getLang } from './i18n.js'
 import { resolveDshProfileName } from './update.js'
 import {
-  choices, confirmMessage, currentText, detailOptions, dialogTitle, errorText, fingerprint,
-  itemLine, laterText, normalizeCheck, noticeText, resultText,
+  checkingText, choices, confirmMessage, currentText, detailOptions, dialogTitle, errorText, errorTitle,
+  fingerprint, laterText, normalizeCheck, noticeText, resultText,
 } from './hyperaiSkillsCore.js'
 
 const AUTO_DELAY_MS = 1500
@@ -152,6 +152,25 @@ export function useSkillsUpdate({ channel, dialogs }) {
     } catch { /* the notification surface is best-effort */ }
   }, [channel])
 
+  /**
+   * Persistent result dialog. The toast surface is intentionally transient and
+   * is easy to miss on an embedded terminal (Orca) especially after a slow
+   * network check; a manual action must leave a visible result until dismissed.
+   */
+  const showInfo = React.useCallback(async (title, message) => {
+    try {
+      await dialogs.ask({
+        kind: 'confirm',
+        title,
+        message: message === '' ? undefined : ` · ${message}`,
+        confirmLabel: lang() === 'zh' ? '确定' : 'OK',
+        cancelLabel: lang() === 'zh' ? '关闭' : 'Close',
+      }, undefined, 300_000)
+    } catch {
+      notify(message, { color: 'warning', timeoutMs: 10_000 })
+    }
+  }, [dialogs, notify])
+
   const present = React.useCallback(async checked => {
     let current = checked
     while (aliveRef.current) {
@@ -211,39 +230,45 @@ export function useSkillsUpdate({ channel, dialogs }) {
           setNotice(null)
           notifiedRef.current = null
           const failed = Array.isArray(result.failed) && result.failed.length > 0
-          notify(resultText(result, lang()), { color: failed ? 'error' : 'success', timeoutMs: failed ? 10_000 : 5000 })
+          await showInfo(failed ? (lang() === 'zh' ? 'HyperAI Skills 安装失败' : 'HyperAI Skills install failed') : (lang() === 'zh' ? 'HyperAI Skills 安装完成' : 'HyperAI Skills installed'), resultText(result, lang()))
           return
         } catch (error) {
-          notify(errorText(error, lang()), { color: 'error', timeoutMs: 10_000 })
+          await showInfo(errorTitle(lang()), errorText(error, lang()))
           return
         }
       }
     }
-  }, [context, dialogs, notify])
+  }, [context, dialogs, notify, showInfo])
 
   const open = React.useCallback(async () => {
     if (!context.available) {
-      notify(lang() === 'zh' ? '此 Profile 未安装 HyperAI Skills 更新器' : 'This profile has no HyperAI Skills updater installed', { color: 'warning' })
+      await showInfo(lang() === 'zh' ? 'HyperAI Skills 不可用' : 'HyperAI Skills unavailable', lang() === 'zh' ? '此 Profile 未安装 HyperAI Skills 更新器' : 'This profile has no HyperAI Skills updater installed')
       return
     }
     if (busyRef.current) return
     busyRef.current = true
     try {
-      notify(lang() === 'zh' ? '正在检查 HyperAI Skills…' : 'Checking HyperAI Skills…', { timeoutMs: 2500 })
+      // Persistent while the network check runs: Orca/embedded terminals can
+      // make a short toast disappear before the 30s git timeout returns.
+      setNotice(checkingText(lang()))
+      notify(checkingText(lang()), { timeoutMs: 2500 })
       const checked = await check(context, { manual: true })
       if (!checked.changes) {
         setNotice(null)
-        notify(currentText(lang()), { color: 'success' })
+        await showInfo(currentText(lang()), checked.resolvedRef === ''
+          ? ''
+          : (lang() === 'zh' ? `来源 ${checked.resolvedRef.slice(0, 8)}` : `Source ${checked.resolvedRef.slice(0, 8)}`))
         return
       }
       setNotice(noticeText(checked, lang()))
       await present(checked)
     } catch (error) {
-      notify(errorText(error, lang()), { color: 'error', timeoutMs: 10_000 })
+      setNotice(null)
+      await showInfo(errorTitle(lang()), errorText(error, lang()))
     } finally {
       busyRef.current = false
     }
-  }, [context, notify, present])
+  }, [context, notify, present, showInfo])
 
   React.useEffect(() => {
     if (!context.available || context.disabled) return undefined
