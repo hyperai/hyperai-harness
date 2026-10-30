@@ -1,0 +1,401 @@
+diff --git a/lib/types/branding.js b/lib/types/branding.js
+index e20c590..bfb6f7b 100644
+--- a/lib/types/branding.js
++++ b/lib/types/branding.js
+@@ -53,10 +53,31 @@ export function resolveBrand(setting, backendId) {
+ }
+ /** 各品牌的开屏标题词（大字重解字距见 `splashFonts.withTagline`）。 */
+ export const BRAND_SPLASH_WORDS = Object.freeze({
+-    deepseek: Object.freeze({ top: 'DEEPSEEK', bottom: 'HARNESS', plain: 'DeepSeek Harness' }),
++    deepseek: Object.freeze({ top: 'HYPERAI', bottom: 'HARNESS', plain: 'HyperAI Harness' }),
+     claude: Object.freeze({ top: 'CLAUDE', bottom: 'CODE', plain: 'Claude Code' }),
+     codex: Object.freeze({ top: 'CODEX', bottom: 'HARNESS', plain: 'Codex' }),
+ });
++/**
++ * HyperAI palette for the patched default (`dsh` backend) look.
++ *
++ * The product brand colour is one value, `#FF6096`. The splash title, the
++ * wordmark and the welcome tagline all use it unchanged, so light and dark
++ * terminals show the same brand pink instead of deriving theme gradients (the
++ * earlier pink -> near-white ladder read as an unintended purple/pink ramp on
++ * light themes). No other brand accent is introduced here.
++ */
++export const HYPERAI_PALETTE = Object.freeze({
++    accent: Object.freeze({ r: 255, g: 96, b: 150 }),
++    accentShimmer: Object.freeze({ r: 255, g: 96, b: 150 }),
++    tagline: Object.freeze({ r: 255, g: 96, b: 150 }),
++    title: Object.freeze({
++        base: Object.freeze({ r: 255, g: 96, b: 150 }),
++        start: Object.freeze({ r: 255, g: 96, b: 150 }),
++        mid: Object.freeze({ r: 255, g: 96, b: 150 }),
++        end: Object.freeze({ r: 255, g: 96, b: 150 }),
++        flash: Object.freeze({ r: 255, g: 96, b: 150 }),
++    }),
++});
+ /** claude 品牌按终端深浅落的两套内置主题（theme.ts 注册：墨黑 / 暖纸张，
+  *  共用同一套陶土橙强调色——切明暗不丢品牌识别）。 */
+ export const CLAUDE_BRAND_THEMES = Object.freeze({
+@@ -97,14 +118,14 @@ export function brandThemeFor(brand, themeName) {
+ /** 开屏欢迎语（品牌档；deepseek 沿用 i18n 的 `logo-tagline`）。英文两行以
+  *  `\n` 分隔，渲染层按行拆开居中。 */
+ export const BRAND_TAGLINE = Object.freeze({
+-    deepseek: Object.freeze({ zh: '', en: '' }),
++    deepseek: Object.freeze({ zh: 'HyperAI Harness', en: 'HyperAI Harness' }),
+     codex: Object.freeze({ zh: '用 Codex 构建一切', en: 'Build anything with Codex' }),
+     claude: Object.freeze({ zh: '创造精彩，守护关键。', en: "Create what's exciting.\nMaintain what's essential." }),
+ });
+ /** `/settings` 里 `dsh-tui.brand` 的选项（结构与 `SPLASH_FONT_OPTIONS` 同形）。 */
+ export const BRAND_SETTING_OPTIONS = [
+     { value: 'auto', label: 'Follow backend (default)', descriptions: { zh: '跟随后端（默认）' } },
+-    { value: 'deepseek', label: 'DeepSeek (mist blue)', descriptions: { zh: 'DeepSeek（雾蓝）' } },
++    { value: 'deepseek', label: 'HyperAI Harness (default)', descriptions: { zh: 'HyperAI Harness（默认）' } },
+     { value: 'claude', label: 'Claude Code (orange)', descriptions: { zh: 'Claude Code（橙）' } },
+     { value: 'codex', label: 'Codex (lavender)', descriptions: { zh: 'Codex（薰衣草紫）' } },
+ ];
+diff --git a/lib/types/components/LogoV2.js b/lib/types/components/LogoV2.js
+index ed2f7f3..8f565de 100644
+--- a/lib/types/components/LogoV2.js
++++ b/lib/types/components/LogoV2.js
+@@ -8,7 +8,7 @@ import { dirname, join } from 'node:path';
+ import { fileURLToPath } from 'node:url';
+ import { Box, Text, useAnimationFrame, useTerminalImages, useTerminalSize } from '../ui.js';
+ import { getTheme, isLightThemeActive } from '../theme.js';
+-import { BRAND_SPLASH_WORDS, BRAND_TAGLINE } from '../branding.js';
++import { BRAND_SPLASH_WORDS, BRAND_TAGLINE, HYPERAI_PALETTE } from '../branding.js';
+ import { useTheme } from './design-system/ThemeProvider.js';
+ import { interpolateColor, parseRGB } from './Spinner/spinnerUtils.js';
+ import { paintedWidth, renderBigText } from './bigfont.js';
+@@ -163,9 +163,12 @@ export function LogoV2({ model = '', effort, cwd = '', skipIntro = false, intro,
+     /** 终端真底色（Sixel 不透明衬底；见渲染处的注释）。 */
+     const theme = getTheme(themeName);
+     const { columns } = useTerminalSize();
+-    const wordmarkRGB = parseRGB(theme.accent) ?? BRAND;
+-    const wordmarkShimmerRGB = parseRGB(theme.accentShimmer) ?? ICE;
+-    const taglineRGB = parseRGB(theme.activity) ?? ICE;
++    // hyperai-tui: the patched default brand owns the accent family, so the
++    // wordmark/tagline use the product brand colour instead of the theme accent.
++    const hyperaiLook = brand === 'deepseek';
++    const wordmarkRGB = hyperaiLook ? HYPERAI_PALETTE.accent : parseRGB(theme.accent) ?? BRAND;
++    const wordmarkShimmerRGB = hyperaiLook ? HYPERAI_PALETTE.accentShimmer : parseRGB(theme.accentShimmer) ?? ICE;
++    const taglineRGB = hyperaiLook ? HYPERAI_PALETTE.tagline : parseRGB(theme.activity) ?? ICE;
+     // 按天轮换的大字字体：同一天内恒定、隔天换一款；`fontId`（设置项）可 pin 住一款。
+     const [dailyFont] = React.useState(() => pickSplashFont());
+     const font = fontId === undefined ? dailyFont : splashFontById(fontId);
+@@ -181,7 +184,9 @@ export function LogoV2({ model = '', effort, cwd = '', skipIntro = false, intro,
+     const [dailyEgg] = React.useState(() => (egg === undefined ? pickSplashEgg() : egg));
+     const titleFont = resolveSplashTitleFont(font, brand, dailyEgg);
+     // 窄终端阶梯：鲸鱼 + 大字 → 纯大字 → 纯鲸鱼 → 一行纯文字（阈值随字体字身宽度变）。
+-    const splash = resolveSplashLayout(columns, { whale, font: titleFont });
++    // hyperai-tui: the splash is the pixel wordmark only — no logo, whale,
++    // mascot or image placeholder is rendered in any arrangement.
++    const splash = resolveSplashLayout(columns, { whale: false, font: titleFont });
+     /**
+      * 上下排布（落地页）时立绘与词标**不共行**，宽轴那套「谁挤掉谁」的判定不适用：
+      * 立绘只看自己放不放得下（盒宽）。照并排阈值走会在 55–96 列这一大段把立绘判掉，
+@@ -191,7 +196,7 @@ export function LogoV2({ model = '', effort, cwd = '', skipIntro = false, intro,
+     const stacked = arrangement === 'column';
+     const { showWhale, showBigTitle, showPlainTitle } = stacked
+         ? {
+-            showWhale: whale && columns >= WHALE_BOX_WIDTH,
++            showWhale: false,
+             showBigTitle: splash.showBigTitle,
+             showPlainTitle: !splash.showBigTitle,
+         }
+@@ -393,7 +398,9 @@ export function LogoV2({ model = '', effort, cwd = '', skipIntro = false, intro,
+     // 品牌大字色阶（跨两行三档，从左上到右下走完）：claude 陶土橙、codex 薰衣草
+     // 紫；深底从亮档起步奔最亮收，浅底反向从深化档起步（浅底上"亮"是加深）。
+     // deepseek 不在表内——沿用主题 wordmark/tagline/PALE 的蓝白阶。
+-    const brandLadder = brand === 'claude'
++    const brandLadder = brand === 'deepseek'
++        ? HYPERAI_PALETTE.title
++        : brand === 'claude'
+         ? (brandPaper
+             ? { base: EMBER, start: EMBER, mid: EMBER_LIGHT, end: EMBER_BRIGHT, flash: EMBER_PAPER_FLASH }
+             : { base: EMBER_LIGHT, start: EMBER_LIGHT, mid: EMBER_BRIGHT, end: EMBER_PALE, flash: EMBER_FLASH })
+@@ -415,19 +422,22 @@ export function LogoV2({ model = '', effort, cwd = '', skipIntro = false, intro,
+     // 上到右下走完色阶。起点两轮提亮（用户反馈"还是暗"）：深底直接从亮档
+     // #E68A69 起步 → #EFA97E → 奶油橙 #FBD6B0（官方正色 #D77757 明度中等、
+     // 压深底发闷，只留给浅底当起点）；浅底 #D77757 → #E68A69 → #EFA97E。
+-    const titleFrom = titleFont.palette?.from
++    // hyperai-tui: the brand title is one solid colour. Font palettes and the
++    // bevel font's derived shading must not turn it into a gradient in another
++    // brand hue, so the deepseek default bypasses every other colour source.
++    const titleFrom = hyperaiLook ? HYPERAI_PALETTE.title.base : titleFont.palette?.from
+         ?? bevelShade?.from
+         ?? brandLadder?.start
+         ?? wordmarkRGB;
+-    const titleTopTo = titleFont.palette?.to
++    const titleTopTo = hyperaiLook ? HYPERAI_PALETTE.title.base : titleFont.palette?.to
+         ?? bevelShade?.to
+         ?? brandLadder?.mid
+         ?? taglineRGB;
+-    const titleBottomFrom = titleFont.palette?.from
++    const titleBottomFrom = hyperaiLook ? HYPERAI_PALETTE.title.base : titleFont.palette?.from
+         ?? bevelShade?.from
+         ?? brandLadder?.mid
+         ?? taglineRGB;
+-    const titleBottomTo = titleFont.palette?.to
++    const titleBottomTo = hyperaiLook ? HYPERAI_PALETTE.title.base : titleFont.palette?.to
+         ?? bevelShade?.to
+         ?? brandLadder?.end
+         ?? PALE;
+@@ -436,7 +446,10 @@ export function LogoV2({ model = '', effort, cwd = '', skipIntro = false, intro,
+     // 标题）两行左缘对齐。deepseek 档维持求解器的 bottomIndent（等宽契约），
+     // 例外是声明了固定字距的字体（shadow——等宽契约在 10 列字身上最紧只能
+     // 解出 5/7 字距，字间空得能走人）：它两行同字距，两种形态都按半差居中。
+-    const uniformBrand = brand !== 'deepseek';
++    // hyperai-tui: HYPERAI and HARNESS have different ink widths in the pixel
++    // fonts, so center the narrower word under the wider one (launchpad only;
++    // the chat header keeps left alignment).
++    const uniformBrand = true;
+     const fixedKerning = !uniformBrand && titleFont.uniformKerning !== undefined;
+     const centeredTitle = (uniformBrand && align === 'center') || fixedKerning;
+     const topInk = paintedWidth(titleFont, top, topKerning);
+@@ -477,7 +490,7 @@ export function LogoV2({ model = '', effort, cwd = '', skipIntro = false, intro,
+                                 setHeartSeq(0);
+                                 setHeartKey(k => k + 1);
+                             }
+-                        }, children: _jsx(Box, { width: WHALE_BOX_WIDTH, flexDirection: "column", alignItems: "center", children: brand === 'deepseek' && mascotSkin !== undefined ? (_jsx(SplashMascot, { skin: mascotSkin, active: !whaleFrozen && whaleIdle, imageBox: imageBox })) : portraitMode ? (_jsx(Box, { width: WHALE_BOX_WIDTH, height: textColumnRows, flexDirection: "row", justifyContent: "center", alignItems: "center", children: maidImageActive ? (_jsx(MaidPortrait, { source: maidHappy ? (portraits?.happy ?? maidSource) : maidSource, maxColumns: WHALE_BOX_WIDTH, maxRows: textColumnRows, presentation: "transcript" })) : (claudeArt ? _jsx(ClaudeGirlArt, { width: WHALE_BOX_WIDTH }) : _jsx(WhaleGirlArt, { width: WHALE_BOX_WIDTH })) })) : (_jsx(WhaleArt, { frameIndex: frameIndex, pose: settled && whaleIdle && !whaleFrozen ? (idlePose ?? RESTING_POSE) : undefined, width: WHALE_BOX_WIDTH })) }) })), (showBigTitle || showPlainTitle) && (_jsxs(Box, { flexDirection: "column", flexShrink: 1, children: [chrome !== 'minimal' && (_jsxs(Text, { wrap: "truncate-end", children: [sweep('✦ dsh-TUI', t, wordmarkRGB, wordmarkShimmerRGB, 60), _jsx(Text, { dimColor: true, children: '  v' + VERSION })] })), showBigTitle ? (_jsxs(_Fragment, { children: [bigDeepSeek.map((row, index) => (_jsx(Text, { wrap: "truncate-end", children: row.replace(/\s+$/u, '') }, `ds-${index}`))), _jsx(Box, { height: 1 }), bigHarness.map((row, index) => (_jsx(Text, { wrap: "truncate-end", children: row.replace(/\s+$/u, '') }, `h-${index}`)))] })) : (showPlainTitle && (_jsx(Text, { color: "accent", bold: true, wrap: "truncate-end", children: words.plain }))), chrome !== 'minimal' && (_jsxs(_Fragment, { children: [_jsxs(Text, { wrap: "truncate-end", children: [model, effort !== undefined && _jsx(Text, { dimColor: true, children: ' · ' + capitalize(effort) + ' effort' })] }), _jsx(Text, { dimColor: true, wrap: "truncate-end", children: cwd }), _jsxs(Text, { wrap: "truncate-end", children: [_jsx(Text, { dimColor: true, children: tr('logo-tip-prefix') }), getLang() === 'zh' ? randomTip.zh : randomTip.en, _jsx(Text, { dimColor: true, children: ' · /tips ' + tr('logo-tip-more') })] })] })), chrome !== 'minimal' && driftLine != null && (_jsxs(Text, { color: "warning", wrap: "wrap", children: ["\u26A0", ' ', tOr(`logo-drift-${driftLine.kind}`, `The dsh engine (${driftLine.versions.join(' / ')}) does not match the validated ${UPSTREAM_VALIDATED_VERSION}; reinstall via npm i -g @deepseek-ai/dsh@${UPSTREAM_VALIDATED_VERSION}.`, {
++                        }, children: _jsx(Box, { width: WHALE_BOX_WIDTH, flexDirection: "column", alignItems: "center", children: brand === 'deepseek' && mascotSkin !== undefined ? (_jsx(SplashMascot, { skin: mascotSkin, active: !whaleFrozen && whaleIdle, imageBox: imageBox })) : portraitMode ? (_jsx(Box, { width: WHALE_BOX_WIDTH, height: textColumnRows, flexDirection: "row", justifyContent: "center", alignItems: "center", children: maidImageActive ? (_jsx(MaidPortrait, { source: maidHappy ? (portraits?.happy ?? maidSource) : maidSource, maxColumns: WHALE_BOX_WIDTH, maxRows: textColumnRows, presentation: "transcript" })) : (claudeArt ? _jsx(ClaudeGirlArt, { width: WHALE_BOX_WIDTH }) : _jsx(WhaleGirlArt, { width: WHALE_BOX_WIDTH })) })) : (_jsx(WhaleArt, { frameIndex: frameIndex, pose: settled && whaleIdle && !whaleFrozen ? (idlePose ?? RESTING_POSE) : undefined, width: WHALE_BOX_WIDTH })) }) })), (showBigTitle || showPlainTitle) && (_jsxs(Box, { flexDirection: "column", flexShrink: 1, children: [chrome !== 'minimal' && (_jsxs(Text, { wrap: "truncate-end", children: [sweep('✦ hyperai-tui', t, wordmarkRGB, wordmarkShimmerRGB, 60), _jsx(Text, { dimColor: true, children: '  v' + VERSION })] })), showBigTitle ? (_jsxs(_Fragment, { children: [bigDeepSeek.map((row, index) => (_jsx(Text, { wrap: "truncate-end", children: row.replace(/\s+$/u, '') }, `ds-${index}`))), _jsx(Box, { height: 1 }), bigHarness.map((row, index) => (_jsx(Text, { wrap: "truncate-end", children: row.replace(/\s+$/u, '') }, `h-${index}`)))] })) : (showPlainTitle && (_jsx(Text, { bold: true, wrap: "truncate-end", children: sweep(words.plain, t, HYPERAI_PALETTE.accent, HYPERAI_PALETTE.accent, 60) }))), chrome !== 'minimal' && (_jsxs(_Fragment, { children: [_jsxs(Text, { wrap: "truncate-end", children: [model, effort !== undefined && _jsx(Text, { dimColor: true, children: ' · ' + capitalize(effort) + ' effort' })] }), _jsx(Text, { dimColor: true, wrap: "truncate-end", children: cwd }), _jsxs(Text, { wrap: "truncate-end", children: [_jsx(Text, { dimColor: true, children: tr('logo-tip-prefix') }), getLang() === 'zh' ? randomTip.zh : randomTip.en, _jsx(Text, { dimColor: true, children: ' · /tips ' + tr('logo-tip-more') })] })] })), chrome !== 'minimal' && driftLine != null && (_jsxs(Text, { color: "warning", wrap: "wrap", children: ["\u26A0", ' ', tOr(`logo-drift-${driftLine.kind}`, `The dsh engine (${driftLine.versions.join(' / ')}) does not match the validated ${UPSTREAM_VALIDATED_VERSION}; reinstall via npm i -g @deepseek-ai/dsh@${UPSTREAM_VALIDATED_VERSION}.`, {
+                                         installed: driftLine.versions.join(' / '),
+                                         validated: UPSTREAM_VALIDATED_VERSION,
+                                         primary: UPSTREAM_VALIDATED_VERSION,
+diff --git a/lib/types/components/launchpadLayout.js b/lib/types/components/launchpadLayout.js
+index 660f031..9ce3346 100644
+--- a/lib/types/components/launchpadLayout.js
++++ b/lib/types/components/launchpadLayout.js
+@@ -111,7 +111,9 @@ export function resolveLaunchpadLayout(columns, rows, options) {
+     const titleWidth = Math.max(bigTextWidth(font, font.tagline.top, font.tagline.topKerning) + font.tagline.topKerning, bigTextWidth(font, font.tagline.bottom, font.tagline.bottomKerning) + font.tagline.bottomKerning);
+     const showBigTitle = columns >= titleWidth;
+     const artBox = WHALE_BOX_WIDTH;
+-    const wantsArt = options.whale || options.whaleGirl === true;
++    // hyperai-tui: the splash never renders art, so the launchpad budget must
++    // not reserve rows for it (the wordmark is the whole hero).
++    const wantsArt = false;
+     // 上下排布：立绘只看自己放不放得下，不再和词标抢同一行的宽度。
+     const showWhale = wantsArt && columns >= artBox;
+     const showPlainTitle = !showBigTitle && !showWhale;
+diff --git a/lib/types/components/splashEggs.js b/lib/types/components/splashEggs.js
+index 03e9f34..42bdb27 100644
+--- a/lib/types/components/splashEggs.js
++++ b/lib/types/components/splashEggs.js
+@@ -34,7 +34,7 @@ export function pickSplashEgg(now = new Date()) {
+     return SPLASH_EGGS.find(egg => egg.month === month && egg.day === day) ?? null;
+ }
+ /** 求 star 标语指向的仓库。 */
+-export const SPLASH_STAR_URL = 'https://github.com/ccch1mneyyy/dsh-TUI';
++export const SPLASH_STAR_URL = 'https://github.com/hyperai/hyperai-harness';
+ /** 链接显示文本（比裸 URL 短，整行还能按鲸鱼居中）。 */
+ const SPLASH_STAR_LABEL = 'Star';
+ /** 剥掉 OSC 8 包裹序列（量可见宽度用）。 */
+diff --git a/lib/types/components/splashFonts.js b/lib/types/components/splashFonts.js
+index 78b5e4d..9634e65 100644
+--- a/lib/types/components/splashFonts.js
++++ b/lib/types/components/splashFonts.js
+@@ -303,10 +303,11 @@ export function withTagline(font, top, bottom, options) {
+ }
+ /** 品牌与节日换词后的实际标题，供布局预算与 Logo 渲染共同使用。 */
+ export function resolveSplashTitleFont(font, brand = 'deepseek', egg = null) {
+-    if (brand === 'deepseek' && egg === null)
+-        return font;
++    // hyperai-tui: every brand — including the dsh default — takes its splash
++    // words from BRAND_SPLASH_WORDS instead of the font table's built-in
++    // DEEPSEEK/HARNESS pair.
+     const words = BRAND_SPLASH_WORDS[brand];
+-    return withTagline(font, brand === 'deepseek' ? font.tagline.top : words.top, egg?.bottom ?? words.bottom, brand === 'deepseek' ? undefined : { uniform: true });
++    return withTagline(font, words.top, egg?.bottom ?? words.bottom, { uniform: true });
+ }
+ /** 半立体的配色不再静态写死：LogoV2 按主题 accent 派生亮/暗两档（金属受光），
+  * 蓝主题出蓝金属、橙主题出橙金属——静态灰阶在任何主题下都像没上色。 */
+diff --git a/lib/types/dsh-adapter/plugin.js b/lib/types/dsh-adapter/plugin.js
+index 71e32df..91f7aa6 100644
+--- a/lib/types/dsh-adapter/plugin.js
++++ b/lib/types/dsh-adapter/plugin.js
+@@ -2229,7 +2229,7 @@ export async function apply(ctx, runtimeConfig, configOwner = ctx, runtimeOption
+      * two answer different questions, and an install that already knows its
+      * workspace may still never have configured a key.
+      */
+-    const onboardingOnBoot = dshBoot && noResume && shouldOfferOnboarding();
++    const onboardingOnBoot = false; // hyperai-tui: upstream onboarding is DeepSeek-branded; the profile configures the provider from the environment
+     // 品牌镜像初值（branding.ts）：首帧渲染前铺好，避免 Claude 后端先画一屏
+     // 蓝再变橙。Chat 里的 effect 会在品牌解析变化时跟进更新这个镜像。
+     setActiveBrand(resolveBrand(config.brand, backendChoice));
+diff --git a/lib/types/i18n.js b/lib/types/i18n.js
+index d7db9d3..ae0cba4 100644
+--- a/lib/types/i18n.js
++++ b/lib/types/i18n.js
+@@ -253,7 +253,7 @@ const dict = {
+     'subagent-status-failed': { zh: '失败', en: 'failed' },
+     'subagent-status-unknown': { zh: '状态未知', en: 'status unknown' },
+     'subagent-task-fallback': { zh: '{{kind}} 任务', en: '{{kind}} task' },
+-    'task-complete-notification': { zh: 'dsh-TUI · 任务已完成', en: 'dsh-TUI · Task complete' },
++    'task-complete-notification': { zh: 'hyperai-tui · 任务已完成', en: 'hyperai-tui · Task complete' },
+     'subagent-background': { zh: '后台', en: 'background' },
+     'subagent-interrupt-failed': { zh: '无法停止子代理 {{id}}（已结束或被拒绝）', en: 'Could not stop subagent {{id}} (already finished or refused)' },
+     'agent-preset-switched': { zh: 'Agent preset 已切换：{{preset}}', en: 'Agent preset switched: {{preset}}' },
+@@ -896,7 +896,7 @@ const dict = {
+     // ── channel/upstream-retry.ts — 上游断链自动重试 ──────────────────────
+     'upstream-retry-enabled': { zh: '已为当前渠道 {{routes}} 启用上游断链自动重试（最多重试 5 次；cordis.yml upstreamRetry: false 可关闭）', en: 'Upstream auto-retry enabled for {{routes}} (the route in use) — up to 5 retries per request (opt out with upstreamRetry: false in cordis.yml)' },
+     // ── components/LogoV2.tsx ───────────────────────────────────────────
+-    'logo-tagline': { zh: '探索未至之境！', en: 'Explore the uncharted!' },
++    'logo-tagline': { zh: 'HyperAI Harness', en: 'HyperAI Harness' },
+     // Star easter egg (bottom welcome line on ~1/20 of mounts, see
+     // components/splashEggs.ts): the sentence is split around the repo
+     // hyperlink — lead + link + tail — so both halves are translatable and
+@@ -905,10 +905,10 @@ const dict = {
+     // URL, and lead+URL+tail has to fit an 80-column terminal without wrapping.
+     // 开屏求 star 彩蛋（splashEggs.ts + LogoV2）：平时是 logo-tagline，跨里程碑
+     // 时换成"标题 + 数字 + 求星"三行，标题先出、其余两行每秒跟一行。
+-    'logo-star-title': { zh: '鲸鱼娘好像在等一颗小星星…… ☆', en: 'The whale girl seems to be waiting for a little star… ☆' },
+-    'logo-star-caught': { zh: '鲸鱼娘捡到一颗小星星啦 ✨', en: 'The whale girl caught a little star ✨' },
++    'logo-star-title': { zh: 'HyperAI Harness 好像在等一颗小星星…… ☆', en: 'HyperAI Harness seems to be waiting for a little star… ☆' },
++    'logo-star-caught': { zh: 'HyperAI Harness 捡到一颗小星星啦 ✨', en: 'HyperAI Harness caught a little star ✨' },
+     'logo-star-stats': { zh: '已陪你 {{hours}} 小时 · 第 {{launches}} 次打开', en: '{{hours}}h together · launch #{{launches}}' },
+-    'logo-star-ask': { zh: '喜欢 dshTUI 的话，顺手点亮一颗 {{star}}？（点这一行或 {{key}} 一键支持）', en: 'If you like dsh-TUI, would you light a {{star}}? (click this line or {{key}})' },
++    'logo-star-ask': { zh: '喜欢 hyperai-tui 的话，顺手点亮一颗 {{star}}？（点这一行或 {{key}} 一键支持', en: 'If you like hyperai-tui, would you light a {{star}}? (click this line or {{key}})' },
+     'cmd-desc-star': { zh: '给这个项目点个 star（用 gh 一键）' },
+     'star-ok': { zh: '已 star，谢谢！', en: 'Starred — thank you!' },
+     'star-no-gh': {
+@@ -928,21 +928,21 @@ const dict = {
+     // 一行**（48 列内不折行），所以排版与作者写的断句完全一致。
+     'star-modal-title-hours': { zh: '🐳 已经陪你 {{hours}} 小时了！', en: '🐳 {{hours}} hours together!' },
+     'star-modal-title-launches': { zh: '🐳 已经陪你 {{launches}} 次启动了！', en: '🐳 {{launches}} launches together!' },
+-    'star-modal-body-1': { zh: '不知不觉，dshTUI 已经陪你走了这么久啦。', en: 'Before you noticed, dsh-TUI had already come this far with you.' },
++    'star-modal-body-1': { zh: '不知不觉，HyperAI Harness 已经陪你走了这么久啦。', en: 'Before you noticed, HyperAI Harness had already come this far with you.' },
+     'star-modal-body-2': { zh: '如果它有让你的 DSH 更好用一点、', en: 'If it made your DSH a little more usable,' },
+     'star-modal-body-3': { zh: '更顺手一点，或者只是让你开心了一点——', en: 'a little smoother — or just made you smile —' },
+-    'star-modal-body-4': { zh: '那就送鲸鱼娘一颗小小的 Star 吧 ⭐', en: 'treat the whale girl to a tiny Star ⭐' },
++    'star-modal-body-4': { zh: '那就送 HyperAI Harness 一颗小小的 Star 吧 ⭐', en: 'treat HyperAI Harness to a tiny Star ⭐' },
+     'star-modal-body-5': { zh: '每一颗 Star，都会变成我们继续折腾', en: 'Every Star becomes fuel for us to keep tinkering' },
+-    'star-modal-body-6': { zh: '和把 dshTUI 做得更好的动力！', en: 'and to keep making dsh-TUI better!' },
++    'star-modal-body-6': { zh: '和把 HyperAI Harness 做得更好的动力！', en: 'and to keep making HyperAI Harness better!' },
+     'star-modal-star': { zh: '投喂一颗 Star ⭐', en: 'Feed a Star ⭐' },
+     'star-modal-open': { zh: '在浏览器中打开 GitHub', en: 'Open GitHub in the browser' },
+     'star-modal-working': { zh: '正在点 star…', en: 'Starring…' },
+     'star-modal-hint': { zh: '↑↓ 选择 · **Enter** 确认 · **Esc** 下次一定 (´;ω;`)', en: '↑↓ choose · **Enter** confirm · **Esc** next time (´;ω;`)' },
+     // star 成功后的庆祝态（星光 + 鲸鱼喷水），几秒后卡片自己收场。
+     'star-modal-thanks-title': { zh: '🌟 收到 Star 啦！', en: '🌟 Star received!' },
+-    'star-modal-thanks-1': { zh: '鲸鱼娘成功接住了一颗小星星 ~', en: 'The whale girl caught a little star ~' },
++    'star-modal-thanks-1': { zh: 'HyperAI Harness 成功接住了一颗小星星 ~', en: 'HyperAI Harness caught a little star ~' },
+     'star-modal-thanks-2': { zh: '谢谢你的支持！', en: 'Thank you for your support!' },
+-    'star-modal-thanks-3': { zh: '这颗 Star 会变成 dshTUI 继续成长的动力。', en: 'This Star becomes fuel for dsh-TUI to keep growing.' },
++    'star-modal-thanks-3': { zh: '这颗 Star 会变成 HyperAI Harness 继续成长的动力。', en: 'This Star becomes fuel for HyperAI Harness to keep growing.' },
+     'star-modal-thanks-4': { zh: '希望以后，它也能继续陪你走很久。', en: 'May it keep you company for a long time to come.' },
+     'star-modal-thanks-hint': { zh: '**Enter** / **Esc** 关闭', en: '**Enter** / **Esc** to close' },
+     'coupon-modal-title': { zh: '鲸鱼券', en: 'Whale coupon' },
+@@ -1154,7 +1154,7 @@ const dict = {
+     'tips-hint': { zh: '↑/↓ 滚动 · Esc 关闭', en: '↑/↓ scroll · Esc to close' },
+     // ── components/TurnInterruptedRow.tsx ────────────────────────────────
+     'interrupted-by-user': { zh: '已打断 ', en: 'Interrupted ' },
+-    'interrupted-ask-next': { zh: '· 接下来想让 DeepSeek 做什么？', en: '· What should DeepSeek do instead?' },
++    'interrupted-ask-next': { zh: '· 接下来想让 HyperAI 做什么？', en: '· What should HyperAI do instead?' },
+     'interrupted-ask-backend': { zh: '· 接下来想让 {{name}} 做什么？', en: '· What should {{name}} do instead?' },
+     // ── components/MessageList.tsx ──────────────────────────────────────
+     'load-earlier': { zh: ' ↑ 加载更早消息（会话日志完整，/export 导出全文） ', en: ' ↑ load earlier messages (full session log; /export for full text) ' },
+@@ -1596,7 +1596,7 @@ const dict = {
+     'thinking-title': { zh: '思考过程显示', en: 'Thinking display' },
+     'thinking-subtitle': { zh: '只控制思考过程是否显示，不改变模型的思考行为。', en: 'Only controls whether reasoning is shown; it does not change model behavior.' },
+     'thinking-enabled': { zh: '显示', en: 'Shown' },
+-    'thinking-enabled-desc': { zh: '在对话中显示 DeepSeek 的思考过程', en: "Show DeepSeek's reasoning in the conversation" },
++    'thinking-enabled-desc': { zh: '在对话中显示 HyperAI 的思考过程', en: "Show HyperAI's reasoning in the conversation" },
+     'thinking-disabled': { zh: '隐藏', en: 'Hidden' },
+     'thinking-disabled-desc': { zh: '隐藏思考过程；模型仍会照常思考', en: 'Hide reasoning; the model will still think as usual' },
+     'thinking-label': { zh: '思考', en: 'Thinking' },
+@@ -2404,7 +2404,7 @@ const dict = {
+     // 这三个 label 键只给**随包内置**的后端（manifest 的 `inTree: true` /
+     // `label.kind: 'key'`）。插件后端的名字是外部字面量：原样渲染、不进本字典、
+     // 不过 t()（P0 D2，见 components/KernelPicker.tsx）。
+-    'kernel-label-dsh': { zh: 'DeepSeek Harness', en: 'DeepSeek Harness' },
++    'kernel-label-dsh': { zh: 'HyperAI Harness', en: 'HyperAI Harness' },
+     'kernel-label-claude': { zh: 'Claude Agent', en: 'Claude Agent' },
+     'kernel-label-codex': { zh: 'Codex', en: 'Codex' },
+     'kernel-login-in-session': { zh: '未登录', en: 'Not signed in' },
+@@ -2587,14 +2587,14 @@ const dict = {
+         en: 'Could not resume the last session — opened the session list',
+     },
+     'launchpad-first-run': {
+-        zh: '第一次用 dsh-TUI？花一分钟跑一遍引导，把 API Key、语言、主题、模型一次配好。',
+-        en: 'New to dsh-TUI? One minute of setup wires up your API key, language, theme and model.',
++        zh: '第一次用 hyperai-tui？花一分钟跑一遍引导，把 API Key、语言、主题、模型一次配好。',
++        en: 'New to hyperai-tui? One minute of setup wires up your API key, language, theme and model.',
+     },
+     // （launchpad-cwd-prefix 已删：2026-10 落地页改版删掉了底部工作目录行。）
+     // （launchpad-handoff 已删：第五版起落地页回车直接发送（channel.submit），
+     //  没有草稿要交接，那句"已放进输入框"的提示反而是假的。）
+     // ── screens/Onboarding.tsx（首次引导：四步把常用配置配好）────────────────
+-    'onboarding-title': { zh: '欢迎使用 dsh-TUI', en: 'Welcome to dsh-TUI' },
++    'onboarding-title': { zh: '欢迎使用 hyperai-tui', en: 'Welcome to hyperai-tui' },
+     'onboarding-step-progress': { zh: '第 {{n}} / {{total}} 步', en: 'Step {{n}} of {{total}}' },
+     'onboarding-step-apikey-title': { zh: 'API Key 与连通性', en: 'API key and connectivity' },
+     'onboarding-step-apikey-desc': {
+@@ -2628,7 +2628,7 @@ const dict = {
+     'onboarding-key-howto-env': { zh: '设置一个环境变量再重启：', en: 'Set an environment variable and restart:' },
+     'onboarding-key-howto-config': { zh: '或写进 dsh 的配置里：', en: 'Or put it in the dsh config:' },
+     'onboarding-key-retry': { zh: '重新检查', en: 'Check again' },
+-    'onboarding-conn-running': { zh: '正在连接 DeepSeek…', en: 'Connecting to DeepSeek…' },
++    'onboarding-conn-running': { zh: '正在连接 HyperAI…', en: 'Connecting to HyperAI…' },
+     'onboarding-conn-ok': { zh: '连通正常', en: 'Connected' },
+     'onboarding-conn-models': { zh: '{{count}} 个可用模型', en: '{{count}} models available' },
+     'onboarding-conn-balance': { zh: '余额 {{amount}}', en: 'Balance {{amount}}' },
+diff --git a/lib/types/screens/Launchpad.js b/lib/types/screens/Launchpad.js
+index d8a8835..5b3cbf3 100644
+--- a/lib/types/screens/Launchpad.js
++++ b/lib/types/screens/Launchpad.js
+@@ -479,7 +479,7 @@ onKernelPick, cwd, branch, tuiVersion, onFocusChange, onAction, onQueryChange, o
+     // （kernelSubtitle），读不到就只画名字，绝不编造。**登录状态不进铭牌**：
+     // 铭牌只报「有哪些内核、各自什么版本」，未登录在选择器里看（切换时才需要，
+     // noteKey 在那边走副标题），右下角保持只有名字与版号的干净两列。
+-    const tuiPart = tuiVersion === undefined || tuiVersion === '' ? undefined : `dsh-tui v${tuiVersion}`;
++    const tuiPart = tuiVersion === undefined || tuiVersion === '' ? undefined : `hyperai-tui v${tuiVersion}`;
+     // 名字用**短品牌名**（option.shortLabel，来自 manifest：DSH / Claude，与启动页
+     // 「内核 · DSH」那个 chip 同源）：这一格与左下角的 `工作目录:分支` 共用底边，
+     // 全名（DeepSeek Harness · … = 40 列）在窄终端里会把左边的目录铭牌挤掉。
+diff --git a/lib/types/update.js b/lib/types/update.js
+index 8efb701..e9a50a9 100644
+--- a/lib/types/update.js
++++ b/lib/types/update.js
+@@ -875,6 +875,9 @@ export async function downloadAndReplaceStandaloneBinary(downloadUrl, onProgress
+  * upgrading to yesterday's version.
+  */
+ export async function resolveTuiUpdateTarget() {
++    // hyperai-tui: the upstream updater replaces the branded package with the
++    // unbranded one, so the hyperai profile installer owns version bumps.
++    return { kind: 'unknown' };
+     const current = installedTuiVersion();
+     const currentVersion = current === undefined ? null : valid(current);
+     if (currentVersion === null)
+diff --git a/lib/types/utils/paths.js b/lib/types/utils/paths.js
+index cdef174..e315699 100644
+--- a/lib/types/utils/paths.js
++++ b/lib/types/utils/paths.js
+@@ -15,8 +15,29 @@ import { join } from 'node:path';
+ export function homeDir() {
+     return homedir() || process.env.USERPROFILE || process.env.HOME || '';
+ }
++/**
++ * hyperai-tui: keep a second dsh profile from reading and writing the dsh-tui
++ * profile's UI state. Upstream keeps every preference (model route, workspace,
++ * history, onboarding) under one `~/.dsh-tui`; that would let a `/model` pick
++ * in the hyperai profile overwrite the dsh-tui profile's persisted route. The
++ * dsh-tui profile keeps the legacy path; any other profile gets its own
++ * `~/.dsh-tui-<profile>` root.
++ * @returns The directory name for the current profile's UI state.
++ */
++function dataDirName() {
++    const argv = process.argv;
++    let profile;
++    for (let index = 0; index < argv.length; index++) {
++        if (argv[index] === '--profile' && typeof argv[index + 1] === 'string')
++            profile = argv[index + 1];
++        else if (argv[index].startsWith('--profile='))
++            profile = argv[index].slice('--profile='.length);
++    }
++    profile ??= process.env.DSH_TUI_PROFILE;
++    return profile === undefined || profile === '' || profile === 'dsh-tui' ? '.dsh-tui' : `.dsh-tui-${profile}`;
++}
+ /** Data directory all preferences/history live in (`~/.dsh-tui`). */
+-export const DATA_DIR = join(homeDir(), '.dsh-tui');
++export const DATA_DIR = join(homeDir(), dataDirName());
+ /**
+  * Where one backend keeps its own files: `<dataRoot>/backends/<id>`, keyed by
+  * the backend's declared id (the `x-dsh-tui` Backend entry's `spec.id` field).

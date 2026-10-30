@@ -1,0 +1,64 @@
+# hyperai profile patch layer, applied after the dsh-base and dsh-tui bundle
+# layers. Kept small on purpose: the profile owns three things — the default
+# OpenAI-compatible model route, the splash route stamped into the TUI row, and
+# the profile-scoped skill root.
+#
+# No credential ever lives here: `apiKeyEnv` is the NAME of an environment
+# variable the launcher must export. Change the endpoint/model without editing
+# this file by exporting the variables documented in apps/profiles/hyperai/README.md.
+
+# ── OpenAI-compatible provider ──────────────────────────────────────────────
+# dsh-base mounts llm-pi-ai with zero routes; this supplies one route whose
+# endpoint, credential reference and model list all come from the environment.
+# HYPERAI_API_KEY_ENV names the variable that holds the key (default
+# HYPERAI_API_KEY); HYPERAI_BASE_URL points at any OpenAI-compatible gateway;
+# HYPERAI_MODELS is a comma-separated model list (HYPERAI_MODEL alone also
+# works). The default model id is a placeholder, not a product choice.
+- id: llm-pi-ai
+  config:
+    providers:
+      hyperai:
+        apiKeyEnv: !!js process.env.HYPERAI_API_KEY_ENV ?? 'HYPERAI_API_KEY'
+        displayName: !!js process.env.HYPERAI_PROVIDER_LABEL ?? 'HyperAI'
+        api: openai-completions
+        baseURL: !!js process.env.HYPERAI_BASE_URL ?? 'https://api.openai.com/v1'
+        models: !!js >-
+          (process.env.HYPERAI_MODELS ?? process.env.HYPERAI_MODEL ?? 'gpt-4o-mini')
+            .split(',')
+            .map(id => id.trim())
+            .filter(id => id.length > 0)
+            .map(id => ({ id }))
+
+# ── default TUI route ──────────────────────────────────────────────────────
+# A patch replaces the targeted row's whole config, so this restates every key
+# the dsh-tui bundle row owns (pinned upstream 0.16.1) and changes only
+# `provider`/`model`. A `/model` pick persisted in ~/.dsh-tui wins whole later.
+- id: dsh-tui
+  config:
+    provider: !!js process.env.HYPERAI_PROVIDER ?? 'hyperai'
+    model: !!js process.env.HYPERAI_MODEL ?? 'gpt-4o-mini'
+    fullscreen: true
+    terminalImages: true
+    effort: max
+    preset: !!js process.env.DSH_TUI_PRESET ?? undefined
+    workspace: !!js process.env.DSH_TUI_WORKSPACE_TARGET ?? undefined
+    sessionId: !!js process.env.DSH_TUI_RESUME_SESSION ?? undefined
+    backend: !!js process.env.DSH_TUI_BACKEND || undefined
+
+# ── skills ─────────────────────────────────────────────────────────────────
+# The dsh-tui bundle disables the host skill rows because its agent presets own
+# per-agent discovery. Re-enabling the host provider adds a global-layer skill
+# root on top of the preset providers: every agent reads the merged catalog.
+# The installer drops hyperai-skills bundles under
+# `<profile>/skills/<skill>/SKILL.md`; HYPERAI_SKILLS_DIR relocates the root.
+- id: skill-filesystem
+  disabled: false
+  config:
+    providerName: filesystem
+    customSkillDirs:
+      - !!js >-
+        process.env.DSH_HYPERAI_SKILLS_DIR
+          ?? process.getBuiltinModule('node:path').join(
+            process.env.DSH_HOME ?? process.getBuiltinModule('node:path').join(process.getBuiltinModule('node:os').homedir(), '.dsh'),
+            'profiles', 'hyperai', 'skills')
+    watch: true

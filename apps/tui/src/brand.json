@@ -1,0 +1,22 @@
+{
+  "$comment": "Brand data for hyperai-tui. scripts/build-patch.mjs reads these values to produce the pnpm patch that rebrands the pinned upstream @deepseek-harness-tui/dsh-tui package. The startup splash shows only the HYPERAI HARNESS pixel wordmark in titleColor; no logo, mascot or image is rendered, and no image protocol is involved.",
+  "productName": "HyperAI Harness",
+  "pluginName": "hyperai-tui",
+  "profileName": "hyperai",
+  "titleColor": "#FF6096",
+  "splashWords": {
+    "top": "HYPERAI",
+    "bottom": "HARNESS",
+    "plain": "HyperAI Harness"
+  },
+  "tagline": {
+    "zh": "HyperAI Harness",
+    "en": "HyperAI Harness"
+  },
+  "upstream": {
+    "package": "@deepseek-harness-tui/dsh-tui",
+    "version": "0.16.1",
+    "repository": "https://github.com/ccch1mneyyy/dsh-TUI",
+    "license": "MIT"
+  }
+}

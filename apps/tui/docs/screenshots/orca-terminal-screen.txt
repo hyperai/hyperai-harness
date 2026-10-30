@@ -1,0 +1,24 @@
+Real Orca embedded terminal (xterm.js 6.0.0, light theme) screen buffer for `dsh --profile hyperai`.
+Captured with `orca terminal read --terminal <handle> --screen --json` on 2026-10-30.
+The splash is the pixel wordmark only; there are no logo/art rows.
+
+                                  ██  ██  ██  ██  ██████  ██████  ██████   ████   ██████
+                                  █▓  █▓  █▓  █▓  █▓  █▓  █▓      █▓  █▓  █▓  ██    █▓
+                                  █████▓  ▓▓██▓▓  ████▓▓  █████   █████▓  █████▓    █▓
+                                  █▓  █▓    █▓    █▓      █▓      █▓ ▓▓   █▓  █▓    █▓
+                                  ▓▓  ▓▓    ▓▓    ▓▓      ▓▓▓▓▓▓  ▓▓  ▓▓  ▓▓  ▓▓  ▓▓▓▓▓▓
+                                  ██  ██   ████   ██████  ██  ██  ██████  ██████  ██████
+                                  █▓  █▓  █▓  ██  █▓  █▓  ███ █▓  █▓      ▓▓      ▓▓
+                                  █████▓  █████▓  █████▓  █▓ ██▓  █████    ▓████   ▓████
+                                  █▓  █▓  █▓  █▓  █▓ ▓▓   █▓  █▓  █▓          █▓      █▓
+                                  ▓▓  ▓▓  ▓▓  ▓▓  ▓▓  ▓▓  ▓▓  ▓▓  ▓▓▓▓▓▓  ▓▓▓▓▓▓  ▓▓▓▓▓▓
+                         ╭──────────────────────────────────────────────────────────────────────╮
+                         │ ❯ Say something, or type / for commands…                             │
+                         ╰──────────────────────────────────────────────────────────────────────╯
+                           gpt-4o-mini  ·  standard  ·  Workspace read/write
+                                       Sessions & workspaces    Settings    Kernel · DSH    Help
+                            ● Tips: Type / for every command; /setup re-runs the guide anytime
+  /Users/zhenhaoli/Downloads/hyperai_har/hyperai-harness:feat/hyperai-tui-profile                    hyperai-tui v0.16.1
+                                                                                            ▸ DSH · dsh-core v0.2.1-rc.2
+                                                                               Claude · Not installed · Enter to install
+                                                                                              Codex · codex-cli v0.164.0
