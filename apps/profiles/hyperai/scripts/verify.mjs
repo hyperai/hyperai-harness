@@ -140,6 +140,8 @@ await check('the dry-run installer plans every managed file and writes nothing',
       'create cordis.patch.yml',
       'create pnpm-workspace.yaml',
       'create patches/hyperai-tui.patch',
+      'create scripts/skills-lib.mjs',
+      'create scripts/skills-update.mjs',
     ]
     if (JSON.stringify(plan) !== JSON.stringify(expected)) throw new Error(`plan is ${JSON.stringify(plan)}`)
     if (existsSync(join(home, 'profiles', 'hyperai', 'package.json'))) throw new Error('dry run wrote files')
@@ -170,8 +172,23 @@ await check('the installer refuses a foreign profile and the manifest stays mana
   }
 })
 
+await check('the profile ships the independent skills updater', () => {
+  for (const file of ['scripts/skills-lib.mjs', 'scripts/skills-update.mjs']) {
+    if (!existsSync(join(PKG, file))) throw new Error(`${file} is missing`)
+  }
+  const cli = readFileSync(join(PKG, 'scripts', 'skills-update.mjs'), 'utf8')
+  for (const command of ['check', 'update', 'catalog', 'rollback']) {
+    if (!cli.includes(command)) throw new Error(`skills-update.mjs is missing the ${command} command`)
+  }
+  const lib = readFileSync(join(PKG, 'scripts', 'skills-lib.mjs'), 'utf8')
+  for (const marker of ['discoverSkills', 'planSkills', 'applyPlan', 'rollback', 'recoverPending']) {
+    if (!lib.includes(marker)) throw new Error(`skills-lib.mjs is missing ${marker}`)
+  }
+  return 'check/update/catalog/rollback shipped with the profile'
+})
+
 await check('the README documents the native profile, TUI relation and run command', () => {
-  for (const marker of ['apps/tui', 'dsh --profile hyperai', '/provider', '/model', 'Skills']) {
+  for (const marker of ['apps/tui', 'dsh --profile hyperai', '/provider', '/model', 'skills-update.mjs', 'Skills']) {
     if (!readme.includes(marker)) throw new Error(`README is missing ${JSON.stringify(marker)}`)
   }
   if (readme.includes('HYPERAI_API_KEY')) throw new Error('README still documents a forced provider credential')

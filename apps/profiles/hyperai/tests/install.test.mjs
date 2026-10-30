@@ -43,6 +43,8 @@ test('dry run plans every managed file and writes nothing', async () => {
         'create cordis.patch.yml',
         'create pnpm-workspace.yaml',
         'create patches/hyperai-tui.patch',
+        'create scripts/skills-lib.mjs',
+        'create scripts/skills-update.mjs',
       ],
     )
     assert.equal(existsSync(join(home, 'profiles', 'hyperai', 'package.json')), false)
@@ -65,7 +67,7 @@ test('dry run is idempotent on a managed profile', async () => {
     const result = await install(parseArgs(['--dsh-home', home, '--no-skills', '--dry-run']))
     assert.deepEqual(
       result.plan.map(step => step.action),
-      ['unchanged', 'unchanged', 'unchanged', 'create'],
+      ['unchanged', 'unchanged', 'unchanged', 'create', 'create', 'create'],
     )
   } finally {
     rmSync(home, { recursive: true, force: true })

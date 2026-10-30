@@ -326,6 +326,11 @@ export async function install(options = parseArgs([])) {
   stageCordisPatch(options, readFileSync(join(PROFILE_TEMPLATE, 'cordis.patch.yml'), 'utf8'), plan)
   stageFile(options, 'pnpm-workspace.yaml', workspaceFile(), { marker: WORKSPACE_MARKER, plan })
   stageCopy(options, join('patches', 'hyperai-tui.patch'), PATCH_FILE, plan)
+  // Ship the independent skills updater into the installed profile so the user
+  // can check/update/rollback skills without keeping this checkout around.
+  for (const file of ['skills-lib.mjs', 'skills-update.mjs']) {
+    stageCopy(options, join('scripts', file), join(PKG, 'scripts', file), plan)
+  }
   if (options.dryRun) {
     result.skills = { skipped: options.skills ? 'dry-run' : true }
     return result

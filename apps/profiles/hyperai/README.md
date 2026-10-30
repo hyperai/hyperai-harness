@@ -66,9 +66,27 @@ or read by the profile.
 
 `scripts/install-skills.mjs` installs the pinned `hyperai-skills` commit listed
 in [`skills/hyperai-skills.lock.json`](skills/hyperai-skills.lock.json) into
-`<profile>/skills/`, records digests in `<profile>/.hyperai-skills/manifest.json`
-and refuses to overwrite user-modified skills. See
-[`docs/skills.md`](docs/skills.md) for the full mechanism, rollback and flags.
+`<profile>/skills/` as the initial/offline baseline. Day-to-day updates use the
+independent updater, which `install.mjs` copies into the installed profile:
+
+```sh
+node ~/.dsh/profiles/hyperai/scripts/skills-update.mjs catalog   # offline
+node ~/.dsh/profiles/hyperai/scripts/skills-update.mjs check     # read-only
+node ~/.dsh/profiles/hyperai/scripts/skills-update.mjs update --yes
+node ~/.dsh/profiles/hyperai/scripts/skills-update.mjs rollback --list
+
+# explicit development-branch test (prerelease; never the default):
+node ~/.dsh/profiles/hyperai/scripts/skills-update.mjs check \
+  --ref feat/ppt-generation-upstream
+```
+
+The updater discovers `skills/**/SKILL.md` recursively, flattens categories to
+DSH's one-level layout, skips local-modified/user-installed skills, preserves
+user extra files, keeps skills removed upstream, and records backups/rollback
+snapshots in `<profile>/.hyperai-skills/`. It never touches model/provider
+configuration and never runs automatically at TUI startup. See
+[`docs/skills.md`](docs/skills.md) for the full mechanism, manifest schema and
+safety rules.
 
 ## Layout
 
@@ -78,12 +96,15 @@ apps/profiles/hyperai/
 ├── cordis.patch.yml      profile-scoped skill root only (model config is user-owned)
 ├── pnpm-workspace.yaml   hoisted profile workspace + TUI patch wiring
 ├── README.md
-├── scripts/install.mjs   profile init + TUI patch + dependency install
-├── scripts/install-skills.mjs
+├── scripts/install.mjs          profile init + TUI patch + dependency install
+├── scripts/install-skills.mjs   legacy/bootstrap skills install
+├── scripts/skills-update.mjs    skills check/update/catalog/rollback CLI
+├── scripts/skills-lib.mjs       discovery, digests, transactions, rollback
 ├── scripts/verify.mjs
 ├── skills/hyperai-skills.lock.json
 ├── tests/install.test.mjs
 ├── tests/skills.test.mjs
+├── tests/skills-update.test.mjs
 └── docs/skills.md
 ```
 
