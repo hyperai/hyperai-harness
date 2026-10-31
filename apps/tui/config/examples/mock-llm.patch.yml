@@ -1,0 +1,13 @@
+# Demo overlay: route the TUI at the mock LLM server.
+# Disabling the credential store lets DEEPSEEK_BASE_URL / DEEPSEEK_API_KEY
+# environment variables authenticate the request instead of a stored key.
+# Usage:
+#   pnpm run mock:llm --port 8000 --api-key mock-key --sequence reasoning_success,tool_call_success,success &
+#   DEEPSEEK_BASE_URL=http://127.0.0.1:8000/v1 DEEPSEEK_API_KEY=mock-key \
+#     pnpm dsh --profile tui --patch apps/tui/config/examples/mock-llm.patch.yml
+- id: credentials
+  disabled: true
+- id: authorization
+  disabled: true
+- id: deepseek-account
+  disabled: true

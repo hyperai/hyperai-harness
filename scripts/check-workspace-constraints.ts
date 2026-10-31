@@ -62,6 +62,18 @@ const publicationSourceAllowlist: Readonly<Record<string, readonly string[]>> = 
 }
 /** Public source home recorded in maintained package manifests. */
 const publishedRepositoryUrl = 'git+https://github.com/deepseek-ai/deepseek-harness.git'
+/** Public source home of fork-owned `@hyperai/*` packages. */
+const forkPublishedRepositoryUrl = 'git+https://github.com/hyperai/hyperai-harness.git'
+
+/**
+ * Repository URL a maintained manifest must record: fork-owned `@hyperai/*`
+ * packages name this fork, every other release member names upstream.
+ * @param name - the package name from the manifest under check.
+ * @returns the expected public repository URL.
+ */
+function expectedRepositoryUrl(name: string | undefined): string {
+  return name !== undefined && name.startsWith('@hyperai/') ? forkPublishedRepositoryUrl : publishedRepositoryUrl
+}
 /** Packages that participate in the experimental policy. */
 const experimentalPackageDirectory = /^packages\/experimental\/[^/]+$/
 /** Private reference tool run from the repository; it publishes no files. */
@@ -530,9 +542,9 @@ export function checkWorkspaceManifest({ dir, manifest }: WorkspaceManifest): st
       errors.push(`${label}: release member must set publishConfig.access to "public"`)
     }
     if (manifest.repository?.type !== 'git'
-      || manifest.repository.url !== publishedRepositoryUrl
+      || manifest.repository.url !== expectedRepositoryUrl(manifest.name)
       || manifest.repository.directory !== dir) {
-      errors.push(`${label}: release member repository must use ${publishedRepositoryUrl} with directory ${dir}`)
+      errors.push(`${label}: release member repository must use ${expectedRepositoryUrl(manifest.name)} with directory ${dir}`)
     }
   } else if (!experimentalPackageDirectory.test(dir) && manifest.private !== true) {
     errors.push(`${label}: package.json must set "private": true`)

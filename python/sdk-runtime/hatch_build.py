@@ -84,6 +84,14 @@ class RuntimeBuildHook(BuildHookInterface):
             if expected_executable.endswith(".exe")
             else [expected_executable, f"{expected_executable}-rg"]
         )
+        # The OpenTUI native library ships beside the executable so node:ffi can
+        # dlopen it from the real filesystem (the SEA snapshot is invisible to FFI).
+        if expected_executable.endswith(".exe"):
+            expected_files.append(f"{expected_executable.removesuffix('.exe')}-opentui.dll")
+        elif "-macos-" in expected_executable:
+            expected_files.append(f"{expected_executable}-opentui.dylib")
+        else:
+            expected_files.append(f"{expected_executable}-opentui.so")
         if "-macos-" in expected_executable:
             expected_files.append(f"{expected_executable}-spawn-helper")
         resources = runtime_dir / target

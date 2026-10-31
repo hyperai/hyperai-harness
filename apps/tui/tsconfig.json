@@ -1,0 +1,51 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": "src",
+    "outDir": "lib/types"
+  },
+  "include": [
+    "src"
+  ],
+  "references": [
+    {
+      "path": "../../vendor/cordis"
+    },
+    {
+      "path": "../../vendor/loader"
+    },
+    {
+      "path": "../../vendor/schemastery"
+    },
+    {
+      "path": "../../packages/core/agent"
+    },
+    {
+      "path": "../../packages/core/agent-default-model"
+    },
+    {
+      "path": "../../packages/llm/llm"
+    },
+    {
+      "path": "../../packages/core/session"
+    },
+    {
+      "path": "../../packages/boot/cmdline"
+    },
+    {
+      "path": "../../packages/session-query/session-query"
+    },
+    {
+      "path": "../../packages/interaction/user-approval"
+    },
+    {
+      "path": "../../packages/interaction/user-questions"
+    },
+    {
+      "path": "../../packages/interaction/permission-presets"
+    },
+    {
+      "path": "../../packages/llm/token-meter"
+    }
+  ]
+}

@@ -109,7 +109,7 @@ export async function buildSshHelper(argv: string[]): Promise<void> {
     target: { type: 'string' }, output: { type: 'string' },
     'skip-build': { type: 'boolean', default: false }, 'dry-run': { type: 'boolean', default: false },
   } })
-  const host = `node24-${process.platform === 'darwin' ? 'macos' : process.platform}-${process.arch}`
+  const host = `node26-${process.platform === 'darwin' ? 'macos' : process.platform}-${process.arch}`
   const selected = values.target ?? host
   if (!SSH_HELPER_TARGETS.some(target => target === selected)) throw new Error(`Unsupported SSH helper target: ${selected}`)
   if (!values['dry-run'] && selected !== host) throw new Error(`SSH helper target ${selected} requires its native host; current host is ${host}`)
@@ -164,7 +164,7 @@ export async function buildSshHelper(argv: string[]): Promise<void> {
     await writeFile(join(product, 'manifest.json'), `${JSON.stringify(metadata, null, 2)}\n`)
     await verifyPayload(product)
     await mkdir(output, { recursive: true })
-    const archive = join(output, `dsh-ssh-helper-${definition.version}-${target.slice('node24-'.length)}.tar.gz`)
+    const archive = join(output, `dsh-ssh-helper-${definition.version}-${target.slice('node26-'.length)}.tar.gz`)
     await createTar({ cwd: temporary, file: archive, gzip: true, portable: true }, ['dsh-ssh-helper'])
     await writeFile(`${archive}.sha256`, `${await fileDigest(archive)}  ${basename(archive)}\n`)
     console.log(`SSH helper archive: ${archive}`)

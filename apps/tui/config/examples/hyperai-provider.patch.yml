@@ -1,0 +1,29 @@
+# HyperAI provider overlay: route model traffic to the HyperAI
+# OpenAI-compatible API instead of the DeepSeek provider. The route key
+# `hyperai` is the registered provider name that session model selections and
+# the `/model` display resolve against.
+#
+# No secret appears in this file:
+#   - HYPERAI_BASE_URL / HYPERAI_MODEL are read from the process environment
+#     (the launcher materializes the invoking directory's .env into it) via !!js.
+#   - the API key resolves per request through the credential seam's
+#     HYPERAI_API_KEY reference (launch env → .env → $DSH_HOME/.env), so the
+#     value never enters configuration.
+#
+# Usage (from the repository root, with .env filled in):
+#   pnpm dsh --profile tui --patch apps/tui/config/examples/hyperai-provider.patch.yml
+- id: llm-pi-ai
+  config:
+    providers:
+      hyperai:
+        displayName: HyperAI
+        apiKeyEnv: HYPERAI_API_KEY
+        api: openai-completions
+        baseURL: !!js process.env.HYPERAI_BASE_URL
+        models:
+          - id: !!js process.env.HYPERAI_MODEL
+
+- id: agent-default-model
+  config:
+    provider: hyperai
+    model: !!js process.env.HYPERAI_MODEL

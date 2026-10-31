@@ -74,6 +74,17 @@ if (office !== undefined) {
 }
 if (downloads !== undefined) process.env.DSH_BUNDLED_OFFICE_SKILLS = join(resourceDirectory, 'office-skills')
 
+// node:ffi dlopen reads the real filesystem: the OpenTUI native library ships
+// beside the executable (the ripgrep-sidecar convention) and is pinned here so
+// the TUI surface loads it instead of probing inside the SEA snapshot.
+if (isSea()) {
+  const base = process.execPath.replace(/\.exe$/iu, '')
+  const openTuiNative = process.platform === 'darwin'
+    ? `${base}-opentui.dylib`
+    : process.platform === 'win32' ? `${base}-opentui.dll` : `${base}-opentui.so`
+  if (existsSync(openTuiNative)) process.env.HYPERAI_TUI_NATIVE_LIB = openTuiNative
+}
+
 const selectorName = 'DSH_SUBPROCESS_RUNNER'
 const selection = process.env[selectorName]
 const aclRunner = process.platform === 'win32'

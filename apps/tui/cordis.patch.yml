@@ -1,0 +1,21 @@
+# The HyperAI TUI bundle patch: a terminal surface directly over dsh-base.
+# It mounts no Host, HTTP server, or browser plugin. The startup provider
+# injects `cmdlineArgs` and publishes `tuiStartup`; the runtime row reads its
+# task and Session identity from that service and drives one Agent in-process
+# through an OpenTUI terminal view.
+
+- id: system-prompt
+  config:
+    personaPrefix: >-
+      You are a coding agent powered by the {{model}} model.
+
+- insert:
+    - id: tui-startup
+      name: '@hyperai/hyperai-harness-tui/startup'
+
+    - id: tui-runtime
+      name: '@hyperai/hyperai-harness-tui'
+      inject: [tuiStartup]
+      config:
+        task: !!js ctx.tuiStartup.task
+        sessionId: !!js ctx.tuiStartup.sessionId

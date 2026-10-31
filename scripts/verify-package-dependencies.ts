@@ -42,7 +42,10 @@ const CORDIS = '@deepseek-ai/cordis'
  * location that TypeScript scans when it computes module specifiers for every JSX file.
  */
 function workspaceRange(name: string): 'workspace:*' | 'workspace:~' {
-  return name === '@deepseek-ai/dsh' || name.startsWith('@deepseek-ai/dsh-') ? 'workspace:*' : 'workspace:~'
+  // `@hyperai/*` carries fork-owned product packages beside the upstream names.
+  return name === '@deepseek-ai/dsh' || name.startsWith('@deepseek-ai/dsh-') || name.startsWith('@hyperai/')
+    ? 'workspace:*'
+    : 'workspace:~'
 }
 const RELEASE_MANIFEST_GLOB = 'packages/!(experimental)/*/package.json'
 /** Every package group, experimental included, follows the same published dependency policy. */

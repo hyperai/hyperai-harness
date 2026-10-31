@@ -31,7 +31,7 @@ const ENTRY_BIN = 'runtime-bootstrap.mjs'
 /** Python-visible executable basename. */
 const OUTPUT_BASENAME = 'deepseek-harness-sdk-runtime'
 /** Default Node major; SEA mode requires at least Node 22. */
-const DEFAULT_NODE_RANGE = 'node24'
+const DEFAULT_NODE_RANGE = 'node26'
 const OUT_DIR = 'dist-exe'
 /** Python package destination; created when absent. */
 const PYTHON_RUNTIME_DIR = 'python/sdk-runtime/src/deepseek_harness_runtime/runtime'
@@ -106,17 +106,17 @@ class Target {
 
   /**
    * Parse one target spec, rejecting malformed triples and unsupported platform or architecture.
-   * @param spec - the raw triple, e.g. `node24-linux-x64`.
+   * @param spec - the raw triple, e.g. `node26-linux-x64`.
    * @returns the parsed target.
    */
   static parse(spec: string): Target {
     const parts = spec.split('-')
     const [nodeRange, platform, arch] = parts
     if (parts.length !== 3 || nodeRange === undefined || platform === undefined || arch === undefined) {
-      throw new Error(`build-exe-for-python-sdk: target ${JSON.stringify(spec)} must be <nodeRange>-<platform>-<arch>, e.g. node24-linux-x64.`)
+      throw new Error(`build-exe-for-python-sdk: target ${JSON.stringify(spec)} must be <nodeRange>-<platform>-<arch>, e.g. node26-linux-x64.`)
     }
     if (!/^node\d+$/.test(nodeRange)) {
-      throw new Error(`build-exe-for-python-sdk: target ${JSON.stringify(spec)}: node range must look like node24, got ${JSON.stringify(nodeRange)}.`)
+      throw new Error(`build-exe-for-python-sdk: target ${JSON.stringify(spec)}: node range must look like node26, got ${JSON.stringify(nodeRange)}.`)
     }
     if (!isPlatform(platform)) {
       throw new Error(`build-exe-for-python-sdk: target ${JSON.stringify(spec)}: platform must be one of ${PLATFORMS.join(', ')}, got ${JSON.stringify(platform)}.`)
@@ -245,8 +245,8 @@ class BuildCli {
     return [
       'Usage: pnpm exec tsx scripts/build-exe-for-python-sdk.ts [flags]',
       '',
-      '  --targets=<t1,t2,...>  pkg targets, e.g. node24-linux-x64,node24-linux-arm64,node24-macos-arm64,node24-macos-x64,node24-win-x64.',
-      '                         Default: the host platform only (on node24).',
+      '  --targets=<t1,t2,...>  pkg targets, e.g. node26-linux-x64,node26-linux-arm64,node26-macos-arm64,node26-macos-x64,node26-win-x64.',
+      '                         Default: the host platform only (on node26).',
       '  --skip-build           skip `pnpm run build` (lib/ artifacts must already exist).',
       '  --build-artifacts      run `pnpm run build:artifacts` instead, omitting the aggregate test and script typechecks.',
       '  --compress=<type>      pkg archive compression: None | GZip | Brotli | Zstd. Default: Brotli (smallest, slowest).',
@@ -431,6 +431,7 @@ class SingleExeBuild {
       throw new Error(`build-exe-for-python-sdk: product ${product} is missing after the pkg run; inspect ${this.outDir}.`)
     }
     const ripgrep = await this.copyRipgrepSidecar(target, product)
+    const openTuiNative = await this.copyOpenTuiNative(target, product)
     const resources = join(this.outDir, `${target.platform}-${target.arch}`)
     if (this.cli.dryRun) {
       console.log(`build-exe-for-python-sdk: [dry-run] lock optional resource downloads and copy Office skills to ${resources}`)
@@ -445,7 +446,7 @@ class SingleExeBuild {
       await writeFile(join(resources, 'downloads.json'), JSON.stringify({ ...inputs, identity }, undefined, 2) + '\n')
       await prepareOfficeSkillAssets(join(this.staging, 'node_modules/@deepseek-ai/dsh-skill-office/assets'), join(resources, 'office-skills'))
     }
-    if (target.platform !== 'macos') return [product, ripgrep, resources]
+    if (target.platform !== 'macos') return [product, ripgrep, openTuiNative, resources]
     const spawnHelper = `${product}-spawn-helper`
     const source = join(this.staging, 'node_modules', 'node-pty', 'prebuilds', `darwin-${target.arch}`, 'spawn-helper')
     if (this.cli.dryRun) {
@@ -454,7 +455,34 @@ class SingleExeBuild {
       await copyFile(source, spawnHelper)
       await chmod(spawnHelper, 0o755)
     }
-    return [product, ripgrep, spawnHelper, resources]
+    return [product, ripgrep, spawnHelper, openTuiNative, resources]
+  }
+
+  /**
+   * Copy the target OpenTUI native library beside the executable so `node:ffi`
+   * can dlopen it from the real filesystem: pkg's dlopen hook only covers
+   * `process.dlopen`, and a SEA snapshot path is invisible to the FFI loader.
+   * @param target - the pkg target whose platform library is being staged.
+   * @param product - the built executable the library is named beside.
+   * @returns the destination path.
+   */
+  private async copyOpenTuiNative(target: Target, product: string): Promise<string> {
+    const platform = target.platform === 'macos' ? 'darwin' : target.platform === 'win' ? 'win32' : target.platform
+    const library = target.platform === 'macos' ? 'libopentui.dylib' : target.platform === 'win' ? 'opentui.dll' : 'libopentui.so'
+    const source = join(this.staging, 'node_modules', '@opentui', `core-${platform}-${target.arch}`, library)
+    const destination = target.platform === 'win'
+      ? `${product.slice(0, -'.exe'.length)}-opentui.dll`
+      : `${product}-opentui.${target.platform === 'macos' ? 'dylib' : 'so'}`
+    if (this.cli.dryRun) {
+      console.log(`build-exe-for-python-sdk: [dry-run] cp ${source} ${destination}`)
+      return destination
+    }
+    if (!existsSync(source)) {
+      throw new Error(`build-exe-for-python-sdk: OpenTUI native library is missing at ${source}.`)
+    }
+    await copyFile(source, destination)
+    await chmod(destination, 0o755)
+    return destination
   }
 
   /** Copy the target ripgrep binary beside the executable so Node can spawn it outside pkg's virtual filesystem. */
