@@ -76,17 +76,19 @@ test('the patch touches only the documented upstream files and stays small', () 
     'lib/types/i18n.js',
     'lib/types/screens/Chat.js',
     'lib/types/screens/Launchpad.js',
+    'lib/types/settings/definitions.js',
     'lib/types/update.js',
     'lib/types/utils/paths.js',
   ].sort())
-  assert.ok(patch.length < 64 * 1024, `patch is ${patch.length} bytes`)
+  assert.ok(patch.length < 96 * 1024, `patch is ${patch.length} bytes`)
   const longest = patch.split('\n').reduce((max, line) => Math.max(max, line.length), 0)
   assert.ok(longest < 4000, `longest patch line is ${longest} characters`)
 })
 
 test('profile isolation, version plate and branded links stay wired', () => {
   for (const marker of [
-    'hyperai-tui v${tuiVersion}',
+    'hyperai-tui v0.2.0',
+    ' · dsh-tui v${tuiVersion}',
     '.dsh-tui-${profile}',
     'https://github.com/hyperai/hyperai-harness',
     'const onboardingOnBoot = false;',

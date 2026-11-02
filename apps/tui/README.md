@@ -34,6 +34,29 @@ provider, endpoint, API-key variable or default model.
 
 `dsh --profile hyperai` is the only entry point; there is no extra launcher CLI.
 
+## Runtime compatibility
+
+HyperAI TUI is pinned to upstream `@deepseek-harness-tui/dsh-tui@0.16.1` and
+validated against the DSH Core lines listed in
+[`src/brand.json`](src/brand.json) (`core.validated`; currently the
+`0.2.0-rc.2` tested line plus older mapped lines). The profile installer refuses
+a DSH Core line outside that set before writing; there is no accept-risk bypass.
+Upgrading DSH Core or dsh-tui requires rebuilding this patch and updating the
+compatibility list/test evidence; see [`docs/compatibility.md`](docs/compatibility.md).
+
+The upstream `/update` command is intentionally disabled in the branded build:
+it would replace the patched package with an unbranded upstream release. `/update`
+now points at the HyperAI profile installer/release flow. `/restart` and the
+normal upstream session/chat/tool features remain available.
+
+`/settings` retains a few upstream compatibility toggles (header art, maid
+portrait, welcome animation, splash font). They are explicitly labelled as not
+used by HyperAI; the branded splash is always the solid pixel wordmark. The
+version plate distinguishes the HyperAI product version (`hyperai-tui v0.2.0`)
+from the pinned upstream TUI version (`dsh-tui v0.16.1`), and the terminal title
+carries no upstream whale glyph. Very narrow terminal windows keep upstream's
+plain-title fallback rather than a cropped pixel wordmark.
+
 ## Commands
 
 Run from this directory (the package is intentionally outside the repository's
@@ -126,6 +149,16 @@ This pinning is the maintenance limitation of the patch approach. A native
 Cordis branding plugin that upstream supports would remove it; that is recorded
 as a follow-up, not part of this distribution.
 
+## Known limitations
+
+- `/settings` keeps upstream fields for header art, maid portrait, welcome
+  animation and splash font for compatibility; they are labelled “not used by
+  HyperAI”.
+- Upstream provider-form API-key echo and the upstream `tool-ralph` warning are
+  outside this branding patch and are tracked as upstream issues.
+- 56/80/120-column behavior and Windows/Linux terminals still require the QA
+  matrix; the current bundled screenshots cover macOS/Orca and Terminal.app.
+
 ## Upstream and license
 
 HyperAI TUI is **based on the upstream dsh-TUI project**; it is not a
@@ -161,6 +194,7 @@ apps/tui/
 ├── LICENSE                 MIT terms for the HyperAI additions
 ├── docs/branding.md        brand decisions and splash layout behaviour
 ├── docs/verification.md    automated + real-terminal verification record
+├── docs/compatibility.md   DSH Core / dsh-tui compatibility and upgrade policy
 ├── docs/third-party-notices.md  upstream / dependency compliance record
 └── docs/licenses/          upstream MIT, third-party and MathJax notices
 ```

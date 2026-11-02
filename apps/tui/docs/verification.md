@@ -10,8 +10,8 @@ node scripts/verify.mjs             # 12/12 distribution checks
 node --test tests/                  # 13/13 branding + skills-bridge tests
 
 cd ../profiles/hyperai
-node scripts/verify.mjs             # 9/9 profile checks
-node --test tests/                  # 32/32 installer + skills/updater tests
+node scripts/verify.mjs             # 12/12 profile checks
+node --test tests/                  # 49/49 installer + skills/updater tests
 ```
 
 `build-patch.mjs` unpacks the pinned upstream package with `npm pack`, applies
@@ -25,10 +25,12 @@ credential variable or default model), the TUI patch wiring, the pinned skills
 lock, the installer plan/refusal rules and the reinstall migration that keeps
 user provider/TUI rows while dropping the removed environment-driven preset.
 
-Measured: patch is **64,750 bytes (60,089 code points) / 14 upstream files** (the previous logo
+Measured: patch is **72,650 bytes (66,937 code points) / 15 upstream files** (the previous logo
 distribution carried >150 KB of embedded PNG/sprites; none of it remains).
-The two added files are the HyperAI Skills TUI bridge; Chat/commands only gain
-one command, one hook, one inline hint and the existing managed-dialog path.
+The two added files are the HyperAI Skills TUI bridge; Chat/commands/settings
+only gain the branded command/hook/hint, the disabled upstream `/update` route,
+the branded terminal title and explicit “not used by HyperAI” labels for the
+upstream mascot toggles.
 
 ## Real terminal acceptance (macOS 26.1, arm64)
 

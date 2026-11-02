@@ -19,16 +19,60 @@ It does **not** contain TUI implementation code. The TUI branding lives in the
 independent [`apps/tui`](../../tui) package; this installer copies that package's
 generated `pnpm` patch and installs the pinned upstream TUI dependency.
 
+## Prerequisites and compatibility
+
+- Node.js `^22.19 || >=24` (the `apps/tui` engine range); Node 18/20/23 is
+  rejected **before** any profile write.
+- `pnpm` on `PATH` (the `dsh plugin` wrapper uses it); a missing pnpm is a
+  preflight error, not a late failure.
+- DSH Core must be in the validated list in
+  [`../tui/src/brand.json`](../../tui/src/brand.json). The current tested line
+  is `0.2.0-rc.2`; an unsupported line such as `0.2.1-rc.5` is refused with the
+  validated list and installation guidance. There is intentionally no
+  `--accept-risk`/version-bypass flag.
+- The installer records phases in `<profile>/.hyperai-install.json`; a failed
+  phase is visible to `status`/`doctor` and can be retried with `repair`.
+
 ## Install
 
 ```sh
 cd apps/profiles/hyperai
-node scripts/install.mjs            # profile init + TUI patch + skills
+node scripts/install.mjs                         # profile + TUI + verified skills
+node scripts/install.mjs --include-unverified    # also install inbox candidates (experimental)
 node scripts/install.mjs --no-skills
-node scripts/install.mjs --dry-run  # print the plan, write nothing
-node scripts/verify.mjs             # offline template/installer checks
-node --test tests/                  # installer + skills unit tests
+node scripts/install.mjs --dry-run               # print the plan, write nothing
+node scripts/install.mjs --frozen-lockfile       # reproducible reinstall from the profile lock
+node scripts/verify.mjs                          # offline template/installer checks
+node --test tests/                               # installer + skills unit tests
 ```
+
+`--include-unverified` is the only way to install the three `inbox/` candidates;
+the default release path installs only the repo-verified `skills/` set. The
+updater still labels legacy/unverified entries and never silently promotes them.
+
+## Lifecycle
+
+```sh
+node scripts/manage.mjs status                 # read-only profile/install summary
+node scripts/manage.mjs doctor                 # Node/pnpm/DSH Core/patch/skills diagnostics
+node scripts/manage.mjs repair --yes           # recover a partial/failed install
+node scripts/manage.mjs uninstall --yes        # archive user data, remove managed runtime files
+node scripts/manage.mjs uninstall --yes --purge # archive then remove the profile directory
+```
+
+`uninstall` archives the profile (skills, state, user files; excluding
+`node_modules`) under `~/.dsh/profiles/.hyperai-uninstall-backups/` before it
+removes installer-owned files. Shared credentials under `~/.dsh/.credentials.yaml`
+are never rewritten or deleted by these commands.
+
+## Environment isolation
+
+The profile's UI state is `~/.dsh-tui-<profile>` (for HyperAI:
+`~/.dsh-tui-hyperai`), derived from `--profile`. DSH model/provider/session
+state is under `$DSH_HOME/profiles/hyperai`. For a completely isolated test,
+set **both** `DSH_HOME` and a temporary `HOME`; setting only `DSH_HOME` still
+leaves the TUI preferences/history under the real home directory. The installer
+and tests never write the real user's profile when given temporary paths.
 
 The installer writes the native profile under `~/.dsh/profiles/hyperai`,
 installs dependencies through `dsh plugin --profile hyperai install`, verifies
@@ -39,6 +83,10 @@ Existing user data (skills content, `~/.dsh-tui-hyperai` UI state, model
 selection and user-created `llm-pi-ai`/`insert` rows in `cordis.patch.yml`) is
 preserved; re-running the installer backs the file up and merges only the
 managed skill-root row, dropping the removed environment-driven preset rows.
+The generated `pnpm-lock.yaml` stays in the profile; use `--frozen-lockfile`
+for a reproducible reinstall, or omit it when intentionally refreshing the
+patched TUI dependency. The default install path does not write a lockfile into
+this repository checkout.
 
 ## Configure the model (DSH-native, no preset provider)
 
@@ -111,6 +159,21 @@ apps/profiles/hyperai/
 └── docs/skills.md
 ```
 
+## License and third-party material
+
+HyperAI profile code is MIT-licensed (Copyright (c) 2026 DeepSeek); see
+[`LICENSE`](LICENSE). The branded TUI is a modified upstream dsh-TUI package,
+whose MIT/BSD/MathJax notices are recorded in
+[`../tui/docs/third-party-notices.md`](../tui/docs/third-party-notices.md).
+
+The private `hyperai/hyperai-skills` source repository currently has **no
+LICENSE file** in the audited checkout. This profile does not relicense or
+redistribute the skills source; the installer consumes it from the configured
+private repository into the user's local profile, and the Skills repository is
+an Internal-only source for now. Before any public distribution of installed
+skills, the company must confirm/attach the appropriate license and attribution
+for that repository.
+
 ## Maintenance
 
 The TUI is installed as a `pnpm` patch over the pinned upstream
@@ -118,3 +181,21 @@ The TUI is installed as a `pnpm` patch over the pinned upstream
 upstream means rebuilding the patch in `apps/tui` and re-running this
 installer; see `apps/tui/README.md`. The installed profile itself contains no
 checkout paths: it only carries the copied `patches/hyperai-tui.patch`.
+
+## Known limitations and upstream boundaries
+
+- The private `hyperai-skills` repository has no LICENSE file; Skills remain
+  Internal-only and must not be publicly redistributed until its license and
+  attribution are confirmed. QA-002 is intentionally deferred: do not change
+  repository visibility, URL, lock ref, authentication or distribution.
+- HyperAI does not fix upstream DSH behavior outside the profile/TUI boundary:
+  the tool-ralph entry warning and plain-text API-key echo in provider input
+  are upstream concerns. They are recorded as known limitations rather than
+  forked into the branded patch.
+- The branded `/update` command is disabled with an explicit message; upgrades
+  go through the profile installer/release flow. `/restart` and normal chat,
+  tool, provider and model features remain upstream.
+- Very narrow terminal windows use upstream's plain-title fallback. The
+  56/80/120-column matrix still needs a dedicated cross-terminal pass.
+- Windows/Linux and a fresh public-user install are not yet part of the
+  automated acceptance matrix.

@@ -9,7 +9,7 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync
 import { tmpdir } from 'node:os'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { install, mergeCordisPatch, parseArgs, profileManifest, workspaceFile } from '../scripts/install.mjs'
+import { dependencyInstallArgs, install, mergeCordisPatch, parseArgs, profileManifest, workspaceFile } from '../scripts/install.mjs'
 
 const PKG = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const TUI = resolve(PKG, '..', '..', 'tui')
@@ -25,7 +25,7 @@ test('parseArgs defaults to the hyperai profile under the Harness home', () => {
   assert.equal(options.dshHome, '/tmp/example-home')
   assert.equal(options.profileDir, '/tmp/example-home/profiles/hyperai')
   assert.equal(options.skills, true)
-  assert.equal(options.verifiedOnly, false)
+  assert.equal(options.verifiedOnly, true)
 })
 
 test('parseArgs rejects unknown flags', () => {
@@ -150,6 +150,100 @@ test('a foreign profile is refused without --force', async () => {
       /not created by this installer/u,
     )
   } finally {
+    rmSync(home, { recursive: true, force: true })
+  }
+})
+
+test('repeated reinstall normalizes trailing blank lines (QA-018)', () => {
+  const template = readFileSync(join(PKG, 'cordis.patch.yml'), 'utf8')
+  const withBlank = `${template.replace(/\n+$/u, '\n')}\n\n\n`
+  const first = mergeCordisPatch(withBlank, template)
+  const second = mergeCordisPatch(first, template)
+  assert.equal(first, second)
+  assert.equal(/\n{3,}$/u.test(first), false)
+})
+
+test('a failed install records a diagnosable failed state (QA-009)', async () => {
+  if (process.platform === 'win32') return
+  const home = temporaryHome()
+  const root = temporaryHome()
+  try {
+    const fakeDsh = join(root, 'fake-dsh')
+    writeFileSync(fakeDsh, '#!/bin/sh\nif [ "$1" = "--version" ]; then printf "0.2.0-rc.2\\n"; exit 0; fi\nexit 7\n')
+    const { chmodSync } = await import('node:fs')
+    chmodSync(fakeDsh, 0o755)
+    await assert.rejects(install(parseArgs(['--dsh-home', home, '--dsh-bin', fakeDsh, '--no-skills'])), /dsh plugin|exited|Command failed/u)
+    const state = JSON.parse(readFileSync(join(home, 'profiles', 'hyperai', '.hyperai-install.json'), 'utf8'))
+    assert.equal(state.status, 'failed')
+    assert.equal(state.schema, 1)
+  } finally {
+    rmSync(home, { recursive: true, force: true })
+    rmSync(root, { recursive: true, force: true })
+  }
+})
+
+
+test('default skill install is verified-only and frozen lock is opt-in (QA-015/022)', () => {
+  const defaults = parseArgs([])
+  assert.equal(defaults.verifiedOnly, true)
+  assert.equal(defaults.frozenLockfile, false)
+  const args = dependencyInstallArgs({ profile: 'hyperai', frozenLockfile: false })
+  assert.ok(args.includes('--no-frozen-lockfile'))
+  const frozen = dependencyInstallArgs({ profile: 'hyperai', frozenLockfile: true })
+  assert.ok(frozen.includes('--frozen-lockfile'))
+  assert.equal(frozen.includes('--no-frozen-lockfile'), false)
+})
+
+test('full default install succeeds with a local skills fixture and stubbed dsh (QA-003/009)', async () => {
+  if (process.platform === 'win32') return
+  const root = temporaryHome()
+  const home = temporaryHome()
+  try {
+    const repo = join(root, 'skills-repo')
+    mkdirSync(join(repo, 'skills', 'example'), { recursive: true })
+    writeFileSync(join(repo, 'skills', 'example', 'SKILL.md'), '---\nname: example\ndescription: Use when testing\n---\n# example\n')
+    const { execFileSync } = await import('node:child_process')
+    const git = (...args) => execFileSync('git', args, { cwd: repo, encoding: 'utf8', env: { ...process.env, GIT_TERMINAL_PROMPT: '0' } }).trim()
+    git('init', '-q', '-b', 'master')
+    git('config', 'user.email', 'test@example.invalid')
+    git('config', 'user.name', 'Test')
+    git('add', '-A')
+    git('commit', '-qm', 'fixture')
+    const ref = git('rev-parse', 'HEAD')
+    const lockPath = join(root, 'lock.json')
+    writeFileSync(lockPath, `${JSON.stringify({
+      schema: 1, repository: repo, ref,
+      verified: [{ name: 'example', area: 'skills', validated: true }], unverified: [],
+    })}\n`)
+    const fakeDsh = join(root, 'fake-dsh')
+    writeFileSync(fakeDsh, `#!/bin/sh
+if [ "$1" = "--version" ]; then printf "0.2.0-rc.2\\n"; exit 0; fi
+if [ "$1" = "plugin" ]; then
+  profile="hyperai"
+  prev=""
+  for arg in "$@"; do if [ "$prev" = "--profile" ]; then profile="$arg"; fi; prev="$arg"; done
+  dir="$DSH_HOME/profiles/$profile/node_modules/@deepseek-harness-tui/dsh-tui/lib/types"
+  mkdir -p "$dir/components"
+  printf "HYPERAI\\n" > "$dir/branding.js"
+  printf "showWhale: false\\nHYPERAI_PALETTE.title\\n" > "$dir/components/LogoV2.js"
+  exit 0
+fi
+exit 7
+`)
+    const { chmodSync } = await import('node:fs')
+    chmodSync(fakeDsh, 0o755)
+    const result = await install(parseArgs([
+      '--dsh-home', home, '--dsh-bin', fakeDsh,
+      '--skills-source', repo, '--skills-lock', lockPath,
+    ]))
+    const profileDir = join(home, 'profiles', 'hyperai')
+    assert.ok(result.skills.installed.includes('example'))
+    assert.equal(readFileSync(join(profileDir, 'skills', 'example', 'SKILL.md'), 'utf8').includes('Use when testing'), true)
+    const state = JSON.parse(readFileSync(join(profileDir, '.hyperai-install.json'), 'utf8'))
+    assert.equal(state.status, 'completed')
+    assert.equal(state.phase, 'done')
+  } finally {
+    rmSync(root, { recursive: true, force: true })
     rmSync(home, { recursive: true, force: true })
   }
 })

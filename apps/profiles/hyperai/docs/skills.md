@@ -44,13 +44,14 @@ profile-scoped: `<profile>/skills/<name>`.
 
 ```sh
 node scripts/install-skills.mjs [--dsh-home <dir>] [--profile hyperai]
-                                [--ref <sha>] [--source <checkout>] [--verified-only]
-                                [--dry-run] [--rollback] [--json]
+                                [--ref <sha>] [--source <checkout>] [--include-unverified]
+                                [--dry-run] [--rollback] [--timeout <ms>] [--json]
 ```
 
-- Default set: every skill in the lock (verified first, then the three inbox
-  candidates, each recorded with `validated: true|false`); `--verified-only`
-  installs just `skills/`.
+- Default set: the repo-verified `skills/` set only. Pass
+  `--include-unverified` to also install the three `inbox/` candidates; they are
+  recorded with `validated: false` and should be treated as experimental.
+  `--verified-only` remains accepted as an explicit alias of the default.
 - Source checkout is pinned and verified: `git clone` → `git checkout --detach
   <ref>` → `rev-parse HEAD` must equal the pin. `--source <dir>` installs from an
   existing checkout after checking its HEAD against the pin (offline path; used
@@ -62,9 +63,14 @@ node scripts/install-skills.mjs [--dsh-home <dir>] [--profile hyperai]
   `validated` flag, every file's sha256, and the install time. History appends
   to `history.log`.
 - Safety: installed skill content that no longer matches the manifest is
-  **skipped, never overwritten** (`--rollback` restores the newest backup);
-  replaced directories are copied to `.hyperai-skills/backups/<timestamp>/`
-  first; the swap is a staging directory renamed into place.
+  **skipped, never overwritten**; files not owned by the manifest (for example
+  user notes under `references/`) are preserved across updates. `--rollback`
+  restores the newest snapshot and its manifest; legacy snapshots without
+  `meta.json`/`manifest.json` are migrated on read. The swap is a staging
+  directory renamed into place.
+- Git clone/checkout commands have a hard `--timeout` (default 120s); a hanging
+  private-repository network call fails with an actionable error and leaves no
+  installed skill half-written.
 - Update: pass a newer `--ref` (and update the lock after review). Identical
   content reports `noop`.
 

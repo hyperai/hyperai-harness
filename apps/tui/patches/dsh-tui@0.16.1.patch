@@ -53,17 +53,20 @@ index e20c590..bfb6f7b 100644
      { value: 'codex', label: 'Codex (lavender)', descriptions: { zh: 'Codex（薰衣草紫）' } },
  ];
 diff --git a/lib/types/commands.js b/lib/types/commands.js
-index 0806732..f7270e2 100644
+index 0806732..7973530 100644
 --- a/lib/types/commands.js
 +++ b/lib/types/commands.js
-@@ -84,6 +84,7 @@ export const LOCAL_COMMANDS = [
+@@ -84,8 +84,9 @@ export const LOCAL_COMMANDS = [
      { name: 'hooks', description: 'Show hooks status' },
      { name: 'mcp', description: 'Show MCP status' },
      { name: 'skills', description: 'List available skills' },
 +    { name: 'skills-update', description: 'Check for HyperAI Skills updates and install them' },
      { name: 'plugin', description: 'Show plugin diagnostics, and the plugins this profile added' },
-     { name: 'update', description: 'Update dsh-tui and restart' },
+-    { name: 'update', description: 'Update dsh-tui and restart' },
++    { name: 'update', description: 'HyperAI: updates are managed by the profile installer' },
      // Skills are discovered through the DSH registry and added at runtime.
+     // A local entry of the same name would win the collision filter.
+     // Misc / not applicable on this leaf
 diff --git a/lib/types/components/LogoV2.js b/lib/types/components/LogoV2.js
 index ed2f7f3..54b9ca4 100644
 --- a/lib/types/components/LogoV2.js
@@ -800,7 +803,7 @@ index d7db9d3..ae0cba4 100644
      'onboarding-conn-models': { zh: '{{count}} 个可用模型', en: '{{count}} models available' },
      'onboarding-conn-balance': { zh: '余额 {{amount}}', en: 'Balance {{amount}}' },
 diff --git a/lib/types/screens/Chat.js b/lib/types/screens/Chat.js
-index 050c07c..9fda505 100644
+index 050c07c..521ceed 100644
 --- a/lib/types/screens/Chat.js
 +++ b/lib/types/screens/Chat.js
 @@ -24,6 +24,7 @@ import { execFileNoThrow } from '../utils/execFileNoThrow.js';
@@ -820,6 +823,15 @@ index 050c07c..9fda505 100644
      const coupon = React.useSyncExternalStore(bonusNotices?.subscribe ?? noCouponSubscription, bonusNotices?.getSnapshot ?? noCouponSnapshot);
      // Plugin status contributions: text keys join into one line; bounded rich
      // views keep their own rows immediately above the prompt.
+@@ -2117,7 +2120,7 @@ export function Chat({ channel, questionStore, approvalStore, extensionDialogs,
+     const titlePrefix = channel.working
+         ? (TITLE_SPINNER_FRAMES[titleFrame] ?? '✦')
+         : '✦';
+-    useTerminalTitle(`${titlePrefix} 🐋 ${channel.sessionTitle}`);
++    useTerminalTitle(`${titlePrefix} ${channel.sessionTitle}`);
+     const handleWorkspaceResult = (result) => {
+         workspaceFlowAbortRef.current = null;
+         if (result.kind === 'target') {
 @@ -2918,6 +2921,12 @@ export function Chat({ channel, questionStore, approvalStore, extensionDialogs,
                      });
                  return true;
@@ -833,7 +845,29 @@ index 050c07c..9fda505 100644
              case 'skills': {
                  // issue #204: 列出当前 agent 的完整技能目录（名称 + 来源 + 简述），
                  // Enter 把可直调技能以 `/name ` 填回输入行（completion-only 分发的
-@@ -6285,7 +6294,8 @@ export function Chat({ channel, questionStore, approvalStore, extensionDialogs,
+@@ -3727,16 +3736,11 @@ export function Chat({ channel, questionStore, approvalStore, extensionDialogs,
+             }
+             case 'update':
+                 setHelpOpen(false);
+-                if (onUpdate === undefined) {
+-                    channel.notify(t('update-unavailable'), { color: 'warning' });
+-                }
+-                else if (channel.working) {
+-                    channel.notify(t(WORKING_GATE_NOTICES.update), { color: 'warning' });
+-                }
+-                else {
+-                    channel.notify(t('update-starting'));
+-                    onUpdate();
+-                }
++                channel.pushLocal('/update', [
++                    getLang() === 'zh'
++                        ? 'HyperAI Harness 不通过 /update 升级；请使用 HyperAI Profile 安装器/发布流程。'
++                        : 'HyperAI Harness does not upgrade through /update; use the HyperAI profile installer/release flow.',
++                ]);
+                 return true;
+             case 'reload': {
+                 // pi-style soft reload: re-read the persisted preference files
+@@ -6285,7 +6289,8 @@ export function Chat({ channel, questionStore, approvalStore, extensionDialogs,
                                          // inflating the reading next to a real upload number). An
                                          // automatic compaction mid-turn badges THIS line too — it is
                                          // the spinner slot whenever real activity data exists.
@@ -844,7 +878,7 @@ index 050c07c..9fda505 100644
                                              ui: STATUS_VIEW_UI,
                                          }) }) }) }, `${view.key}:${view.registrationId}`))), _jsxs(Box, { flexDirection: "column", flexShrink: 0, children: [approvalPanelNode !== null ? (approvalPanelNode) : dialogSnapshot !== null ? (_jsx(ExtensionDialog, { dialog: dialogSnapshot, onDecide: value => dialogs.decide(dialogSnapshot.key, value), onCancel: () => dialogs.cancel(dialogSnapshot.key) }, dialogSnapshot.key)) : overlay.kind === 'tips' ? (_jsx(Box, { flexDirection: "column", marginTop: 1, children: _jsx(TipsPanel, { onClose: () => dispatchOverlay({ type: 'close-if', kind: 'tips' }) }) })) : recap !== null && (!recap.auto || recap.expanded) ? (_jsx(Box, { flexDirection: "column", marginTop: 1, children: _jsx(RecapPanel, { summary: recap.summary, title: recap.title, error: recap.error, streaming: !recap.done, titleApplied: recap.titleApplied, onClose: () => {
 diff --git a/lib/types/screens/Launchpad.js b/lib/types/screens/Launchpad.js
-index d8a8835..c338c8c 100644
+index d8a8835..e29e562 100644
 --- a/lib/types/screens/Launchpad.js
 +++ b/lib/types/screens/Launchpad.js
 @@ -479,7 +479,7 @@ onKernelPick, cwd, branch, tuiVersion, onFocusChange, onAction, onQueryChange, o
@@ -852,7 +886,7 @@ index d8a8835..c338c8c 100644
      // 铭牌只报「有哪些内核、各自什么版本」，未登录在选择器里看（切换时才需要，
      // noteKey 在那边走副标题），右下角保持只有名字与版号的干净两列。
 -    const tuiPart = tuiVersion === undefined || tuiVersion === '' ? undefined : `dsh-tui v${tuiVersion}`;
-+    const tuiPart = tuiVersion === undefined || tuiVersion === '' ? undefined : `hyperai-tui v${tuiVersion}`;
++    const tuiPart = tuiVersion === undefined || tuiVersion === '' ? undefined : `hyperai-tui v0.2.0 · dsh-tui v${tuiVersion}`;
      // 名字用**短品牌名**（option.shortLabel，来自 manifest：DSH / Claude，与启动页
      // 「内核 · DSH」那个 chip 同源）：这一格与左下角的 `工作目录:分支` 共用底边，
      // 全名（DeepSeek Harness · … = 40 列）在窄终端里会把左边的目录铭牌挤掉。
@@ -867,6 +901,77 @@ index d8a8835..c338c8c 100644
      const [dailyEgg] = React.useState(() => egg === undefined ? pickSplashEgg() : egg);
      const font = fontId === undefined ? dailyFont : splashFontById(fontId);
      const titleFont = resolveSplashTitleFont(font, brand, dailyEgg);
+diff --git a/lib/types/settings/definitions.js b/lib/types/settings/definitions.js
+index 2e18b2d..903475d 100644
+--- a/lib/types/settings/definitions.js
++++ b/lib/types/settings/definitions.js
+@@ -2,11 +2,11 @@ import { SPLASH_FONT_OPTIONS } from '../components/splashFonts.js';
+ import { BRAND_SETTING_OPTIONS } from '../branding.js';
+ export const SETTING_DEFINITIONS = {
+     'brand': {
+-        label: 'Brand look',
+-        descriptions: { zh: '品牌外观' },
++        label: 'HyperAI look (upstream compatibility)',
++        descriptions: { zh: 'HyperAI 外观（上游兼容）' },
+         group: 'splash',
+-        hint: 'Brand look of the splash and theme. Follow backend (default) switches with the active kernel — Claude boots orange (CLAUDE CODE title, Claude girl), Codex boots lavender (CODEX title, "Build anything with Codex"); the other values pin one look. Applies immediately.',
+-        hintDescriptions: { zh: '开屏与主题的品牌外观。跟随后端（默认）随当前内核自动切——Claude 后端整套换橙（CLAUDE CODE 大标题、Claude 娘立绘），Codex 后端整套换薰衣草紫（CODEX 大标题、"Build anything with Codex" 标语）；选固定档则锁定一种外观。立即生效。' },
++        hint: 'HyperAI uses the fixed HyperAI Harness palette and text-only wordmark. This upstream brand selector is retained only for compatibility; it does not reintroduce the upstream logo or mascot.',
++        hintDescriptions: { zh: 'HyperAI 固定使用 HyperAI Harness 品牌色和纯文字字标。此项仅为上游兼容保留，不会重新引入上游 Logo 或吉祥物。' },
+         kind: 'select',
+         options: BRAND_SETTING_OPTIONS,
+     },
+@@ -303,7 +303,7 @@ export const SETTING_DEFINITIONS = {
+         label: 'Splash font',
+         descriptions: { zh: '开屏大字字体' },
+         group: 'splash',
+-        hint: 'Big-text face on the header splash. Daily rotates by local date (default); pick a face to pin that one. Applies immediately.',
++        hint: 'Upstream splash font setting. HyperAI always starts from the solid bold face (daily hollow rotation is bypassed); an explicit face remains available for upstream compatibility.',
+         hintDescriptions: { zh: '开屏头部的大字字面。按天轮换（默认）随本地日期换款；选某一款即固定那一款。立即生效。' },
+         kind: 'select',
+         options: SPLASH_FONT_OPTIONS,
+@@ -507,24 +507,24 @@ export const SETTING_DEFINITIONS = {
+         kind: 'boolean',
+     },
+     'whale': {
+-        label: 'Header art',
+-        descriptions: { zh: '标题图形 logo' },
++        label: 'Header art (not used by HyperAI)',
++        descriptions: { zh: '标题图形（HyperAI 不使用）' },
+         group: 'splash',
+-        hint: 'Header art. DeepSeek follows Companion skin and the maid toggle; Claude uses its own art; Codex uses its own raster portrait or maid character-art fallback. Off leaves a text-only header.',
+-        hintDescriptions: { zh: '标题图形：DeepSeek 品牌随宠物皮肤与女仆娘开关，Claude 使用自己的图案；Codex 优先显示自己的真图，不可用时回落女仆娘字符画。关闭则只留文字标题。' },
++        hint: 'HyperAI renders a text-only pixel wordmark; upstream header art is disabled by the profile patch. This setting is retained only for upstream compatibility.',
++        hintDescriptions: { zh: 'HyperAI 只渲染文字像素字标；上游标题图形已由 Profile patch 关闭。此设置仅为上游兼容保留。' },
+         kind: 'boolean',
+     },
+     'whaleGirl': {
+-        label: 'Maid portrait',
+-        descriptions: { zh: '女仆娘立绘' },
++        label: 'Maid portrait (not used by HyperAI)',
++        descriptions: { zh: '女仆娘立绘（HyperAI 不使用）' },
+         group: 'splash',
+         hint: 'DeepSeek brand: choose whale in Companion skin, then enable this toggle. Claude uses its own art; Codex uses its own raster portrait or maid character-art fallback. Swaps the pixel whale for the author-designed maid portrait, preferring the real raster (Kitty/Sixel) with character-art fallback.',
+         hintDescriptions: { zh: 'DeepSeek 品牌：选 whale 皮肤并开启本项。Claude 使用自己的图案；Codex 优先显示自己的真图，不可用时回落女仆娘字符画。把像素鲸鱼换成项目作者绘制的女仆娘立绘，优先用终端图像协议（Kitty/Sixel）渲染真图，不支持时回落字符画。' },
+         kind: 'boolean',
+     },
+     'whaleIdle': {
+-        label: 'Welcome whale idle',
+-        descriptions: { zh: '鲸鱼娘闲置动画（欢迎期）' },
++        label: 'Welcome animation (not used by HyperAI)',
++        descriptions: { zh: '欢迎动画（HyperAI 不使用）' },
+         group: 'splash',
+         hint: 'Welcome-phase idle behaviors: after the intro the whale flutters its fins, thumps its tail, and dozes off when idle; clicking wakes a dozing whale and pops a heart. The first agent turn freezes it to the static standard frame.',
+         hintDescriptions: { zh: '欢迎期闲置行为：开屏后鲸鱼娘摆鱼鳍、偶尔拍尾巴，空闲会睡着冒 Z；点击唤醒睡着的鲸鱼娘并冒爱心。开始第一个任务后定格为静态标准帧。' },
+@@ -543,7 +543,7 @@ export const SETTING_DEFINITIONS = {
+  * render on the root under "general". */
+ export const SETTING_GROUPS = [
+     { id: 'appearance', mode: 'inline', title: 'Appearance', descriptions: { zh: '外观与布局' } },
+-    { id: 'splash', mode: 'inline', title: 'Splash', descriptions: { zh: '开屏与吉祥物' } },
++    { id: 'splash', mode: 'inline', title: 'Splash / 开屏', descriptions: { zh: '开屏与字标' } },
+     { id: 'conversation', mode: 'inline', title: 'Conversation', descriptions: { zh: '对话与输入' } },
+     { id: 'rendering', mode: 'inline', title: 'Rendering', descriptions: { zh: '图表与图片' } },
+     { id: 'math', mode: 'page', title: 'Formula', descriptions: { zh: '公式设置' } },
 diff --git a/lib/types/update.js b/lib/types/update.js
 index 8efb701..e9a50a9 100644
 --- a/lib/types/update.js

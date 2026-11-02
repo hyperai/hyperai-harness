@@ -103,6 +103,7 @@ check('patch touches only the documented upstream files', () => {
     'lib/types/update.js',
     'lib/types/components/splashEggs.js',
     'lib/types/commands.js',
+    'lib/types/settings/definitions.js',
     'lib/types/screens/Chat.js',
     'lib/types/hyperaiSkills.js',
     'lib/types/hyperaiSkillsCore.js',
@@ -111,7 +112,7 @@ check('patch touches only the documented upstream files', () => {
   const missing = expected.filter(file => !changed.includes(file))
   if (unexpected.length > 0) throw new Error(`unexpected files: ${unexpected.join(', ')}`)
   if (missing.length > 0) throw new Error(`missing files: ${missing.join(', ')}`)
-  if (patch.length > 64 * 1024) throw new Error(`patch is unexpectedly large (${patch.length} bytes)`)
+  if (patch.length > 96 * 1024) throw new Error(`patch is unexpectedly large (${patch.length} bytes)`)
   return `${changed.length} files, ${patch.length} bytes`
 })
 
@@ -121,7 +122,8 @@ check('brand strings and profile isolation remain wired', () => {
     'HARNESS',
     'hyperai-tui',
     'HyperAI Harness',
-    'hyperai-tui v${tuiVersion}',
+    'hyperai-tui v0.2.0',
+    ' · dsh-tui v${tuiVersion}',
     '.dsh-tui-${profile}',
     'https://github.com/hyperai/hyperai-harness',
     'const onboardingOnBoot = false;',
@@ -129,6 +131,12 @@ check('brand strings and profile isolation remain wired', () => {
     'sweep(words.plain',
     'hyperaiLook ? HYPERAI_PALETTE.title.base',
     "return { kind: 'unknown' };",
+    'HyperAI Harness does not upgrade through /update',
+    'useTerminalTitle(`${titlePrefix} ${channel.sessionTitle}`)',
+    'Header art (not used by HyperAI)',
+    'Maid portrait (not used by HyperAI)',
+    'Welcome animation (not used by HyperAI)',
+    'HyperAI always starts from the solid bold face',
   ]
   for (const marker of expectations) {
     if (!patch.includes(marker)) throw new Error(`missing brand wiring: ${marker}`)

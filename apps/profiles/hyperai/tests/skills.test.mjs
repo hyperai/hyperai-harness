@@ -5,14 +5,17 @@
  */
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { execFileSync } from 'node:child_process'
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import {
   digestSkill,
+  installSkills,
   loadLock,
   planSkill,
+  rollbackSkills,
   selectedSkills,
   validateSkill,
 } from '../scripts/install-skills.mjs'
@@ -112,4 +115,135 @@ test('planSkill installs, no-ops, updates, and protects user edits', () => {
 test('the generated manifest schema stays at version 1', () => {
   const manifest = JSON.parse(readFileSync(join(PKG, 'skills', 'hyperai-skills.lock.json'), 'utf8'))
   assert.equal(manifest.schema, 1)
+})
+
+/** Build a small local git repo with one skill; returns repo/ref. */
+function localSkillRepo() {
+  const root = temporaryDir()
+  const repo = join(root, 'repo')
+  mkdirSync(join(repo, 'skills', 'example', 'references'), { recursive: true })
+  writeFileSync(join(repo, 'skills', 'example', 'SKILL.md'), skillBody('example', 'Use when testing v1'))
+  writeFileSync(join(repo, 'skills', 'example', 'references', 'notes.md'), 'v1\n')
+  const git = (...args) => execFileSync('git', args, { cwd: repo, encoding: 'utf8', env: { ...process.env, GIT_TERMINAL_PROMPT: '0' } }).trim()
+  git('init', '-q', '-b', 'master')
+  git('config', 'user.email', 'test@example.invalid')
+  git('config', 'user.name', 'Test')
+  git('add', '-A')
+  git('commit', '-qm', 'v1')
+  return { root, repo, ref: git('rev-parse', 'HEAD'), git }
+}
+
+function localLock(root, repo, ref) {
+  const lock = join(root, 'lock.json')
+  writeFileSync(lock, `${JSON.stringify({
+    schema: 1,
+    repository: repo,
+    ref,
+    verified: [{ name: 'example', area: 'skills', validated: true }],
+    unverified: [],
+  }, undefined, 2)}\n`)
+  return lock
+}
+
+test('installSkills accepts the partial options install.mjs passes (QA-003)', async () => {
+  const fixture = localSkillRepo()
+  const home = temporaryDir()
+  try {
+    const lockPath = localLock(fixture.root, fixture.repo, fixture.ref)
+    const result = installSkills({ dshHome: home, profile: 'hyperai', lockPath, source: fixture.repo })
+    assert.deepEqual(result.installed, ['example'])
+    const profileDir = join(home, 'profiles', 'hyperai')
+    assert.ok(existsSync(join(profileDir, 'skills', 'example', 'SKILL.md')))
+    const manifest = JSON.parse(readFileSync(join(profileDir, '.hyperai-skills', 'manifest.json'), 'utf8'))
+    assert.equal(manifest.schema, 1)
+    assert.deepEqual(Object.keys(manifest.skills.example.files).sort(), ['SKILL.md', 'references/notes.md'])
+  } finally {
+    rmSync(fixture.root, { recursive: true, force: true })
+    rmSync(home, { recursive: true, force: true })
+  }
+})
+
+test('legacy update preserves extra files and rolls back manifest (QA-004/006/007)', async () => {
+  const fixture = localSkillRepo()
+  const home = temporaryDir()
+  try {
+    const lockPath = localLock(fixture.root, fixture.repo, fixture.ref)
+    const base = { dshHome: home, profile: 'hyperai', lockPath, source: fixture.repo }
+    installSkills(base)
+    const profileDir = join(home, 'profiles', 'hyperai')
+    const target = join(profileDir, 'skills', 'example')
+    writeFileSync(join(target, 'references', 'user-notes.md'), 'user extra\n')
+    writeFileSync(join(fixture.repo, 'skills', 'example', 'SKILL.md'), skillBody('example', 'Use when testing v2'))
+    writeFileSync(join(fixture.repo, 'skills', 'example', 'references', 'notes.md'), 'v2\n')
+    fixture.git('add', '-A')
+    fixture.git('commit', '-qm', 'v2')
+    const v2 = fixture.git('rev-parse', 'HEAD')
+    const updated = installSkills({ ...base, ref: v2 })
+    assert.deepEqual(updated.updated, ['example'])
+    assert.equal(readFileSync(join(target, 'references', 'user-notes.md'), 'utf8'), 'user extra\n')
+    const updatedManifest = JSON.parse(readFileSync(join(profileDir, '.hyperai-skills', 'manifest.json'), 'utf8'))
+    assert.equal(updatedManifest.skills.example.ref, v2)
+    const rolled = rollbackSkills(base)
+    assert.deepEqual(rolled.restored, ['example'])
+    assert.match(readFileSync(join(target, 'SKILL.md'), 'utf8'), /v1/u)
+    assert.equal(readFileSync(join(target, 'references', 'user-notes.md'), 'utf8'), 'user extra\n')
+    const rolledManifest = JSON.parse(readFileSync(join(profileDir, '.hyperai-skills', 'manifest.json'), 'utf8'))
+    assert.equal(rolledManifest.skills.example.ref, fixture.ref)
+    assert.ok(existsSync(join(profileDir, '.hyperai-skills', 'backups', updated.backup, 'manifest.json')))
+  } finally {
+    rmSync(fixture.root, { recursive: true, force: true })
+    rmSync(home, { recursive: true, force: true })
+  }
+})
+
+test('legacy snapshots without meta/manifest remain rollback-compatible (QA-008)', () => {
+  const fixture = localSkillRepo()
+  const home = temporaryDir()
+  try {
+    const lockPath = localLock(fixture.root, fixture.repo, fixture.ref)
+    const base = { dshHome: home, profile: 'hyperai', lockPath, source: fixture.repo }
+    installSkills(base)
+    const profileDir = join(home, 'profiles', 'hyperai')
+    const legacy = join(profileDir, '.hyperai-skills', 'backups', 'legacy-2000')
+    mkdirSync(join(legacy, 'skills', 'example', 'references'), { recursive: true })
+    writeFileSync(join(legacy, 'skills', 'example', 'SKILL.md'), skillBody('example', 'Use when testing legacy'))
+    writeFileSync(join(legacy, 'skills', 'example', 'references', 'notes.md'), 'legacy\n')
+    const result = rollbackSkills({ ...base, to: 'legacy-2000' })
+    assert.deepEqual(result.restored, ['example'])
+    assert.match(readFileSync(join(profileDir, 'skills', 'example', 'SKILL.md'), 'utf8'), /legacy/u)
+    const manifest = JSON.parse(readFileSync(join(profileDir, '.hyperai-skills', 'manifest.json'), 'utf8'))
+    assert.ok(manifest.skills.example.files['SKILL.md'])
+  } finally {
+    rmSync(fixture.root, { recursive: true, force: true })
+    rmSync(home, { recursive: true, force: true })
+  }
+})
+
+test('legacy git checkout has a bounded timeout (QA-013)', async () => {
+  if (process.platform === 'win32') return
+  const root = temporaryDir()
+  const home = temporaryDir()
+  try {
+    const bin = join(root, 'bin')
+    mkdirSync(bin)
+    const fakeGit = join(bin, 'git')
+    writeFileSync(fakeGit, '#!/bin/sh\nsleep 5\n')
+    const { chmodSync } = await import('node:fs')
+    chmodSync(fakeGit, 0o755)
+    const lockPath = join(root, 'lock.json')
+    writeFileSync(lockPath, JSON.stringify({ schema: 1, repository: 'https://example.invalid/repo.git', ref: 'a'.repeat(40), verified: [], unverified: [] }))
+    const oldPath = process.env.PATH
+    process.env.PATH = `${bin}:${oldPath}`
+    try {
+      await assert.rejects(
+        async () => installSkills({ dshHome: home, profile: 'hyperai', lockPath, source: root, timeoutMs: 100 }),
+        /timed out|ETIMEDOUT|SIGTERM/u,
+      )
+    } finally {
+      process.env.PATH = oldPath
+    }
+  } finally {
+    rmSync(root, { recursive: true, force: true })
+    rmSync(home, { recursive: true, force: true })
+  }
 })

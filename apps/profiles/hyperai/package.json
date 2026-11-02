@@ -1,6 +1,7 @@
 {
   "name": "dsh-profile-hyperai",
   "private": true,
+  "license": "MIT",
   "dependencies": {
     "@deepseek-harness-tui/dsh-tui": "0.16.1"
   },

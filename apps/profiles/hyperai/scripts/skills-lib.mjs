@@ -749,6 +749,15 @@ export function listBackups(stateDir) {
     const metaPath = join(root, name, 'meta.json')
     let meta = {}
     try { meta = JSON.parse(readFileSync(metaPath, 'utf8')) } catch { /* tolerate */ }
+    if (!existsSync(metaPath)) {
+      // Pre-2026-11-02 legacy-installer snapshots only carry skills/<name>/.
+      // Mark them so rollback can migrate them instead of refusing to work.
+      const legacySkills = join(root, name, 'skills')
+      const names = existsSync(legacySkills)
+        ? readdirSync(legacySkills).filter(entry => existsSync(join(legacySkills, entry, 'SKILL.md')))
+        : []
+      meta = { kind: 'legacy-install', at: name, names, legacy: true }
+    }
     out.push({ id: name, root: join(root, name), meta })
   }
   // Newest first by recorded time; the random suffix is only a tiebreaker.
@@ -770,8 +779,32 @@ export function rollback({ stateDir, skillsDir, to, dryRun = false }) {
   const chosen = to === undefined ? defaultTarget : backups.find(item => item.id === to || item.id.startsWith(to))
   if (chosen === undefined) throw new SkillsError(`no backup matches ${JSON.stringify(to)}; use --list to see them`)
   const snapshotManifestPath = join(chosen.root, 'manifest.json')
-  if (!existsSync(snapshotManifestPath)) throw new SkillsError(`backup ${chosen.id} has no manifest.json`)
-  const snapshotManifest = readManifestAt(snapshotManifestPath)
+  let snapshotManifest
+  if (existsSync(snapshotManifestPath)) {
+    snapshotManifest = readManifestAt(snapshotManifestPath)
+  } else {
+    // Compatibility migration for backups written by install-skills.mjs
+    // before it recorded manifest.json/meta.json: reconstruct owned files from
+    // the snapshot dirs, retaining current metadata for unchanged names.
+    const currentManifest = readManifest(stateDir)
+    const skills = { ...currentManifest.skills }
+    const snapshotSkills = join(chosen.root, 'skills')
+    if (existsSync(snapshotSkills)) {
+      for (const name of readdirSync(snapshotSkills)) {
+        const source = join(snapshotSkills, name)
+        if (!existsSync(join(source, 'SKILL.md'))) continue
+        const files = scanPackageFiles(source)
+        skills[name] = {
+          ...(skills[name] ?? {}),
+          managedBy: 'legacy-installer-migrated',
+          validated: false,
+          files,
+          digest: digestFromFiles(files),
+        }
+      }
+    }
+    snapshotManifest = { schema: MANIFEST_SCHEMA, managedBy: 'hyperai-skills-updater', skills }
+  }
   const snapshotNames = Object.keys(snapshotManifest.skills)
   const current = readManifest(stateDir)
   const plan = { id: chosen.id, restore: [], remove: [], keep: [] }

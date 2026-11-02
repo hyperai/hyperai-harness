@@ -36,6 +36,7 @@ import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, 
 import { tmpdir } from 'node:os'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { createSnapshot, rollback as rollbackShared } from './skills-lib.mjs'
 
 const HERE = dirname(fileURLToPath(import.meta.url))
 const PKG = resolve(HERE, '..')
@@ -55,11 +56,12 @@ export function parseArgs(argv) {
     profile: BRAND.profileName,
     lockPath: DEFAULT_LOCK,
     ref: undefined,
-    verifiedOnly: false,
+    verifiedOnly: true,
     dryRun: false,
     rollback: false,
     json: false,
     source: undefined,
+    timeoutMs: 120_000,
   }
   for (let index = 0; index < argv.length; index++) {
     const arg = argv[index]
@@ -69,23 +71,49 @@ export function parseArgs(argv) {
     else if (arg === '--ref') options.ref = argv[++index]
     else if (arg === '--source') options.source = resolve(argv[++index])
     else if (arg === '--verified-only') options.verifiedOnly = true
+    else if (arg === '--include-unverified') options.verifiedOnly = false
     else if (arg === '--dry-run') options.dryRun = true
     else if (arg === '--rollback') options.rollback = true
     else if (arg === '--json') options.json = true
+    else if (arg === '--timeout') options.timeoutMs = Number(argv[++index])
     else if (arg === '--help' || arg === '-h') {
       process.stdout.write(
-        'usage: node scripts/install-skills.mjs [--dsh-home <dir>] [--profile <name>] [--ref <sha>] [--source <checkout>] [--verified-only] [--dry-run] [--rollback] [--json]\n',
+        'usage: node scripts/install-skills.mjs [--dsh-home <dir>] [--profile <name>] [--ref <sha>] [--source <checkout>] [--verified-only|--include-unverified] [--dry-run] [--rollback] [--timeout <ms>] [--json]\n',
       )
       process.exit(0)
     } else throw new Error(`unknown argument ${JSON.stringify(arg)}`)
   }
-  if (options.dshHome === '') throw new Error('a Harness home is required: pass --dsh-home or export DSH_HOME')
-  options.dshHome = resolve(options.dshHome)
-  options.profileDir = join(options.dshHome, 'profiles', options.profile)
-  options.skillsDir = join(options.profileDir, 'skills')
-  options.stateDir = join(options.profileDir, '.hyperai-skills')
-  options.manifestPath = join(options.stateDir, 'manifest.json')
-  return options
+  return normalizeSkillOptions(options)
+}
+
+/**
+ * Resolve the filesystem contract for both the CLI and installer callers.
+ * install.mjs calls installSkills with a partial options object; normalizing
+ * here keeps the default installation path from producing a TypeError.
+ * @param {Record<string, any>} options partial options.
+ * @param {{requireDshHome?: boolean}} [requirements]
+ */
+export function normalizeSkillOptions(options = {}, requirements = {}) {
+  const dshHome = options.dshHome ?? process.env.DSH_HOME
+  if ((requirements.requireDshHome ?? true) && (dshHome === undefined || dshHome === '')) {
+    throw new Error('a Harness home is required: pass --dsh-home or export DSH_HOME')
+  }
+  const profile = options.profile ?? BRAND.profileName
+  const profileDir = options.profileDir ?? (dshHome === undefined || dshHome === '' ? undefined : join(resolve(dshHome), 'profiles', profile))
+  if (profileDir === undefined) throw new Error('a Harness home is required: pass --dsh-home or export DSH_HOME')
+  const stateDir = options.stateDir ?? join(profileDir, '.hyperai-skills')
+  return {
+    ...options,
+    dshHome: dshHome === undefined || dshHome === '' ? undefined : resolve(dshHome),
+    profile,
+    profileDir,
+    skillsDir: options.skillsDir ?? join(profileDir, 'skills'),
+    stateDir,
+    manifestPath: options.manifestPath ?? join(stateDir, 'manifest.json'),
+    lockPath: options.lockPath ?? DEFAULT_LOCK,
+    verifiedOnly: options.verifiedOnly ?? true,
+    timeoutMs: Number.isFinite(Number(options.timeoutMs)) ? Math.max(1, Number(options.timeoutMs)) : 120_000,
+  }
 }
 
 /** Read the lock file. */
@@ -172,19 +200,67 @@ function writeManifest(path, manifest) {
   renameSync(temporary, path)
 }
 
+/** Run one git command with a hard timeout and one actionable error. */
+function runGit(args, options = {}) {
+  try {
+    return execFileSync('git', args, {
+      encoding: 'utf8',
+      timeout: options.timeoutMs ?? 120_000,
+      stdio: options.stdio ?? ['ignore', 'pipe', 'pipe'],
+      env: { ...process.env, GIT_TERMINAL_PROMPT: '0' },
+    }).trim()
+  } catch (error) {
+    if (error?.code === 'ETIMEDOUT' || error?.signal === 'SIGTERM') {
+      throw new Error(`git ${args.slice(0, 2).join(' ')} timed out after ${options.timeoutMs ?? 120_000}ms`)
+    }
+    const detail = String(error?.stderr ?? '').trim() || String(error?.message ?? error)
+    throw new Error(`git ${args.slice(0, 2).join(' ')} failed: ${detail}`)
+  }
+}
+
 /** Check out the pinned source; returns the directory holding skills/ and inbox/. */
-function checkoutSource(lock, ref, source) {
+function checkoutSource(lock, ref, source, timeoutMs = 120_000) {
   if (source !== undefined) {
-    const head = execFileSync('git', ['-C', source, 'rev-parse', 'HEAD'], { encoding: 'utf8' }).trim()
+    const head = runGit(['-C', source, 'rev-parse', 'HEAD'], { timeoutMs })
     if (head !== ref) throw new Error(`--source ${source} is at ${head}, expected pinned ref ${ref}`)
     return { root: source, head, owned: false }
   }
   const root = mkdtempSync(join(tmpdir(), 'hyperai-skills-'))
-  execFileSync('git', ['clone', '--quiet', lock.repository, root], { stdio: ['ignore', 'ignore', 'pipe'] })
-  execFileSync('git', ['-C', root, 'checkout', '--quiet', '--detach', ref], { stdio: ['ignore', 'ignore', 'pipe'] })
-  const head = execFileSync('git', ['-C', root, 'rev-parse', 'HEAD'], { encoding: 'utf8' }).trim()
-  if (head !== ref) throw new Error(`checked out ${head}, expected pinned ref ${ref}`)
-  return { root, head, owned: true }
+  try {
+    runGit(['clone', '--quiet', lock.repository, root], { timeoutMs, stdio: ['ignore', 'ignore', 'pipe'] })
+    runGit(['-C', root, 'checkout', '--quiet', '--detach', ref], { timeoutMs, stdio: ['ignore', 'ignore', 'pipe'] })
+    const head = runGit(['-C', root, 'rev-parse', 'HEAD'], { timeoutMs })
+    if (head !== ref) throw new Error(`checked out ${head}, expected pinned ref ${ref}`)
+  } catch (error) {
+    rmSync(root, { recursive: true, force: true })
+    throw error
+  }
+  return { root, head: ref, owned: true }
+}
+
+/** Every file under a skill dir, relative and sorted; used for user extras. */
+function allSkillFiles(dir) {
+  if (!existsSync(dir)) return []
+  const files = []
+  const walk = (current, prefix) => {
+    for (const entry of readdirSync(current, { withFileTypes: true }).sort((a, b) => a.name.localeCompare(b.name))) {
+      const relative = prefix === '' ? entry.name : `${prefix}/${entry.name}`
+      if (entry.isDirectory()) walk(join(current, entry.name), relative)
+      else if (entry.isFile()) files.push(relative)
+    }
+  }
+  walk(dir, '')
+  return files.sort()
+}
+
+/** Files in the installed skill that the manifest does not own (user content). */
+function extraFiles(targetDir, owned) {
+  return allSkillFiles(targetDir).filter(file => !(file in owned))
+}
+
+/** Stable JSON for file→digest maps, independent of insertion order. */
+function canonicalFiles(files) {
+  return JSON.stringify(Object.fromEntries(Object.entries(files).sort(([a], [b]) => a.localeCompare(b))))
 }
 
 /** Decide one skill's action without touching the target. */
@@ -194,17 +270,26 @@ export function planSkill(skill, sourceDir, targetDir, manifest) {
   const installed = existsSync(join(targetDir, 'SKILL.md'))
   if (!installed) return { action: 'install', sourceDigest, recorded }
   const currentDigest = digestSkill(targetDir)
-  const currentSerialized = JSON.stringify(currentDigest)
-  if (currentSerialized === JSON.stringify(sourceDigest)) return { action: 'noop', sourceDigest, recorded }
+  if (canonicalFiles(currentDigest) === canonicalFiles(sourceDigest)) return { action: 'noop', sourceDigest, recorded }
   if (recorded === undefined) return { action: 'skip-unmanaged', sourceDigest, recorded }
-  if (JSON.stringify(currentDigest) !== JSON.stringify(recorded.files)) {
+  const owned = recorded.files ?? {}
+  // Only files recorded in the manifest are managed content. A user file in
+  // references/ must not look like a user edit of the package.
+  const currentManaged = Object.fromEntries(Object.entries(currentDigest).filter(([file]) => file in owned))
+  if (canonicalFiles(currentManaged) !== canonicalFiles(owned)) {
     return { action: 'skip-user-modified', sourceDigest, recorded }
   }
-  return { action: 'update', sourceDigest, recorded }
+  const extras = extraFiles(targetDir, owned)
+  const overlap = extras.filter(file => file in sourceDigest)
+  if (overlap.length > 0) {
+    return { action: 'skip-extra-conflict', sourceDigest, recorded, extras, conflict: overlap }
+  }
+  return { action: 'update', sourceDigest, recorded, extras }
 }
 
 /** Install the pinned skills. */
 export function installSkills(options = parseArgs([])) {
+  options = normalizeSkillOptions(options)
   const lock = loadLock(options.lockPath)
   const ref = options.ref ?? lock.ref
   const skills = selectedSkills(lock, options.verifiedOnly)
@@ -217,54 +302,73 @@ export function installSkills(options = parseArgs([])) {
     skillsDir: options.skillsDir,
     dryRun: options.dryRun === true,
   }
-  const plan = []
-  for (const skill of skills) {
-    plan.push({ skill, sourceDir: null })
-  }
   const manifest = readManifest(options.manifestPath)
   let source
+  let snapshot
   try {
-    source = checkoutSource(lock, ref, options.source)
-    for (const entry of plan) {
-      const skill = entry.skill
+    source = checkoutSource(lock, ref, options.source, options.timeoutMs)
+    // Plan before writing so a dry-run has no side effects and a failure has
+    // one consistent pre-change snapshot for manifest-aware rollback.
+    const actions = []
+    for (const skill of skills) {
       const sourceDir = join(source.root, skill.area, skill.name)
       if (!existsSync(sourceDir)) throw new Error(`${skill.name}: not found at ${skill.area}/${skill.name} in ${ref}`)
       validateSkill(sourceDir, skill.name)
       const targetDir = join(options.skillsDir, skill.name)
       const decision = planSkill(skill, sourceDir, targetDir, manifest)
-      if (decision.action === 'install' || decision.action === 'update') {
-        if (!options.dryRun) {
-          const stamp = new Date().toISOString().replaceAll(':', '-').replace(/\.\d+Z$/u, 'Z')
-          const backupDir = join(options.stateDir, 'backups', stamp, 'skills', skill.name)
-          if (decision.action === 'update') {
-            cpSync(targetDir, backupDir, { recursive: true })
-            rmSync(targetDir, { recursive: true, force: true })
-          }
-          mkdirSync(dirname(targetDir), { recursive: true })
-          const staging = join(options.stateDir, 'staging', skill.name)
-          rmSync(staging, { recursive: true, force: true })
-          mkdirSync(dirname(staging), { recursive: true })
-          for (const file of Object.keys(decision.sourceDigest)) {
-            copyOne(join(sourceDir, file), join(staging, file))
-          }
-          renameSync(staging, targetDir)
-          manifest.skills[skill.name] = {
-            ref,
-            validated: skill.validated !== false,
-            description: validateSkill(targetDir, skill.name).description,
-            files: decision.sourceDigest,
-            installedAt: new Date().toISOString(),
-          }
-          if (decision.action === 'install') result.installed.push(skill.name)
-          else result.updated.push(skill.name)
-        } else {
-          if (decision.action === 'install') result.installed.push(skill.name)
-          else result.updated.push(skill.name)
+      if (decision.action === 'install' || decision.action === 'update') actions.push({ skill, sourceDir, targetDir, decision })
+      else if (decision.action === 'noop') result.unchanged.push(skill.name)
+      else result.skippedSkills.push({ name: skill.name, reason: decision.action, detail: decision.conflict?.join(', ') })
+    }
+    if (!options.dryRun && actions.length > 0) {
+      const existing = [...new Set([...Object.keys(manifest.skills), ...actions.map(item => item.skill.name)])]
+        .filter(name => existsSync(join(options.skillsDir, name)))
+      snapshot = createSnapshot(options.stateDir, options.skillsDir, manifest, existing)
+      result.backup = snapshot.id
+    }
+    for (const { skill, sourceDir, targetDir, decision } of actions) {
+      if (options.dryRun) {
+        if (decision.action === 'install') result.installed.push(skill.name)
+        else result.updated.push(skill.name)
+        continue
+      }
+      const staging = join(options.stateDir, 'staging', `${skill.name}-${process.pid}-${Date.now()}`)
+      try {
+        rmSync(staging, { recursive: true, force: true })
+        mkdirSync(staging, { recursive: true })
+        for (const file of Object.keys(decision.sourceDigest)) copyOne(join(sourceDir, file), join(staging, file))
+        // Preserve files the run does not own, including user files inside
+        // resource directories, across the directory swap.
+        for (const file of decision.extras ?? []) {
+          if (existsSync(join(targetDir, file))) copyOne(join(targetDir, file), join(staging, file))
         }
-      } else if (decision.action === 'noop') {
-        result.unchanged.push(skill.name)
-      } else {
-        result.skippedSkills.push({ name: skill.name, reason: decision.action })
+        mkdirSync(dirname(targetDir), { recursive: true })
+        if (decision.action === 'update') rmSync(targetDir, { recursive: true, force: true })
+        renameSync(staging, targetDir)
+        manifest.skills[skill.name] = {
+          ref,
+          validated: skill.validated !== false,
+          description: validateSkill(targetDir, skill.name).description,
+          files: decision.sourceDigest,
+          installedAt: new Date().toISOString(),
+        }
+        if (decision.action === 'install') result.installed.push(skill.name)
+        else result.updated.push(skill.name)
+      } catch (error) {
+        // Put the previous tree back before reporting the failed skill.
+        try {
+          rmSync(staging, { recursive: true, force: true })
+          if (snapshot !== undefined) {
+            const before = join(snapshot.root, 'skills', skill.name)
+            if (existsSync(before)) {
+              rmSync(targetDir, { recursive: true, force: true })
+              cpSync(before, targetDir, { recursive: true })
+            } else if (decision.action === 'install') {
+              rmSync(targetDir, { recursive: true, force: true })
+            }
+          }
+        } catch { /* best effort */ }
+        throw error
       }
     }
     if (!options.dryRun) {
@@ -276,7 +380,6 @@ export function installSkills(options = parseArgs([])) {
     if (source !== undefined && source.owned) rmSync(source.root, { recursive: true, force: true })
   }
 }
-
 /** Copy one file, creating its parent directory. */
 function copyOne(from, to) {
   mkdirSync(dirname(to), { recursive: true })
@@ -296,27 +399,16 @@ function appendHistory(options, ref, result) {
   writeFileSync(join(options.stateDir, 'history.log'), `${JSON.stringify(line)}\n`, { flag: 'a' })
 }
 
-/** Restore the newest backup snapshot. */
-export function rollbackSkills(options) {
-  const backupsRoot = join(options.stateDir, 'backups')
-  if (!existsSync(backupsRoot)) throw new Error(`no backups under ${backupsRoot}`)
-  const stamp = readdirSync(backupsRoot).sort().at(-1)
-  if (stamp === undefined) throw new Error(`no backups under ${backupsRoot}`)
-  const snapshot = join(backupsRoot, stamp)
-  const skills = join(snapshot, 'skills')
-  const restored = []
-  if (existsSync(skills)) {
-    for (const name of readdirSync(skills)) {
-      rmSync(join(options.skillsDir, name), { recursive: true, force: true })
-      cpSync(join(skills, name), join(options.skillsDir, name), { recursive: true })
-      restored.push(name)
-    }
-  }
-  const manifestBackup = join(snapshot, 'manifest.json')
-  if (existsSync(manifestBackup)) cpSync(manifestBackup, options.manifestPath)
-  return { stamp, restored }
+/**
+ * Restore the newest compatible backup snapshot. Backups now carry the
+ * manifest and meta.json just like the updater's snapshots, so one rollback
+ * implementation handles both legacy-installer and updater backups.
+ */
+export function rollbackSkills(options = parseArgs([])) {
+  options = normalizeSkillOptions(options)
+  const plan = rollbackShared({ stateDir: options.stateDir, skillsDir: options.skillsDir, to: options.to })
+  return { stamp: plan.id, restored: plan.restore, removed: plan.remove, kept: plan.keep, backupBefore: plan.backupBefore }
 }
-
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   const options = parseArgs(process.argv.slice(2))
   try {

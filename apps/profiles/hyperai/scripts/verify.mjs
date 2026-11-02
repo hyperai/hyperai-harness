@@ -26,6 +26,7 @@ const manifest = JSON.parse(readFileSync(join(PKG, 'package.json'), 'utf8'))
 const cordis = readFileSync(join(PKG, 'cordis.patch.yml'), 'utf8')
 const workspace = readFileSync(join(PKG, 'pnpm-workspace.yaml'), 'utf8')
 const readme = readFileSync(join(PKG, 'README.md'), 'utf8')
+const coreData = brand.core?.validated ?? []
 const checks = []
 
 async function check(name, fn) {
@@ -47,6 +48,31 @@ await check('profile manifest is a native DSH profile with the pinned TUI bundle
     throw new Error('profile pins a different dsh-tui version than the TUI brand data')
   }
   return `${bundles.join(' + ')} @ ${brand.upstream.version}`
+})
+
+await check('the profile carries the MIT license and upstream-core compatibility guard', () => {
+  if (manifest.license !== 'MIT') throw new Error('package.json license must be MIT')
+  if (!existsSync(join(PKG, 'LICENSE'))) throw new Error('profile LICENSE is missing')
+  if (!readFileSync(join(PKG, 'LICENSE'), 'utf8').includes('Copyright (c) 2026 DeepSeek')) throw new Error('profile LICENSE has the wrong copyright')
+  if (!Array.isArray(coreData) || coreData.length === 0) throw new Error('brand.json core.validated is missing')
+  if (!coreData.includes('0.2.0-rc.2')) throw new Error('brand compatibility list lost the tested 0.2.0-rc.2 line')
+  if (coreData.includes('0.2.1-rc.5')) throw new Error('unvalidated rc.5 is listed as supported')
+  return `${coreData.length} validated core lines`
+})
+
+await check('the profile ships preflight and lifecycle commands', () => {
+  for (const file of ['scripts/preflight.mjs', 'scripts/manage.mjs', 'tests/preflight.test.mjs', 'tests/lifecycle.test.mjs']) {
+    if (!existsSync(join(PKG, file))) throw new Error(`${file} is missing`)
+  }
+  const manage = readFileSync(join(PKG, 'scripts', 'manage.mjs'), 'utf8')
+  for (const marker of ['status', 'doctor', 'repair', 'uninstall', 'archiveProfile']) {
+    if (!manage.includes(marker)) throw new Error(`manage.mjs is missing ${marker}`)
+  }
+  const preflight = readFileSync(join(PKG, 'scripts', 'preflight.mjs'), 'utf8')
+  for (const marker of ['unsupported-core', 'unsupported-node', 'no bypass']) {
+    if (marker === 'no bypass' ? !preflight.includes('no "accept risk"') : !preflight.includes(marker)) throw new Error(`preflight.mjs is missing ${marker}`)
+  }
+  return 'preflight + status/doctor/repair/uninstall'
 })
 
 await check('the profile patch layer keeps only the profile-scoped skill root', () => {
@@ -185,6 +211,17 @@ await check('the profile ships the independent skills updater', () => {
     if (!lib.includes(marker)) throw new Error(`skills-lib.mjs is missing ${marker}`)
   }
   return 'check/update/catalog/rollback shipped with the profile'
+})
+
+await check('the profile documents verified-only skills, isolation and lifecycle', () => {
+  for (const marker of ['--include-unverified', 'manage.mjs status', 'manage.mjs doctor', 'manage.mjs repair', 'manage.mjs uninstall', 'DSH_HOME', 'HOME', 'frozen-lockfile']) {
+    if (!readme.includes(marker)) throw new Error(`README is missing ${JSON.stringify(marker)}`)
+  }
+  const skillsDoc = readFileSync(join(PKG, 'docs', 'skills.md'), 'utf8')
+  for (const marker of ['verified', 'include-unverified', 'timeout', 'manifest']) {
+    if (!skillsDoc.includes(marker)) throw new Error(`docs/skills.md is missing ${JSON.stringify(marker)}`)
+  }
+  return 'verified-only default, lifecycle, isolation, timeout documented'
 })
 
 await check('the README documents the native profile, TUI relation and run command', () => {

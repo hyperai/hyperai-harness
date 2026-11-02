@@ -31,6 +31,7 @@ import { fileURLToPath } from 'node:url'
 const HERE = dirname(fileURLToPath(import.meta.url))
 const PKG = resolve(HERE, '..')
 const BRAND = JSON.parse(readFileSync(join(PKG, 'src', 'brand.json'), 'utf8'))
+const TUI_PACKAGE = JSON.parse(readFileSync(join(PKG, 'package.json'), 'utf8'))
 /** The one product brand colour; both the splash title and the wordmark use it. */
 const TITLE = parseHexColor(BRAND.titleColor)
 
@@ -462,11 +463,108 @@ export const DATA_DIR = join(homeDir(), dataDirName());`,
       replace: `    'logo-star-ask': { zh: ${q(`喜欢 ${plugin} 的话，顺手点亮一颗 {{star}}？（点这一行或 {{key}} 一键支持`)}, en: ${q(`If you like ${plugin}, would you light a {{star}}? (click this line or {{key}})`) } },`,
     },
     {
+      file: 'lib/types/settings/definitions.js',
+      why: 'settings copy must not present upstream brand controls as active HyperAI features',
+      find: `    'brand': {
+        label: 'Brand look',
+        descriptions: { zh: '品牌外观' },
+        group: 'splash',
+        hint: 'Brand look of the splash and theme. Follow backend (default) switches with the active kernel — Claude boots orange (CLAUDE CODE title, Claude girl), Codex boots lavender (CODEX title, "Build anything with Codex"); the other values pin one look. Applies immediately.',
+        hintDescriptions: { zh: '开屏与主题的品牌外观。跟随后端（默认）随当前内核自动切——Claude 后端整套换橙（CLAUDE CODE 大标题、Claude 娘立绘），Codex 后端整套换薰衣草紫（CODEX 大标题、"Build anything with Codex" 标语）；选固定档则锁定一种外观。立即生效。' },`,
+      replace: `    'brand': {
+        label: 'HyperAI look (upstream compatibility)',
+        descriptions: { zh: 'HyperAI 外观（上游兼容）' },
+        group: 'splash',
+        hint: 'HyperAI uses the fixed HyperAI Harness palette and text-only wordmark. This upstream brand selector is retained only for compatibility; it does not reintroduce the upstream logo or mascot.',
+        hintDescriptions: { zh: 'HyperAI 固定使用 HyperAI Harness 品牌色和纯文字字标。此项仅为上游兼容保留，不会重新引入上游 Logo 或吉祥物。' },`,
+    },
+    {
+      file: 'lib/types/settings/definitions.js',
+      why: 'settings copy must not present upstream mascot/brand controls as active HyperAI features',
+      find: "        label: 'Header art',\n        descriptions: { zh: '标题图形 logo' },\n        group: 'splash',\n        hint: 'Header art. DeepSeek follows Companion skin and the maid toggle; Claude uses its own art; Codex uses its own raster portrait or maid character-art fallback. Off leaves a text-only header.',\n        hintDescriptions: { zh: '标题图形：DeepSeek 品牌随宠物皮肤与女仆娘开关，Claude 使用自己的图案；Codex 优先显示自己的真图，不可用时回落女仆娘字符画。关闭则只留文字标题。' },",
+      replace: `        label: 'Header art (not used by HyperAI)',
+        descriptions: { zh: '标题图形（HyperAI 不使用）' },
+        group: 'splash',
+        hint: 'HyperAI renders a text-only pixel wordmark; upstream header art is disabled by the profile patch. This setting is retained only for upstream compatibility.',
+        hintDescriptions: { zh: 'HyperAI 只渲染文字像素字标；上游标题图形已由 Profile patch 关闭。此设置仅为上游兼容保留。' },`,
+    },
+    {
+      file: 'lib/types/settings/definitions.js',
+      why: 'settings copy must not present upstream mascot controls as active HyperAI features',
+      find: "        label: 'Maid portrait',\n        descriptions: { zh: '女仆娘立绘' },\n        group: 'splash',",
+      replace: `        label: 'Maid portrait (not used by HyperAI)',
+        descriptions: { zh: '女仆娘立绘（HyperAI 不使用）' },
+        group: 'splash',`,
+    },
+    {
+      file: 'lib/types/settings/definitions.js',
+      why: 'settings copy must not present upstream mascot controls as active HyperAI features',
+      find: "        label: 'Welcome whale idle',\n        descriptions: { zh: '鲸鱼娘闲置动画（欢迎期）' },\n        group: 'splash',",
+      replace: `        label: 'Welcome animation (not used by HyperAI)',
+        descriptions: { zh: '欢迎动画（HyperAI 不使用）' },
+        group: 'splash',`,
+    },
+    {
+      file: 'lib/types/settings/definitions.js',
+      why: 'splash font setting must explain the HyperAI solid-font pin',
+      find: "        hint: 'Big-text face on the header splash. Daily rotates by local date (default); pick a face to pin that one. Applies immediately.',",
+      replace: "        hint: 'Upstream splash font setting. HyperAI always starts from the solid bold face (daily hollow rotation is bypassed); an explicit face remains available for upstream compatibility.',",
+    },
+    {
+      file: 'lib/types/settings/definitions.js',
+      why: 'splash group must not advertise a mascot',
+      find: "    { id: 'splash', mode: 'inline', title: 'Splash', descriptions: { zh: '开屏与吉祥物' } },",
+      replace: "    { id: 'splash', mode: 'inline', title: 'Splash / 开屏', descriptions: { zh: '开屏与字标' } },",
+    },
+    {
       file: 'lib/types/commands.js',
       why: 'HyperAI Skills update command',
       find: "    { name: 'skills', description: 'List available skills' },",
       replace: `    { name: 'skills', description: 'List available skills' },
     { name: 'skills-update', description: 'Check for HyperAI Skills updates and install them' },`,
+    },
+    {
+      file: 'lib/types/commands.js',
+      why: 'the upstream /update entry must not replace the branded package',
+      find: "    { name: 'update', description: 'Update dsh-tui and restart' },",
+      replace: "    { name: 'update', description: 'HyperAI: updates are managed by the profile installer' },",
+    },
+    {
+      file: 'lib/types/screens/Chat.js',
+      why: 'the upstream /update route is disabled for the branded package',
+      find: `            case 'update':
+                setHelpOpen(false);
+                if (onUpdate === undefined) {
+                    channel.notify(t('update-unavailable'), { color: 'warning' });
+                }
+                else if (channel.working) {
+                    channel.notify(t(WORKING_GATE_NOTICES.update), { color: 'warning' });
+                }
+                else {
+                    channel.notify(t('update-starting'));
+                    onUpdate();
+                }
+                return true;`,
+      replace: `            case 'update':
+                setHelpOpen(false);
+                channel.pushLocal('/update', [
+                    getLang() === 'zh'
+                        ? 'HyperAI Harness 不通过 /update 升级；请使用 HyperAI Profile 安装器/发布流程。'
+                        : 'HyperAI Harness does not upgrade through /update; use the HyperAI profile installer/release flow.',
+                ]);
+                return true;`,
+    },
+    {
+      file: 'lib/types/screens/Chat.js',
+      why: 'window title uses the HyperAI brand, not the upstream whale glyph',
+      find: "    useTerminalTitle(`${titlePrefix} 🐋 ${channel.sessionTitle}`);",
+      replace: "    useTerminalTitle(`${titlePrefix} ${channel.sessionTitle}`);",
+    },
+    {
+      file: 'lib/types/screens/Launchpad.js',
+      why: 'version plate distinguishes the HyperAI product from the pinned upstream TUI',
+      find: "    const tuiPart = tuiVersion === undefined || tuiVersion === '' ? undefined : `hyperai-tui v${tuiVersion}`;",
+      replace: `    const tuiPart = tuiVersion === undefined || tuiVersion === '' ? undefined : \`hyperai-tui v${TUI_PACKAGE.version} · dsh-tui v\${tuiVersion}\`;`,
     },
     {
       file: 'lib/types/screens/Chat.js',
@@ -531,6 +629,7 @@ const EXPECTED_FILES = [
   'lib/types/update.js',
   'lib/types/components/splashEggs.js',
   'lib/types/commands.js',
+  'lib/types/settings/definitions.js',
   'lib/types/screens/Chat.js',
   'lib/types/hyperaiSkills.js',
   'lib/types/hyperaiSkillsCore.js',

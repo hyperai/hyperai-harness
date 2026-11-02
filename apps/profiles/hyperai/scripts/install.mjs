@@ -14,8 +14,11 @@
  *   --profile <name>     Profile name (default: hyperai)
  *   --dsh-bin <path>     dsh executable (default: $HYPERAI_DSH_BIN or `dsh` on PATH)
  *   --no-skills          Skip the hyperai-skills install step
- *   --verified-only      Install only the repo-verified skills
+ *   --include-unverified Install inbox candidates too; default is verified only
+ *   --frozen-lockfile    Use the profile's existing pnpm lockfile (reproducible reinstall)
  *   --skills-ref <sha>   Override the pinned hyperai-skills commit
+ *   --skills-source <dir> Use an existing HyperAI Skills checkout (offline/test)
+ *   --skills-lock <file> Use an alternate pinned skills lock (test/offline)
  *   --dry-run            Print the plan without writing anything
  *   --force              Replace an existing non-managed profile / managed files
  *   --json               Print a machine-readable result
@@ -31,9 +34,10 @@
  * no absolute paths or references back to the checkout.
  */
 import { execFileSync } from 'node:child_process'
-import { cpSync, existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs'
+import { cpSync, existsSync, mkdirSync, readFileSync, readdirSync, renameSync, rmSync, writeFileSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { dirname, join, resolve } from 'node:path'
+import { preflight as runPreflight } from './preflight.mjs'
 import { fileURLToPath } from 'node:url'
 
 const HERE = dirname(fileURLToPath(import.meta.url))
@@ -48,6 +52,7 @@ const PATCH_FILE = join(TUI, 'patches', `dsh-tui@${BRAND.upstream.version}.patch
 const MANAGED_MARKER = 'hyperaiTuiManaged'
 const PATCH_MARKER = '# hyperai profile patch layer'
 const WORKSPACE_MARKER = '# hyperai profile pnpm workspace:'
+const INSTALL_STATE = '.hyperai-install.json'
 
 /** Parse CLI arguments into an options object. */
 export function parseArgs(argv) {
@@ -55,9 +60,14 @@ export function parseArgs(argv) {
     dshHome: process.env.DSH_HOME ?? join(homedir(), '.dsh'),
     profile: BRAND.profileName,
     dshBin: process.env.HYPERAI_DSH_BIN ?? 'dsh',
+    pnpmBin: process.env.PNPM_BIN ?? 'pnpm',
+    preflight: true,
     skills: true,
-    verifiedOnly: false,
+    verifiedOnly: true,
+    frozenLockfile: false,
     skillsRef: undefined,
+    skillsSource: undefined,
+    skillsLock: undefined,
     dryRun: false,
     force: false,
     json: false,
@@ -69,7 +79,11 @@ export function parseArgs(argv) {
     else if (arg === '--dsh-bin') options.dshBin = argv[++index]
     else if (arg === '--no-skills') options.skills = false
     else if (arg === '--verified-only') options.verifiedOnly = true
+    else if (arg === '--include-unverified') options.verifiedOnly = false
+    else if (arg === '--frozen-lockfile') options.frozenLockfile = true
     else if (arg === '--skills-ref') options.skillsRef = argv[++index]
+    else if (arg === '--skills-source') options.skillsSource = resolve(argv[++index])
+    else if (arg === '--skills-lock') options.skillsLock = resolve(argv[++index])
     else if (arg === '--dry-run') options.dryRun = true
     else if (arg === '--force') options.force = true
     else if (arg === '--json') options.json = true
@@ -77,7 +91,9 @@ export function parseArgs(argv) {
       process.stdout.write(
         [
           'usage: node scripts/install.mjs [--dsh-home <dir>] [--profile <name>] [--dsh-bin <path>]',
-          '                                 [--no-skills] [--verified-only] [--skills-ref <sha>]',
+          '                                 [--no-skills] [--verified-only] [--include-unverified]',
+          '                                 [--frozen-lockfile] [--skills-ref <sha>]',
+          '                                 [--skills-source <dir>] [--skills-lock <file>]',
           '                                 [--dry-run] [--force] [--json]',
           '',
         ].join('\n'),
@@ -101,6 +117,34 @@ function readJson(path) {
 
 function isManagedProfile(dir) {
   return readJson(join(dir, 'package.json'))?.[MANAGED_MARKER] === true
+}
+
+/** Path of the durable install/lifecycle state file. */
+export function installStatePath(profileDir) {
+  return join(profileDir, INSTALL_STATE)
+}
+
+/** Read the previous install state, if any. */
+export function readInstallState(profileDir) {
+  return readJson(installStatePath(profileDir))
+}
+
+/** Atomically record the installer phase so a partial run is diagnosable. */
+function writeInstallState(options, state) {
+  if (options.dryRun) return
+  mkdirSync(options.profileDir, { recursive: true })
+  const path = installStatePath(options.profileDir)
+  const temporary = `${path}.tmp-${process.pid}-${Date.now()}`
+  const payload = {
+    schema: 1,
+    version: TUI_PACKAGE.version,
+    upstream: BRAND.upstream.version,
+    profile: options.profile,
+    ...state,
+    updatedAt: new Date().toISOString(),
+  }
+  writeFileSync(temporary, `${JSON.stringify(payload, undefined, 2)}\n`)
+  renameSync(temporary, path)
 }
 
 /** The profile manifest this installer writes. */
@@ -271,9 +315,14 @@ function backupFile(options, relative) {
   return join(backupDir, relative)
 }
 
+/** The dsh plugin install arguments; frozen mode is opt-in for reproducible reinstall. */
+export function dependencyInstallArgs(options) {
+  return ['plugin', '--profile', options.profile, 'install', options.frozenLockfile ? '--frozen-lockfile' : '--no-frozen-lockfile']
+}
+
 /** Run the pinned-package install through the dsh CLI's own pnpm wrapper. */
 function installDependencies(options) {
-  const args = ['plugin', '--profile', options.profile, 'install', '--no-frozen-lockfile']
+  const args = dependencyInstallArgs(options)
   execFileSync(options.dshBin, args, {
     cwd: options.profileDir,
     env: { ...process.env, DSH_HOME: options.dshHome, CI: 'true' },
@@ -308,6 +357,19 @@ function verifyInstall(options) {
 export async function install(options = parseArgs([])) {
   const plan = []
   const result = { profileDir: options.profileDir, plan, skills: undefined, warnings: [] }
+  if (options.preflight !== false) {
+    try {
+      result.environment = runPreflight({
+        dshBin: options.dshBin,
+        pnpmBin: options.pnpmBin,
+        coreVersions: BRAND.core?.validated ?? [],
+        testedCoreVersions: BRAND.core?.tested ?? [],
+      })
+    } catch (error) {
+      result.warnings.push({ phase: 'preflight', message: error instanceof Error ? error.message : String(error) })
+      throw error
+    }
+  }
   if (!existsSync(PATCH_FILE)) {
     throw new Error(`missing branding patch ${PATCH_FILE}; build it with "node apps/tui/scripts/build-patch.mjs" first`)
   }
@@ -319,6 +381,12 @@ export async function install(options = parseArgs([])) {
     )
   }
   if (!options.dryRun) mkdirSync(options.profileDir, { recursive: true })
+  const startedAt = new Date().toISOString()
+  let phase = 'files'
+  if (!options.dryRun) {
+    writeInstallState(options, { status: 'installing', phase, startedAt, error: null })
+  }
+  try {
   stageFile(options, 'package.json', `${JSON.stringify(profileManifest(), undefined, 2)}\n`, {
     marker: `"${MANAGED_MARKER}": true`,
     plan,
@@ -335,19 +403,42 @@ export async function install(options = parseArgs([])) {
     result.skills = { skipped: options.skills ? 'dry-run' : true }
     return result
   }
+  phase = 'dependencies'
+  writeInstallState(options, { status: 'installing', phase, startedAt, error: null })
   installDependencies(options)
+  phase = 'verify'
+  writeInstallState(options, { status: 'installing', phase, startedAt, error: null })
   verifyInstall(options)
   if (options.skills) {
+    phase = 'skills'
+    writeInstallState(options, { status: 'installing', phase, startedAt, error: null })
     const { installSkills } = await import('./install-skills.mjs')
     result.skills = installSkills({
       dshHome: options.dshHome,
       profile: options.profile,
       ref: options.skillsRef,
+      lockPath: options.skillsLock,
+      source: options.skillsSource,
       verifiedOnly: options.verifiedOnly,
       dshBin: options.dshBin,
     })
   }
+  writeInstallState(options, { status: 'completed', phase: 'done', error: null, completedAt: new Date().toISOString() })
   return result
+  } catch (error) {
+    try {
+      writeInstallState(options, {
+        status: 'failed',
+        phase,
+        startedAt,
+        error: error instanceof Error ? error.message : String(error),
+        failedAt: new Date().toISOString(),
+      })
+    } catch {
+      // The original failure is more useful than a state-file failure.
+    }
+    throw error
+  }
 }
 
 /** Remove the installer's own state (used by tests and docs); never touches ~/.dsh-tui. */
