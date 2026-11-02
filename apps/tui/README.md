@@ -51,6 +51,15 @@ exact-match brand edits and self-tests the result by applying the generated
 patch to a fresh copy. `--from <dir>` builds from a local pristine package
 instead of the registry.
 
+## Splash font
+
+The upstream renderer rotates through nine splash fonts daily (`bold`, `square`,
+`bevel`, `wide`, `dot`, `stencil`, `classic`, `slab`, `shadow`). `stencil` and
+`classic` are hollow/outline faces. HyperAI therefore pins its splash to the
+upstream solid `bold` glyph table; `/settings` can still choose another face
+explicitly. The words, spacing and `#FF6096` colour come from the existing
+renderer.
+
 ## HyperAI Skills updates
 
 `dsh --profile hyperai` starts checking the profile's HyperAI Skills updater
@@ -95,7 +104,7 @@ Screenshots: [`docs/screenshots/skills-update-prompt-dark.png`](docs/screenshots
 | Splash words | `HYPERAI` / `HARNESS` |
 | Splash colour | `#FF6096` (255, 96, 150) — solid, identical in dark and light themes |
 | Splash artwork | none: no logo, mascot, whale, PNG, sprite or image protocol |
-| Pixel font | upstream big-font renderer, unchanged |
+| Pixel font | upstream big-font renderer; HyperAI defaults to the solid `bold` face (daily hollow fonts are not used) |
 
 The brand data lives in one place: [`src/brand.json`](src/brand.json). The build
 derives the patched palette from `titleColor`, so the colour is not duplicated in

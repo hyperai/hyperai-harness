@@ -158,6 +158,17 @@ check('the TUI tree carries no logo toolchain or generated art', () => {
   return 'src/ holds brand data only; no svg/png/generated payloads'
 })
 
+check('the HyperAI splash is pinned to the upstream solid font', () => {
+  const logo = readFileSync(join(PKG, 'src', 'brand.json'), 'utf8')
+  if (!logo.includes('HYPERAI')) throw new Error('brand words missing')
+  const pinned = "brand === 'deepseek' ? splashFontById('bold') : pickSplashFont()"
+  if (!patch.includes(pinned)) throw new Error('patch does not pin the brand splash to splashFontById(\'bold\')')
+  if (!patch.includes('daily rotation can select stencil/classic/dot')) throw new Error('patch lacks the hollow-font rationale')
+  if (!patch.includes('const [dailyFont] = React.useState(() => brand ===')) throw new Error('LogoV2 pin missing')
+  if (!patch.includes('const [dailyFont] = React.useState(() => brand ===')) throw new Error('Launchpad pin missing')
+  return 'HYPERAI/HARNESS use the solid base font; daily rotation stays upstream-only'
+})
+
 check('the patch carries the HyperAI Skills update bridge without a second scanner', () => {
   const chat = readFileSync(join(PKG, 'src', 'hyperaiSkills.js'), 'utf8')
   const core = readFileSync(join(PKG, 'src', 'hyperaiSkillsCore.js'), 'utf8')
@@ -183,6 +194,11 @@ check('the skills update screenshots exist', () => {
     'skills-update-prompt-light.png',
     'skills-update-prompt-small.png',
     'skills-update-dialog-light.png',
+    'real/orca-before-hollow.png',
+    'real/orca-after-solid.png',
+    'real/orca-after-small.png',
+    'real/orca-after-narrow.png',
+    'real/orca-after-chat.png',
   ]) {
     const path = join(PKG, 'docs', 'screenshots', file)
     if (!existsSync(path)) throw new Error(`missing screenshot ${file}`)

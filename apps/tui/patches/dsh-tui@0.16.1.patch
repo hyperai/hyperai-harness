@@ -65,7 +65,7 @@ index 0806732..f7270e2 100644
      { name: 'update', description: 'Update dsh-tui and restart' },
      // Skills are discovered through the DSH registry and added at runtime.
 diff --git a/lib/types/components/LogoV2.js b/lib/types/components/LogoV2.js
-index ed2f7f3..8f565de 100644
+index ed2f7f3..54b9ca4 100644
 --- a/lib/types/components/LogoV2.js
 +++ b/lib/types/components/LogoV2.js
 @@ -8,7 +8,7 @@ import { dirname, join } from 'node:path';
@@ -77,7 +77,7 @@ index ed2f7f3..8f565de 100644
  import { useTheme } from './design-system/ThemeProvider.js';
  import { interpolateColor, parseRGB } from './Spinner/spinnerUtils.js';
  import { paintedWidth, renderBigText } from './bigfont.js';
-@@ -163,9 +163,12 @@ export function LogoV2({ model = '', effort, cwd = '', skipIntro = false, intro,
+@@ -163,11 +163,17 @@ export function LogoV2({ model = '', effort, cwd = '', skipIntro = false, intro,
      /** 终端真底色（Sixel 不透明衬底；见渲染处的注释）。 */
      const theme = getTheme(themeName);
      const { columns } = useTerminalSize();
@@ -91,9 +91,15 @@ index ed2f7f3..8f565de 100644
 +    const wordmarkShimmerRGB = hyperaiLook ? HYPERAI_PALETTE.accentShimmer : parseRGB(theme.accentShimmer) ?? ICE;
 +    const taglineRGB = hyperaiLook ? HYPERAI_PALETTE.tagline : parseRGB(theme.activity) ?? ICE;
      // 按天轮换的大字字体：同一天内恒定、隔天换一款；`fontId`（设置项）可 pin 住一款。
-     const [dailyFont] = React.useState(() => pickSplashFont());
+-    const [dailyFont] = React.useState(() => pickSplashFont());
++    // hyperai-tui: the upstream daily rotation can select stencil/classic/dot
++    // fonts (interior cutouts look hollow). The brand keeps the base solid
++    // pixel font; an explicit `/settings` font choice still wins below.
++    const [dailyFont] = React.useState(() => brand === 'deepseek' ? splashFontById('bold') : pickSplashFont());
      const font = fontId === undefined ? dailyFont : splashFontById(fontId);
-@@ -181,7 +184,9 @@ export function LogoV2({ model = '', effort, cwd = '', skipIntro = false, intro,
+     // 品牌词（`branding.ts`）：claude 内核换 `CLAUDE`/`CODE`、codex 内核换
+     // `CODEX`/`HARNESS`——字身不变、**两行同字距**（用户点名「间隙一致」：
+@@ -181,7 +187,9 @@ export function LogoV2({ model = '', effort, cwd = '', skipIntro = false, intro,
      const [dailyEgg] = React.useState(() => (egg === undefined ? pickSplashEgg() : egg));
      const titleFont = resolveSplashTitleFont(font, brand, dailyEgg);
      // 窄终端阶梯：鲸鱼 + 大字 → 纯大字 → 纯鲸鱼 → 一行纯文字（阈值随字体字身宽度变）。
@@ -104,7 +110,7 @@ index ed2f7f3..8f565de 100644
      /**
       * 上下排布（落地页）时立绘与词标**不共行**，宽轴那套「谁挤掉谁」的判定不适用：
       * 立绘只看自己放不放得下（盒宽）。照并排阈值走会在 55–96 列这一大段把立绘判掉，
-@@ -191,7 +196,7 @@ export function LogoV2({ model = '', effort, cwd = '', skipIntro = false, intro,
+@@ -191,7 +199,7 @@ export function LogoV2({ model = '', effort, cwd = '', skipIntro = false, intro,
      const stacked = arrangement === 'column';
      const { showWhale, showBigTitle, showPlainTitle } = stacked
          ? {
@@ -113,7 +119,7 @@ index ed2f7f3..8f565de 100644
              showBigTitle: splash.showBigTitle,
              showPlainTitle: !splash.showBigTitle,
          }
-@@ -393,7 +398,9 @@ export function LogoV2({ model = '', effort, cwd = '', skipIntro = false, intro,
+@@ -393,7 +401,9 @@ export function LogoV2({ model = '', effort, cwd = '', skipIntro = false, intro,
      // 品牌大字色阶（跨两行三档，从左上到右下走完）：claude 陶土橙、codex 薰衣草
      // 紫；深底从亮档起步奔最亮收，浅底反向从深化档起步（浅底上"亮"是加深）。
      // deepseek 不在表内——沿用主题 wordmark/tagline/PALE 的蓝白阶。
@@ -124,7 +130,7 @@ index ed2f7f3..8f565de 100644
          ? (brandPaper
              ? { base: EMBER, start: EMBER, mid: EMBER_LIGHT, end: EMBER_BRIGHT, flash: EMBER_PAPER_FLASH }
              : { base: EMBER_LIGHT, start: EMBER_LIGHT, mid: EMBER_BRIGHT, end: EMBER_PALE, flash: EMBER_FLASH })
-@@ -415,19 +422,22 @@ export function LogoV2({ model = '', effort, cwd = '', skipIntro = false, intro,
+@@ -415,19 +425,22 @@ export function LogoV2({ model = '', effort, cwd = '', skipIntro = false, intro,
      // 上到右下走完色阶。起点两轮提亮（用户反馈"还是暗"）：深底直接从亮档
      // #E68A69 起步 → #EFA97E → 奶油橙 #FBD6B0（官方正色 #D77757 明度中等、
      // 压深底发闷，只留给浅底当起点）；浅底 #D77757 → #E68A69 → #EFA97E。
@@ -151,7 +157,7 @@ index ed2f7f3..8f565de 100644
          ?? bevelShade?.to
          ?? brandLadder?.end
          ?? PALE;
-@@ -436,7 +446,10 @@ export function LogoV2({ model = '', effort, cwd = '', skipIntro = false, intro,
+@@ -436,7 +449,10 @@ export function LogoV2({ model = '', effort, cwd = '', skipIntro = false, intro,
      // 标题）两行左缘对齐。deepseek 档维持求解器的 bottomIndent（等宽契约），
      // 例外是声明了固定字距的字体（shadow——等宽契约在 10 列字身上最紧只能
      // 解出 5/7 字距，字间空得能走人）：它两行同字距，两种形态都按半差居中。
@@ -163,7 +169,7 @@ index ed2f7f3..8f565de 100644
      const fixedKerning = !uniformBrand && titleFont.uniformKerning !== undefined;
      const centeredTitle = (uniformBrand && align === 'center') || fixedKerning;
      const topInk = paintedWidth(titleFont, top, topKerning);
-@@ -477,7 +490,7 @@ export function LogoV2({ model = '', effort, cwd = '', skipIntro = false, intro,
+@@ -477,7 +493,7 @@ export function LogoV2({ model = '', effort, cwd = '', skipIntro = false, intro,
                                  setHeartSeq(0);
                                  setHeartKey(k => k + 1);
                              }
@@ -838,7 +844,7 @@ index 050c07c..9fda505 100644
                                              ui: STATUS_VIEW_UI,
                                          }) }) }) }, `${view.key}:${view.registrationId}`))), _jsxs(Box, { flexDirection: "column", flexShrink: 0, children: [approvalPanelNode !== null ? (approvalPanelNode) : dialogSnapshot !== null ? (_jsx(ExtensionDialog, { dialog: dialogSnapshot, onDecide: value => dialogs.decide(dialogSnapshot.key, value), onCancel: () => dialogs.cancel(dialogSnapshot.key) }, dialogSnapshot.key)) : overlay.kind === 'tips' ? (_jsx(Box, { flexDirection: "column", marginTop: 1, children: _jsx(TipsPanel, { onClose: () => dispatchOverlay({ type: 'close-if', kind: 'tips' }) }) })) : recap !== null && (!recap.auto || recap.expanded) ? (_jsx(Box, { flexDirection: "column", marginTop: 1, children: _jsx(RecapPanel, { summary: recap.summary, title: recap.title, error: recap.error, streaming: !recap.done, titleApplied: recap.titleApplied, onClose: () => {
 diff --git a/lib/types/screens/Launchpad.js b/lib/types/screens/Launchpad.js
-index d8a8835..5b3cbf3 100644
+index d8a8835..c338c8c 100644
 --- a/lib/types/screens/Launchpad.js
 +++ b/lib/types/screens/Launchpad.js
 @@ -479,7 +479,7 @@ onKernelPick, cwd, branch, tuiVersion, onFocusChange, onAction, onQueryChange, o
@@ -850,6 +856,17 @@ index d8a8835..5b3cbf3 100644
      // 名字用**短品牌名**（option.shortLabel，来自 manifest：DSH / Claude，与启动页
      // 「内核 · DSH」那个 chip 同源）：这一格与左下角的 `工作目录:分支` 共用底边，
      // 全名（DeepSeek Harness · … = 40 列）在窄终端里会把左边的目录铭牌挤掉。
+@@ -498,7 +498,9 @@ onKernelPick, cwd, branch, tuiVersion, onFocusChange, onAction, onQueryChange, o
+     // 源（同一份 `useSyncExternalStore` 订阅），预算与渲染不会各看各的。
+     const mascotSkin = useSplashMascotSkin(companionSkin);
+     const mascotBox = useSplashMascotBox(mascotSkin, (brand ?? 'deepseek') === 'deepseek' && (whale || whaleGirl));
+-    const [dailyFont] = React.useState(() => pickSplashFont());
++    // hyperai-tui: mirror LogoV2 — the launchpad must not land on a hollow
++    // daily font (stencil/classic) for the brand.
++    const [dailyFont] = React.useState(() => brand === 'deepseek' ? splashFontById('bold') : pickSplashFont());
+     const [dailyEgg] = React.useState(() => egg === undefined ? pickSplashEgg() : egg);
+     const font = fontId === undefined ? dailyFont : splashFontById(fontId);
+     const titleFont = resolveSplashTitleFont(font, brand, dailyEgg);
 diff --git a/lib/types/update.js b/lib/types/update.js
 index 8efb701..e9a50a9 100644
 --- a/lib/types/update.js

@@ -99,6 +99,13 @@ test('profile isolation, version plate and branded links stay wired', () => {
   }
 })
 
+test('the brand splash is pinned to the upstream solid font', () => {
+  const pinned = "brand === 'deepseek' ? splashFontById('bold') : pickSplashFont()"
+  assert.ok(patch.includes(pinned), 'patch must pin HYPERAI/HARNESS to the solid base font')
+  assert.match(patch, /daily rotation can select stencil\/classic\/dot/u)
+  assert.equal((patch.match(new RegExp(pinned.replace(/[.*+?^${}()|[\]\\]/gu, '\\$&'), 'gu')) ?? []).length, 2)
+})
+
 test('the patch contains the skills update command and non-blocking hint', () => {
   for (const marker of [
     "name: 'skills-update'",

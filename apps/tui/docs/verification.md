@@ -6,8 +6,8 @@ Run from `apps/tui` unless stated otherwise.
 
 ```sh
 node scripts/build-patch.mjs        # rebuild patches/dsh-tui@0.16.1.patch
-node scripts/verify.mjs             # 10/10 distribution checks
-node --test tests/                  # 12/12 branding + skills-bridge tests
+node scripts/verify.mjs             # 11/11 distribution checks
+node --test tests/                  # 13/13 branding + skills-bridge tests
 
 cd ../profiles/hyperai
 node scripts/verify.mjs             # 9/9 profile checks
@@ -25,12 +25,40 @@ credential variable or default model), the TUI patch wiring, the pinned skills
 lock, the installer plan/refusal rules and the reinstall migration that keeps
 user provider/TUI rows while dropping the removed environment-driven preset.
 
-Measured: patch is **63,294 bytes (58,757 code points) / 14 upstream files** (the previous logo
+Measured: patch is **64,750 bytes (60,089 code points) / 14 upstream files** (the previous logo
 distribution carried >150 KB of embedded PNG/sprites; none of it remains).
 The two added files are the HyperAI Skills TUI bridge; Chat/commands only gain
 one command, one hook, one inline hint and the existing managed-dialog path.
 
 ## Real terminal acceptance (macOS 26.1, arm64)
+
+### Splash font regression (2026-11-02)
+
+Real Orca window captures (CuaDriver window capture, not a terminal-screen
+reconstruction) show the failure and the fix:
+
+| Capture | Result |
+|---|---|
+| `screenshots/real/orca-before-hollow.png` | actual Orca window before the fix: the current date selected upstream's daily `stencil` face, whose interior cutouts read as a hollow/outlined pixel wordmark |
+| `screenshots/real/orca-after-solid.png` | actual Orca window after the fix: HYPERAI/HARNESS use the upstream solid `bold` face, exactly `#FF6096` |
+| `screenshots/real/orca-after-small.png` | actual 1300×750 Orca window: solid wordmark, centred layout, usable input/footer |
+| `screenshots/real/orca-after-narrow.png` | actual 900×600 Orca window: upstream narrow fallback (plain `HyperAI Harness`, no hollow glyphs), input/footer remain usable |
+| `screenshots/real/orca-after-chat.png` | actual Orca chat screen after `/new`: same solid HYPERAI/HARNESS wordmark, no chat regression |
+
+Root cause: `pickSplashFont()` rotates the nine upstream fonts by local date.
+On 2026-11-02 it returned `stencil`; the `STENCIL` transform removes interior
+vertical-stroke columns (only the first column of each vertical run remains),
+so glyph interiors look cut out. `launchpad-dark.png`'s title cells match the
+`BOLD_GLYPHS` table (solid 2-cell strokes), so the reference capture was the
+`bold` face; Skills commits never changed the glyph data or renderer, only the
+calendar moved to `stencil`.
+
+Fix: `build-patch.mjs` now pins the daily selection to `splashFontById('bold')`
+for the `deepseek`/HyperAI brand in both `LogoV2` and `Launchpad`; an explicit
+`/settings` font choice still wins, and other brands keep upstream rotation.
+
+Exact brand pixels in the actual captures: after-solid `#FF6096` count 14,965;
+before-hollow 8,700. Small window also has the solid wordmark.
 
 ### macOS Terminal.app — dark, light, small window, chat splash
 

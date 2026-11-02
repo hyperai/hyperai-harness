@@ -15,8 +15,11 @@ placeholder: the splash hero is the wordmark, so removing the logo leaves no
 empty block and no reserved art rows.
 
 The pixel font is upstream's, unchanged. The patch only changes which words the
-font renders (`BRAND_SPLASH_WORDS`) and the colour passed to the existing text
-renderer.
+font renders (`BRAND_SPLASH_WORDS`), the colour passed to the existing text
+renderer, and the **font selection**: HyperAI starts from upstream's solid base
+`bold` face instead of the daily rotation (which can select `stencil`/`classic`
+and turn the splash hollow). An explicit `/settings` font choice still wins.
+Nothing in the glyph data or image pipeline is redrawn.
 
 ## Single brand colour
 

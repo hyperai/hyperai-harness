@@ -410,6 +410,23 @@ function dataDirName() {
 export const DATA_DIR = join(homeDir(), dataDirName());`,
     },
     {
+      file: 'lib/types/components/LogoV2.js',
+      why: 'pin the HyperAI splash to the upstream solid base font',
+      find: "    const [dailyFont] = React.useState(() => pickSplashFont());",
+      replace: `    // hyperai-tui: the upstream daily rotation can select stencil/classic/dot
+    // fonts (interior cutouts look hollow). The brand keeps the base solid
+    // pixel font; an explicit \`/settings\` font choice still wins below.
+    const [dailyFont] = React.useState(() => brand === 'deepseek' ? splashFontById('bold') : pickSplashFont());`,
+    },
+    {
+      file: 'lib/types/screens/Launchpad.js',
+      why: 'pin the HyperAI launchpad splash to the upstream solid base font',
+      find: "    const [dailyFont] = React.useState(() => pickSplashFont());",
+      replace: `    // hyperai-tui: mirror LogoV2 — the launchpad must not land on a hollow
+    // daily font (stencil/classic) for the brand.
+    const [dailyFont] = React.useState(() => brand === 'deepseek' ? splashFontById('bold') : pickSplashFont());`,
+    },
+    {
       file: 'lib/types/dsh-adapter/plugin.js',
       why: 'DeepSeek-branded first-run wizard gate',
       find: '    const onboardingOnBoot = dshBoot && noResume && shouldOfferOnboarding();',
