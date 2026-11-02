@@ -4,7 +4,7 @@
 - **Repair branch:** `fix/hyperai-unified-qa`
 - **Fix commit:** `89b416406`
 - **Base:** `feat/hyperai-tui-profile` / PR #1 (Draft, not modified by this branch)
-- **Scope:** `apps/tui/` and `apps/profiles/hyperai/` only. No push / no PR / no merge was performed by this repair branch; no real `~/.dsh` user data or credentials were modified.
+- **Scope:** `apps/tui/` and `apps/profiles/hyperai/` only. No push / no PR / no merge was performed by this repair branch. Managed TUI files in the real `~/.dsh/profiles/hyperai` were refreshed during actual-terminal validation; provider/skills/credentials/session data were not changed, and the installer left backups under `~/.dsh/profiles/hyperai/.hyperai-backups/`.
 - **Evidence:** local fixture tests, fake-runtime tests for version refusal, and actual Orca/TUI checks on macOS. QA original reports were used only as the unified index; no QA evidence was rewritten.
 
 ## Status by QA-ID
@@ -118,8 +118,9 @@ node --test apps/profiles/hyperai/tests/      -> 49/49 PASS
 - Failed install integration: `.hyperai-install.json` records `failed` phase/error.
 - Real profile: `manage.mjs status` → managed/completed; `doctor` → OK.
 - Actual Orca TUI: `/update` disabled message, branded settings labels,
-  solid wordmark, version plate. No real user Skills install/update was run in
-  this repair round (QA-002 private-repo authorization still user-owned).
+  solid wordmark, version plate. No real user provider/skills/credential update
+  was run; the real profile's managed TUI patch/package files were refreshed for
+  this validation and have backups under `.hyperai-backups/`.
 
 ## Remaining blockers / NEEDS QA
 
@@ -138,3 +139,13 @@ node --test apps/profiles/hyperai/tests/      -> 49/49 PASS
   Mac and OpenBayes Linux, plus Windows/Linux compatibility, remain for the two
   independent QA agents.
 - No change to the Draft PR #1; this repair branch has not been pushed.
+
+
+## Real-profile validation note
+
+The real profile was used only to validate the branded TUI after installing the
+generated patch. The installer was run with `--no-skills`; it did not modify
+user provider rows, Skills content/manifest, credentials or sessions. It did
+replace the managed TUI package metadata/patch/updater files and run the normal
+dependency refresh. The pre-refresh copies are in
+`~/.dsh/profiles/hyperai/.hyperai-backups/2026-11-02T12-48-58Z/`.
