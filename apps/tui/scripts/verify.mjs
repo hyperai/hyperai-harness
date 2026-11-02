@@ -208,6 +208,25 @@ check('the skills update screenshots exist', () => {
   return 'dark/light/small prompt + dialog captures present'
 })
 
+check('upstream license and third-party notices are bundled', () => {
+  const license = readFileSync(join(PKG, 'docs', 'licenses', 'dsh-tui-0.16.1-LICENSE.txt'), 'utf8')
+  if (!license.includes('Copyright (c) 2026, chimney (ccch1mneyyy)')) throw new Error('upstream MIT copyright missing')
+  if (!license.includes('Permission is hereby granted, free of charge')) throw new Error('upstream MIT grant missing')
+  const notices = readFileSync(join(PKG, 'docs', 'licenses', 'dsh-tui-0.16.1-THIRD_PARTY_LICENSES.txt'), 'utf8')
+  for (const marker of ['dsh-ui-whale', 'BSD 3-Clause License', 'dsh-anchored-standard', 'xiaobright']) {
+    if (!notices.includes(marker)) throw new Error(`upstream third-party notice missing ${marker}`)
+  }
+  const record = readFileSync(join(PKG, 'docs', 'third-party-notices.md'), 'utf8')
+  for (const marker of ['MIT', '73ff99fbed56563bf154d719effd09f9f9725349', 'MathJax', 'Apache-2.0']) {
+    if (!record.includes(marker)) throw new Error(`third-party notice record missing ${marker}`)
+  }
+  if (!existsSync(join(PKG, 'LICENSE'))) throw new Error('app-local LICENSE missing')
+  for (const file of ['mathjax-tex-svg-LICENSE.txt', 'mathjax-tex-svg-NOTICE.txt']) {
+    if (!existsSync(join(PKG, 'docs', 'licenses', file))) throw new Error(`missing ${file}`)
+  }
+  return 'upstream MIT + BSD/MIT portions + MathJax license/notice recorded'
+})
+
 check('documentation describes the no-logo brand and the build chain', () => {
   const readme = readFileSync(join(PKG, 'README.md'), 'utf8')
   for (const marker of ['#FF6096', 'HYPERAI HARNESS', 'no logo', 'build-patch.mjs', 'apps/profiles/hyperai']) {

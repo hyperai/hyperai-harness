@@ -6,7 +6,7 @@ Run from `apps/tui` unless stated otherwise.
 
 ```sh
 node scripts/build-patch.mjs        # rebuild patches/dsh-tui@0.16.1.patch
-node scripts/verify.mjs             # 11/11 distribution checks
+node scripts/verify.mjs             # 12/12 distribution checks
 node --test tests/                  # 13/13 branding + skills-bridge tests
 
 cd ../profiles/hyperai
@@ -41,8 +41,8 @@ reconstruction) show the failure and the fix:
 |---|---|
 | `screenshots/real/orca-before-hollow.png` | actual Orca window before the fix: the current date selected upstream's daily `stencil` face, whose interior cutouts read as a hollow/outlined pixel wordmark |
 | `screenshots/real/orca-after-solid.png` | actual Orca window after the fix: HYPERAI/HARNESS use the upstream solid `bold` face, exactly `#FF6096` |
-| `screenshots/real/orca-after-small.png` | actual 1300×750 Orca window: solid wordmark, centred layout, usable input/footer |
-| `screenshots/real/orca-after-narrow.png` | actual 900×600 Orca window: upstream narrow fallback (plain `HyperAI Harness`, no hollow glyphs), input/footer remain usable |
+| `screenshots/real/orca-after-small.png` | actual Orca window cropped to the wordmark: solid wordmark and centred layout at a narrower window size |
+| `screenshots/real/orca-after-narrow.png` | actual Orca narrow-window capture cropped to the terminal content: upstream fallback uses the plain `HyperAI Harness` title with no hollow glyphs |
 | `screenshots/real/orca-after-chat.png` | actual Orca chat screen after `/new`: same solid HYPERAI/HARNESS wordmark, no chat regression |
 
 Root cause: `pickSplashFont()` rotates the nine upstream fonts by local date.
@@ -78,21 +78,19 @@ present in both themes (≈1.7k–2.9k pure pixels per capture), the old logo
 pixels**, and the title block is horizontally centred (light/dark launchpad
 centres within ~2% of the window centre).
 
-### User's real embedded terminal: Orca (xterm.js 6.0.0, light theme)
+### User's real embedded terminal: Orca (xterm.js)
 
 `orca terminal read --screen` of a real Orca-managed terminal running
 `dsh --profile hyperai` shows the 10-row pixel wordmark (`████`/`▓▓▓` glyphs)
-starting at row 0, then the input card, model line and footer — **no logo rows**
-(the full 20-line buffer is kept in
-`screenshots/orca-terminal-screen.txt`). The Orca terminal is a plain
-`xterm-256color` xterm.js surface; the HyperAI startup path no longer performs
-any image-protocol probe, so there is nothing to mis-detect or leave blank.
+followed by the input card, model line and footer — **no logo rows**. The Orca
+terminal is a plain `xterm-256color` xterm.js surface; the HyperAI startup path
+does not perform any image-protocol probe.
 
-Note: an Orca **window** screenshot could not be captured in this environment
-(the Orca window was showing another workspace tab through `cua-driver` capture,
-and `orca terminal switch` only changes the CLI-side focus); the terminal buffer
-above is the real rendered screen content. The visual acceptance therefore uses
-the real Terminal.app captures.
+The checked-in evidence is the actual Orca window capture set under
+`screenshots/real/`, cropped to the terminal/title area so local window chrome
+and workspace paths are not published. It includes the before/after font
+regression, the narrower window and the chat splash. The older full-window
+capture was removed because it exposed a local account path.
 
 ### HyperAI Skills update prompt and install flow
 

@@ -126,10 +126,26 @@ This pinning is the maintenance limitation of the patch approach. A native
 Cordis branding plugin that upstream supports would remove it; that is recorded
 as a follow-up, not part of this distribution.
 
-Upstream `@deepseek-harness-tui/dsh-tui` is MIT-licensed
-(https://github.com/ccch1mneyyy/dsh-TUI); only branding strings, the splash art
-slot and the profile-state path are patched. Chat, streaming, tools, sessions,
-approvals, model pickers, keyboard handling and all image features stay upstream.
+## Upstream and license
+
+HyperAI TUI is **based on the upstream dsh-TUI project**; it is not a
+from-scratch TUI:
+
+- Repository: <https://github.com/ccch1mneyyy/dsh-TUI>
+- Version: [`@deepseek-harness-tui/dsh-tui@0.16.1`](https://www.npmjs.com/package/@deepseek-harness-tui/dsh-tui/v/0.16.1), tag `v0.16.1` (commit `73ff99fbed56563bf154d719effd09f9f9725349`)
+- Upstream license: MIT, Copyright (c) 2026, chimney (ccch1mneyyy)
+- Upstream third-party portions: BSD-3-Clause (dsh-ui-whale) and MIT (dsh-anchored-standard); bundled MathJax/mhchem are Apache-2.0
+- DeepSeek Harness: MIT, Copyright (c) 2026 DeepSeek
+
+Only branding strings, the splash art slot, the profile-state path and a
+read-only Skills-update presentation bridge are patched. Chat, streaming,
+tools, sessions, approvals, model pickers, keyboard handling and all image
+features stay upstream. Upstream copyright is retained.
+
+Full upstream license and notice texts are in
+[`docs/licenses/`](docs/licenses/), with provenance and dependency-license
+details in [`docs/third-party-notices.md`](docs/third-party-notices.md). The
+app-local [`LICENSE`](LICENSE) reproduces the repository MIT terms.
 
 ## Layout
 
@@ -142,6 +158,9 @@ apps/tui/
 ├── scripts/verify.mjs      offline distribution checks
 ├── patches/                committed generated patch
 ├── tests/                  branding contract tests
+├── LICENSE                 MIT terms for the HyperAI additions
 ├── docs/branding.md        brand decisions and splash layout behaviour
-└── docs/verification.md    automated + real-terminal verification record
+├── docs/verification.md    automated + real-terminal verification record
+├── docs/third-party-notices.md  upstream / dependency compliance record
+└── docs/licenses/          upstream MIT, third-party and MathJax notices
 ```
