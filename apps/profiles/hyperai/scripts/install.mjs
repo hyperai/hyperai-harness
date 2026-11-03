@@ -140,6 +140,8 @@ function writeInstallState(options, state) {
     version: TUI_PACKAGE.version,
     upstream: BRAND.upstream.version,
     profile: options.profile,
+    pid: process.pid,
+    runtime: { dshBin: options.dshBin, pnpmBin: options.pnpmBin, node: process.version },
     ...state,
     updatedAt: new Date().toISOString(),
   }
@@ -168,7 +170,7 @@ export function workspaceFile() {
  * that follow it, so `!!js` tags, comments and `insert:` blocks survive
  * byte-for-byte. Returns undefined when the text is not a top-level YAML list.
  * @param {string} text profile patch text.
- * @returns {{ header: string[], blocks: { lines: string[] }[] } | undefined}
+ * @returns {{ header: string[], blocks: { lines: string[], prefix?: string[] }[] } | undefined}
  */
 export function splitPatchBlocks(text) {
   const lines = text.split('\n')
@@ -183,6 +185,22 @@ export function splitPatchBlocks(text) {
     else current.lines.push(line)
   }
   if (current !== undefined) blocks.push(current)
+  // Comments/blank lines immediately above a block belong to that block. Without
+  // this reassignment they would stay in the previous managed block and be
+  // dropped when that block is replaced.
+  for (let index = 0; index < blocks.length - 1; index++) {
+    const block = blocks[index]
+    const moved = []
+    while (block.lines.length > 1) {
+      const last = block.lines[block.lines.length - 1]
+      if (!/^\s*(?:#|$)/u.test(last)) break
+      block.lines.pop()
+      // Keep comments with the following block; drop separator blanks so the
+      // merge stays byte-stable across repeated installs.
+      if (/^\s*#/u.test(last)) moved.unshift(last)
+    }
+    if (moved.length > 0) blocks[index + 1].prefix = [...moved, ...(blocks[index + 1].prefix ?? [])]
+  }
   return blocks.length === 0 ? undefined : { header, blocks }
 }
 
@@ -218,7 +236,7 @@ function sanitizeLegacyDshTuiRow(block) {
   if (meaningful.every(line => /^(?:fullscreen|terminalImages): true$/u.test(line) || line === 'effort: max')) {
     return undefined
   }
-  return { lines: stripped }
+  return { ...block, lines: stripped }
 }
 
 /**
@@ -254,7 +272,9 @@ export function mergeCordisPatch(existing, template) {
     kept.push(block)
   }
   const header = parsedTemplate.header.length === 0 ? '' : `${parsedTemplate.header.join('\n')}\n`
-  const body = [...parsedTemplate.blocks, ...kept].map(block => block.lines.join('\n').replace(/\s+$/u, '')).join('\n\n')
+  const body = [...parsedTemplate.blocks, ...kept]
+    .map(block => [...(block.prefix ?? []), ...block.lines].join('\n').replace(/\s+$/u, ''))
+    .join('\n\n')
   return `${header}${body}\n`
 }
 
@@ -315,6 +335,54 @@ function backupFile(options, relative) {
   return join(backupDir, relative)
 }
 
+/** Root holding node_modules snapshots for dependency-install rollback. */
+function nodeModulesBackupRoot(options) {
+  return join(options.profileDir, '.hyperai-node_modules-backup')
+}
+
+/** Restore a snapshot left by an interrupted dependency install. */
+function recoverDependencyBackup(options) {
+  const root = nodeModulesBackupRoot(options)
+  if (!existsSync(root)) return undefined
+  const stamps = readdirSync(root).sort()
+  const latest = stamps.at(-1)
+  if (latest === undefined) {
+    rmSync(root, { recursive: true, force: true })
+    return undefined
+  }
+  const snapshot = join(root, latest)
+  const target = join(options.profileDir, 'node_modules')
+  if (existsSync(snapshot)) {
+    rmSync(target, { recursive: true, force: true })
+    renameSync(snapshot, target)
+  }
+  rmSync(root, { recursive: true, force: true })
+  return latest
+}
+
+/** Move node_modules aside before a dependency install; caller restores on failure. */
+function stageNodeModulesTransaction(options) {
+  const target = join(options.profileDir, 'node_modules')
+  if (!existsSync(target)) return undefined
+  const stamp = new Date().toISOString().replaceAll(':', '-').replace(/\.\d+Z$/u, 'Z')
+  const root = nodeModulesBackupRoot(options)
+  const snapshot = join(root, stamp)
+  mkdirSync(root, { recursive: true })
+  renameSync(target, snapshot)
+  return { stamp, root, snapshot }
+}
+
+/** Keep a failed tree under a clearly named quarantine instead of leaving it active. */
+function quarantineFailedNodeModules(options) {
+  const target = join(options.profileDir, 'node_modules')
+  if (!existsSync(target)) return undefined
+  const stamp = new Date().toISOString().replaceAll(':', '-').replace(/\.\d+Z$/u, 'Z')
+  const quarantine = join(options.profileDir, '.hyperai-failed-node_modules', stamp)
+  mkdirSync(dirname(quarantine), { recursive: true })
+  renameSync(target, quarantine)
+  return quarantine
+}
+
 /** The dsh plugin install arguments; frozen mode is opt-in for reproducible reinstall. */
 export function dependencyInstallArgs(options) {
   return ['plugin', '--profile', options.profile, 'install', options.frozenLockfile ? '--frozen-lockfile' : '--no-frozen-lockfile']
@@ -326,7 +394,9 @@ function installDependencies(options) {
   execFileSync(options.dshBin, args, {
     cwd: options.profileDir,
     env: { ...process.env, DSH_HOME: options.dshHome, CI: 'true' },
-    stdio: 'inherit',
+    // --json promises one machine-readable document: keep pnpm's progress off
+    // stdout while preserving diagnostics on stderr.
+    stdio: options.json ? ['ignore', 'inherit', 'inherit'] : 'inherit',
   })
 }
 
@@ -336,6 +406,9 @@ function verifyInstall(options) {
   const types = join(tui, 'lib', 'types')
   const branding = join(types, 'branding.js')
   const logoV2 = join(types, 'components', 'LogoV2.js')
+  const license = join(options.profileDir, 'LICENSE')
+  if (!existsSync(license)) throw new Error(`install verification failed: ${license} is missing (R2-10)`)
+  if (!readFileSync(license, 'utf8').includes('Copyright (c) 2026 DeepSeek')) throw new Error('install verification failed: install-state LICENSE is empty or wrong')
   if (!existsSync(branding)) throw new Error(`install verification failed: ${branding} is missing`)
   if (!readFileSync(branding, 'utf8').includes(BRAND.splashWords.top)) {
     throw new Error('install verification failed: the branding patch did not apply')
@@ -370,6 +443,12 @@ export async function install(options = parseArgs([])) {
       throw error
     }
   }
+  if (options.frozenLockfile && !existsSync(join(options.profileDir, 'pnpm-lock.yaml'))) {
+    throw new Error(
+      '--frozen-lockfile requires an existing profile pnpm-lock.yaml. Run the installer once without --frozen-lockfile ' +
+        'to create the lock, review it, then rerun with --frozen-lockfile; the installer will not silently fall back to a mutable install.',
+    )
+  }
   if (!existsSync(PATCH_FILE)) {
     throw new Error(`missing branding patch ${PATCH_FILE}; build it with "node apps/tui/scripts/build-patch.mjs" first`)
   }
@@ -391,6 +470,7 @@ export async function install(options = parseArgs([])) {
     marker: `"${MANAGED_MARKER}": true`,
     plan,
   })
+  stageCopy(options, 'LICENSE', join(PROFILE_TEMPLATE, 'LICENSE'), plan)
   stageCordisPatch(options, readFileSync(join(PROFILE_TEMPLATE, 'cordis.patch.yml'), 'utf8'), plan)
   stageFile(options, 'pnpm-workspace.yaml', workspaceFile(), { marker: WORKSPACE_MARKER, plan })
   stageCopy(options, join('patches', 'hyperai-tui.patch'), PATCH_FILE, plan)
@@ -404,11 +484,25 @@ export async function install(options = parseArgs([])) {
     return result
   }
   phase = 'dependencies'
+  const recoveredDependency = recoverDependencyBackup(options)
+  if (recoveredDependency !== undefined) result.warnings.push({ phase: 'dependencies', message: `restored an interrupted node_modules snapshot (${recoveredDependency})` })
+  const dependencyTransaction = stageNodeModulesTransaction(options)
   writeInstallState(options, { status: 'installing', phase, startedAt, error: null })
-  installDependencies(options)
-  phase = 'verify'
-  writeInstallState(options, { status: 'installing', phase, startedAt, error: null })
-  verifyInstall(options)
+  try {
+    installDependencies(options)
+    phase = 'verify'
+    writeInstallState(options, { status: 'installing', phase, startedAt, error: null })
+    verifyInstall(options)
+  } catch (error) {
+    const quarantined = quarantineFailedNodeModules(options)
+    if (dependencyTransaction !== undefined && existsSync(dependencyTransaction.snapshot)) {
+      renameSync(dependencyTransaction.snapshot, join(options.profileDir, 'node_modules'))
+      rmSync(dependencyTransaction.root, { recursive: true, force: true })
+    }
+    if (quarantined !== undefined) result.warnings.push({ phase: 'verify', message: `failed node_modules quarantined at ${quarantined}` })
+    throw error
+  }
+  if (dependencyTransaction !== undefined) rmSync(dependencyTransaction.root, { recursive: true, force: true })
   if (options.skills) {
     phase = 'skills'
     writeInstallState(options, { status: 'installing', phase, startedAt, error: null })
@@ -456,8 +550,10 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
     } else {
       process.stdout.write(`\nhyperai-tui: profile ${JSON.stringify(options.profile)} at ${options.profileDir}\n`)
       for (const step of result.plan) process.stdout.write(`  ${step.action.padEnd(9)} ${step.file}\n`)
-      if (result.skills !== undefined && result.skills.skipped !== true) {
+      if (result.skills !== undefined && Array.isArray(result.skills.installed)) {
         process.stdout.write(`  skills: ${result.skills.installed.length} installed, ${result.skills.unchanged.length} unchanged, ${result.skills.skippedSkills.length} skipped\n`)
+      } else if (result.skills?.skipped === 'dry-run') {
+        process.stdout.write('  skills: dry-run (not run)\n')
       }
       process.stdout.write(
         [

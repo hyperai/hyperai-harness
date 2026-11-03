@@ -57,13 +57,17 @@ node scripts/manage.mjs status                 # read-only profile/install summa
 node scripts/manage.mjs doctor                 # Node/pnpm/DSH Core/patch/skills diagnostics
 node scripts/manage.mjs repair --yes           # recover a partial/failed install
 node scripts/manage.mjs uninstall --yes        # archive user data, remove managed runtime files
-node scripts/manage.mjs uninstall --yes --purge # archive then remove the profile directory
+node scripts/manage.mjs uninstall --yes --purge # second stage: archive then remove the profile directory
 ```
 
 `uninstall` archives the profile (skills, state, user files; excluding
 `node_modules`) under `~/.dsh/profiles/.hyperai-uninstall-backups/` before it
-removes installer-owned files. Shared credentials under `~/.dsh/.credentials.yaml`
-are never rewritten or deleted by these commands.
+removes installer-owned files (including the managed LICENSE). It leaves a
+`.hyperai-uninstall.json` marker so a later `uninstall --yes --purge` can finish
+the two-stage cleanup without pretending the profile is still managed. Shared
+credentials under `~/.dsh/.credentials.yaml` are never rewritten or deleted by
+these commands. An interrupted install state (`installing` with a dead pid) is
+reported by `doctor` as needing `repair`.
 
 ## Environment isolation
 
@@ -199,3 +203,18 @@ checkout paths: it only carries the copied `patches/hyperai-tui.patch`.
   56/80/120-column matrix still needs a dedicated cross-terminal pass.
 - Windows/Linux and a fresh public-user install are not yet part of the
   automated acceptance matrix.
+
+## Test-environment boundaries
+
+- The preflight runs `pnpm --version`. If pnpm is provided by Corepack and not
+  already installed, that command may bootstrap a package-manager shim into
+  `HOME`. This is a host toolchain side effect, not a profile write. QA should
+  use a preinstalled pnpm or a disposable HOME and must not assume the check is
+  side-effect-free.
+- `install.mjs` is safe in non-TTY automation; use `--json` for one
+  machine-readable document (dependency progress is not mixed into stdout).
+  The TUI itself is an interactive TTY application; non-TTY startup behavior
+  belongs to upstream dsh-tui and is out of this profile's control.
+- Isolated end-to-end tests should set both `DSH_HOME` and `HOME` when checking
+  UI state; the installer's `--dsh-home` controls profile files but not every
+  upstream TUI preference path.

@@ -182,7 +182,9 @@ function tuiCheckPayload(source, plan, extra = {}) {
     dismissed: extra.dismissed ?? false,
     skippedReason: extra.skippedReason,
     ...extra.extra,
-    plan,
+    // Do not ship the full plan (source file maps and skipped details) to the
+    // TUI: it is not consumed there and can exceed the child stdout cap on
+    // large private repositories. The CLI's human output still uses `plan`.
   }
 }
 

@@ -431,7 +431,7 @@ export const DATA_DIR = join(homeDir(), dataDirName());`,
       file: 'lib/types/dsh-adapter/plugin.js',
       why: 'DeepSeek-branded first-run wizard gate',
       find: '    const onboardingOnBoot = dshBoot && noResume && shouldOfferOnboarding();',
-      replace: '    const onboardingOnBoot = false; // hyperai-tui: upstream onboarding is DeepSeek-branded; the profile configures the provider from the environment',
+      replace: '    const onboardingOnBoot = false; // hyperai-tui: upstream onboarding is DeepSeek-branded; the profile leaves provider/model setup to native /provider and /model',
     },
     {
       file: 'lib/types/screens/Launchpad.js',
@@ -463,8 +463,42 @@ export const DATA_DIR = join(homeDir(), dataDirName());`,
       replace: `    'logo-star-ask': { zh: ${q(`喜欢 ${plugin} 的话，顺手点亮一颗 {{star}}？（点这一行或 {{key}} 一键支持`)}, en: ${q(`If you like ${plugin}, would you light a {{star}}? (click this line or {{key}})`) } },`,
     },
     {
+      file: 'lib/types/tips.js',
+      why: 'remove whale intro tips that describe disabled HyperAI art',
+      find: `    {
+        id: 'disp-whale',
+        group: 'display',
+        zh: '首屏鲸鱼动画（终端 ≥64 列才显示）',
+        en: 'The whale intro shows on terminals ≥64 columns',
+    },
+    {
+        id: 'disp-context-legend',`,
+      replace: `    {
+        id: 'disp-context-legend',`,
+    },
+    {
+      file: 'lib/types/tips.js',
+      why: 'remove whale click/idle tips that describe disabled HyperAI art',
+      find: `    {
+        id: 'disp-whale-click',
+        group: 'display',
+        zh: '开始第一个任务前点鲸鱼冒爱心、唤醒睡着的它；闲置动作可在 /settings 关',
+        en: 'Before your first task, click the whale for hearts and to wake it; idle moves toggle in /settings',
+    },
+    {
+        id: 'disp-smooth',`,
+      replace: `    {
+        id: 'disp-smooth',`,
+    },
+    {
+      file: 'lib/types/components/LogoV2.js',
+      why: 'chat header version must be the HyperAI product version, not the upstream TUI version',
+      find: "sweep('✦ hyperai-tui', t, wordmarkRGB, wordmarkShimmerRGB, 60), _jsx(Text, { dimColor: true, children: '  v' + VERSION })",
+      replace: `sweep('✦ hyperai-tui', t, wordmarkRGB, wordmarkShimmerRGB, 60), _jsx(Text, { dimColor: true, children: '  v${TUI_PACKAGE.version}' })`,
+    },
+    {
       file: 'lib/types/settings/definitions.js',
-      why: 'settings copy must not present upstream brand controls as active HyperAI features',
+      why: 'settings copy must not present upstream mascot/brand controls as active HyperAI features',
       find: `    'brand': {
         label: 'Brand look',
         descriptions: { zh: '品牌外观' },
@@ -555,6 +589,30 @@ export const DATA_DIR = join(homeDir(), dataDirName());`,
                 return true;`,
     },
     {
+      file: 'lib/types/screens/Launchpad.js',
+      why: 'narrow footer: give the workspace label a shrink budget and keep the version plate readable',
+      find: "children: cornerLeft })), _jsx(Text, { dimColor: true, wrap: \"truncate-middle\", children: tuiPart ?? '' })",
+      replace: "children: cornerLeft })), _jsx(Text, { dimColor: true, wrap: \"truncate-middle\", flexShrink: 0, children: tuiPart ?? '' })",
+    },
+    {
+      file: 'lib/types/screens/Launchpad.js',
+      why: 'narrow footer: stack workspace/version rows instead of colliding them',
+      find: "_jsxs(Box, { flexShrink: 0, flexDirection: \"row\", justifyContent: \"space-between\", height: 1, children: [",
+      replace: "_jsxs(Box, { flexShrink: 0, flexDirection: columns < 110 ? \"column\" : \"row\", justifyContent: columns < 110 ? \"flex-start\" : \"space-between\", height: columns < 110 ? 2 : 1, children: [",
+    },
+    {
+      file: 'lib/types/screens/Launchpad.js',
+      why: 'narrow footer: reserve a second row in the layout budget',
+      find: "        cornerRows: 1 + kernelRows.length,",
+      replace: "        cornerRows: (columns < 110 ? 2 : 1) + kernelRows.length,",
+    },
+    {
+      file: 'lib/types/screens/Launchpad.js',
+      why: 'narrow footer: let the workspace label shrink so the version plate stays readable',
+      find: "(_jsx(Text, { dimColor: true, wrap: \"truncate-middle\", children: cornerLeft }))",
+      replace: "(_jsx(Text, { dimColor: true, wrap: \"truncate-middle\", flexShrink: 1, minWidth: 0, children: cornerLeft }))",
+    },
+    {
       file: 'lib/types/screens/Chat.js',
       why: 'window title uses the HyperAI brand, not the upstream whale glyph',
       find: "    useTerminalTitle(`${titlePrefix} 🐋 ${channel.sessionTitle}`);",
@@ -564,7 +622,11 @@ export const DATA_DIR = join(homeDir(), dataDirName());`,
       file: 'lib/types/screens/Launchpad.js',
       why: 'version plate distinguishes the HyperAI product from the pinned upstream TUI',
       find: "    const tuiPart = tuiVersion === undefined || tuiVersion === '' ? undefined : `hyperai-tui v${tuiVersion}`;",
-      replace: `    const tuiPart = tuiVersion === undefined || tuiVersion === '' ? undefined : \`hyperai-tui v${TUI_PACKAGE.version} · dsh-tui v\${tuiVersion}\`;`,
+      replace: `    // Keep the product version readable in narrow terminals; the full
+    // product+upstream pair is used only when there is room for it.
+    const tuiPart = tuiVersion === undefined || tuiVersion === ''
+        ? undefined
+        : (columns < 72 ? \`hyperai v${TUI_PACKAGE.version}\` : \`hyperai-tui v${TUI_PACKAGE.version} · dsh-tui v\${tuiVersion}\`);`,
     },
     {
       file: 'lib/types/screens/Chat.js',
@@ -628,6 +690,7 @@ const EXPECTED_FILES = [
   'lib/types/screens/Launchpad.js',
   'lib/types/update.js',
   'lib/types/components/splashEggs.js',
+  'lib/types/tips.js',
   'lib/types/commands.js',
   'lib/types/settings/definitions.js',
   'lib/types/screens/Chat.js',

@@ -60,6 +60,8 @@ function runUpdater(context, args, timeoutMs) {
     let stdout = ''
     let stderr = ''
     let timedOut = false
+    let stdoutTruncated = false
+    const MAX_STDOUT = 8_000_000
     const child = spawn(process.execPath, [context.script, ...args], {
       env: { ...process.env },
       stdio: ['ignore', 'pipe', 'pipe'],
@@ -71,7 +73,12 @@ function runUpdater(context, args, timeoutMs) {
     child.stdout?.setEncoding('utf8')
     child.stderr?.setEncoding('utf8')
     child.stdout?.on('data', chunk => {
-      if (stdout.length < 2_000_000) stdout += chunk
+      if (stdout.length + chunk.length > MAX_STDOUT) {
+        stdoutTruncated = true
+        child.kill('SIGTERM')
+        return
+      }
+      stdout += chunk
     })
     child.stderr?.on('data', chunk => {
       if (stderr.length < 200_000) stderr += chunk
@@ -82,7 +89,7 @@ function runUpdater(context, args, timeoutMs) {
     })
     child.on('close', code => {
       clearTimeout(timer)
-      resolve({ code: code ?? -1, stdout, stderr, timedOut })
+      resolve({ code: code ?? -1, stdout, stderr, timedOut, stdoutTruncated })
     })
   })
 }
@@ -108,6 +115,7 @@ async function check(context, { manual, resolvedRef } = {}) {
   if (context.testSource !== undefined) args.push('--source', context.testSource)
   const result = await runUpdater(context, args, CHECK_TIMEOUT_MS)
   if (result.timedOut) throw new Error('check timed out')
+  if (result.stdoutTruncated) throw new Error('check response was too large; retry after reducing the Skills update batch')
   if (result.code !== 0 && result.code !== 2) throw new Error(result.stderr.trim() || `check exited ${result.code}`)
   return normalizeCheck(parseJson(result.stdout))
 }

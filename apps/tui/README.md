@@ -151,6 +151,12 @@ as a follow-up, not part of this distribution.
 
 ## Known limitations
 
+- Narrow terminals stack the workspace/version footer instead of shrinking it
+  into collision; the checked-in 120/110/80/56-column PTY captures under
+  [`docs/screenshots/real/`](docs/screenshots/real/) show the product version
+  remains readable. Exact terminal certificates remain QA-owned.
+
+
 - `/settings` keeps upstream fields for header art, maid portrait, welcome
   animation and splash font for compatibility; they are labelled “not used by
   HyperAI”.

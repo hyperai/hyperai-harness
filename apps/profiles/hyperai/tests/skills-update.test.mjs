@@ -539,3 +539,14 @@ test('DSH watcher discovers a skill installed after startup', { skip: !existsSyn
   assert.deepEqual(payload.before, [])
   assert.deepEqual(payload.after, ['late-skill'])
 })
+
+test('check --json is compact and omits the full plan (R2-09)', () => {
+  const repo = standardRepo()
+  const home = createHome()
+  const result = run(home, ['check', '--source', repo, '--json'])
+  assert.equal(result.status, 2, result.stderr)
+  assert.ok(result.stdout.length < 2_000_000, `stdout is ${result.stdout.length} bytes`)
+  const payload = JSON.parse(result.stdout)
+  assert.equal('plan' in payload, false)
+  assert.equal(Array.isArray(payload.updates), true)
+})

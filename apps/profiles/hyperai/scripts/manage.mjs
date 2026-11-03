@@ -64,8 +64,14 @@ function parseArgs(argv) {
   return options
 }
 
+const UNINSTALL_MARKER = '.hyperai-uninstall.json'
+
 function managed(profileDir) {
   return readJson(join(profileDir, 'package.json'))?.hyperaiTuiManaged === true
+}
+
+function wasUninstalled(profileDir) {
+  return readJson(join(profileDir, UNINSTALL_MARKER))?.status === 'uninstalled'
 }
 
 function installedTuiVersion(profileDir) {
@@ -112,6 +118,19 @@ export function diagnoseProfile(options) {
   }
   if (!status.managed) issues.push(`profile ${options.profileDir} is not managed by this installer`)
   if (status.installState?.status === 'failed') issues.push(`last install failed: ${status.installState.error ?? 'unknown error'}`)
+  if (status.installState?.status === 'installing') {
+    const pid = Number(status.installState.pid)
+    let alive = false
+    if (Number.isInteger(pid) && pid > 0) {
+      try { process.kill(pid, 0); alive = true } catch { alive = false }
+    }
+    if (alive) warnings.push(`an installer process (pid ${pid}) is still running; do not run repair concurrently`)
+    else issues.push(`interrupted install: state is installing but process ${pid || '?'} is not alive; run repair --yes`)
+  }
+  const installedDshBin = status.installState?.runtime?.dshBin
+  if (installedDshBin !== undefined && installedDshBin !== options.dshBin) {
+    warnings.push(`doctor checked ${options.dshBin}, while the last install recorded ${installedDshBin}; pass the same --dsh-bin or reinstall`)
+  }
   if (!status.copiedPatch) warnings.push('copied branding patch is missing; run repair')
   if (status.skillsError !== undefined) issues.push(`skills manifest: ${status.skillsError}`)
   const pending = join(options.profileDir, '.hyperai-skills', 'pending')
@@ -120,9 +139,20 @@ export function diagnoseProfile(options) {
 }
 
 function requireManaged(options) {
-  if (!managed(options.profileDir) && !options.force) {
+  if (!managed(options.profileDir) && !wasUninstalled(options.profileDir) && !options.force) {
     throw new Error(`refusing to modify ${options.profileDir}: not a managed HyperAI profile (use --force only after inspection)`)
   }
+}
+
+/**
+ * Remove the installer-owned runtime files. The marker deliberately survives
+ * so a later `uninstall --purge` can finish the two-stage cleanup even though
+ * package.json is gone.
+ */
+function removeManagedRuntime(options) {
+  const managedPaths = ['package.json', 'cordis.patch.yml', 'pnpm-workspace.yaml', 'patches', 'scripts', 'LICENSE', 'node_modules', '.plugin-manager', '.hyperai-install.json']
+  for (const relative of managedPaths) rmSync(join(options.profileDir, relative), { recursive: true, force: true })
+  return existsSync(options.profileDir) ? readdirSync(options.profileDir) : []
 }
 
 /** Archive one profile without node_modules; returns archive path. */
@@ -156,10 +186,10 @@ export function uninstallProfile(options) {
     rmSync(options.profileDir, { recursive: true, force: true })
     return { profileDir: options.profileDir, archive, purge: true, kept: [] }
   }
-  const managedPaths = ['package.json', 'cordis.patch.yml', 'pnpm-workspace.yaml', 'patches', 'scripts/skills-lib.mjs', 'scripts/skills-update.mjs', '.plugin-manager', 'node_modules']
-  for (const relative of managedPaths) rmSync(join(options.profileDir, relative), { recursive: true, force: true })
-  const kept = existsSync(options.profileDir) ? readdirSync(options.profileDir) : []
-  return { profileDir: options.profileDir, archive, purge: false, kept }
+  const kept = removeManagedRuntime(options)
+  mkdirSync(options.profileDir, { recursive: true })
+  writeFileSync(join(options.profileDir, UNINSTALL_MARKER), `${JSON.stringify({ status: 'uninstalled', profile: options.profile, archive, at: new Date().toISOString() }, undefined, 2)}\n`)
+  return { profileDir: options.profileDir, archive, purge: false, kept: [...kept, UNINSTALL_MARKER].sort() }
 }
 
 function printStatus(value) {

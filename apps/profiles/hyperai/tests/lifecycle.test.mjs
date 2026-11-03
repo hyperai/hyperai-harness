@@ -59,3 +59,35 @@ test('uninstall refuses an unmanaged profile and requires --yes', () => {
     rmSync(fixture.home, { recursive: true, force: true })
   }
 })
+
+test('doctor reports an interrupted install and dsh-bin mismatch (R2-04/R2-05)', () => {
+  const fixture = tempHome()
+  try {
+    writeFileSync(join(fixture.profileDir, '.hyperai-install.json'), JSON.stringify({
+      schema: 1, status: 'installing', pid: 999_999, runtime: { dshBin: '/tmp/other-dsh' }, phase: 'dependencies',
+    }))
+    const diagnosis = diagnoseProfile({ ...optionsFor(fixture), dshBin: 'dsh' })
+    assert.equal(diagnosis.ok, false)
+    assert.ok(diagnosis.issues.some(issue => /interrupted install/u.test(issue)))
+    assert.ok(diagnosis.warnings.some(warning => /doctor checked.*other-dsh/u.test(warning)))
+  } finally {
+    rmSync(fixture.home, { recursive: true, force: true })
+  }
+})
+
+test('uninstall then uninstall --purge is a two-stage idempotent cleanup (R2-07)', () => {
+  const fixture = tempHome()
+  try {
+    const first = uninstallProfile(optionsFor(fixture))
+    assert.equal(existsSync(join(fixture.profileDir, 'package.json')), false)
+    assert.equal(existsSync(join(fixture.profileDir, '.hyperai-install.json')), false)
+    assert.ok(existsSync(join(fixture.profileDir, '.hyperai-uninstall.json')))
+    assert.ok(first.archive)
+    const second = uninstallProfile({ ...optionsFor(fixture), purge: true })
+    assert.equal(second.purge, true)
+    assert.equal(existsSync(fixture.profileDir), false)
+    assert.ok(second.archive)
+  } finally {
+    rmSync(fixture.home, { recursive: true, force: true })
+  }
+})

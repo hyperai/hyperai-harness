@@ -102,6 +102,7 @@ check('patch touches only the documented upstream files', () => {
     'lib/types/screens/Launchpad.js',
     'lib/types/update.js',
     'lib/types/components/splashEggs.js',
+    'lib/types/tips.js',
     'lib/types/commands.js',
     'lib/types/settings/definitions.js',
     'lib/types/screens/Chat.js',
@@ -137,7 +138,15 @@ check('brand strings and profile isolation remain wired', () => {
     'Maid portrait (not used by HyperAI)',
     'Welcome animation (not used by HyperAI)',
     'HyperAI always starts from the solid bold face',
+    "children: '  v0.2.0'",
+    'columns < 72',
+    'columns < 110',
+    'provider/model setup to native /provider and /model',
   ]
+  const added = addedLines.join('\n')
+  for (const banned of ["id: 'disp-whale'", "id: 'disp-whale-click'"]) {
+    if (added.includes(banned)) throw new Error(`whale tip remains: ${banned}`)
+  }
   for (const marker of expectations) {
     if (!patch.includes(marker)) throw new Error(`missing brand wiring: ${marker}`)
   }
@@ -194,6 +203,16 @@ check('the patch carries the HyperAI Skills update bridge without a second scann
     if (chat.includes(banned) || core.includes(banned)) throw new Error(`TUI bridge duplicates profile logic: ${banned}`)
   }
   return 'CLI bridge only; scanning/install stays in apps/profiles/hyperai'
+})
+
+check('narrow-width PTY evidence keeps the product version readable', () => {
+  for (const columns of [56, 80, 110, 120]) {
+    const file = join(PKG, 'docs', 'screenshots', 'real', `terminal-width-${columns}.txt`)
+    if (!existsSync(file)) throw new Error(`missing terminal-width-${columns}.txt`)
+    const text = readFileSync(file, 'utf8')
+    if (!/hyperai(?:-tui)? v0\.2\.0/u.test(text)) throw new Error(`width ${columns} does not show the HyperAI product version`)
+  }
+  return '56/80/110/120 PTY captures show the product version'
 })
 
 check('the skills update screenshots exist', () => {

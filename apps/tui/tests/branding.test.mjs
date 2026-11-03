@@ -69,6 +69,7 @@ test('the patch touches only the documented upstream files and stays small', () 
     'lib/types/components/launchpadLayout.js',
     'lib/types/components/splashEggs.js',
     'lib/types/components/splashFonts.js',
+    'lib/types/tips.js',
     'lib/types/commands.js',
     'lib/types/dsh-adapter/plugin.js',
     'lib/types/hyperaiSkills.js',

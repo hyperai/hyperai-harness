@@ -6,12 +6,12 @@ Run from `apps/tui` unless stated otherwise.
 
 ```sh
 node scripts/build-patch.mjs        # rebuild patches/dsh-tui@0.16.1.patch
-node scripts/verify.mjs             # 12/12 distribution checks
+node scripts/verify.mjs             # 13/13 distribution checks
 node --test tests/                  # 13/13 branding + skills-bridge tests
 
 cd ../profiles/hyperai
 node scripts/verify.mjs             # 12/12 profile checks
-node --test tests/                  # 49/49 installer + skills/updater tests
+node --test tests/                  # 59/59 installer + skills/updater tests
 ```
 
 `build-patch.mjs` unpacks the pinned upstream package with `npm pack`, applies
@@ -25,7 +25,7 @@ credential variable or default model), the TUI patch wiring, the pinned skills
 lock, the installer plan/refusal rules and the reinstall migration that keeps
 user provider/TUI rows while dropping the removed environment-driven preset.
 
-Measured: patch is **72,650 bytes (66,937 code points) / 15 upstream files** (the previous logo
+Measured: patch is **78,614 bytes (72,577 code points) / 15 upstream files** (the previous logo
 distribution carried >150 KB of embedded PNG/sprites; none of it remains).
 The two added files are the HyperAI Skills TUI bridge; Chat/commands/settings
 only gain the branded command/hook/hint, the disabled upstream `/update` route,
@@ -61,6 +61,15 @@ for the `deepseek`/HyperAI brand in both `LogoV2` and `Launchpad`; an explicit
 
 Exact brand pixels in the actual captures: after-solid `#FF6096` count 14,965;
 before-hollow 8,700. Small window also has the solid wordmark.
+
+### Round 2 narrow-width PTY evidence
+
+Real PTY runs (`pyte`, 30 rows) at 120/110/80/56 columns are under
+`screenshots/real/terminal-width-{120,110,80,56}.txt` (local paths redacted).
+At 110/80/56 the workspace row and version row stack instead of colliding; the
+product version remains one of `hyperai-tui v0.2.0` / `hyperai v0.2.0`, and the
+120-column layout keeps the product+upstream pair on one row. This is developer
+self-test evidence, not the QA Round 3 certificate.
 
 ### macOS Terminal.app — dark, light, small window, chat splash
 

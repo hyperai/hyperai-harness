@@ -252,6 +252,21 @@ function git(args, options = {}) {
     const stdout = String(error?.stdout ?? '').trim()
     const stderr = String(error?.stderr ?? '').trim()
     const detail = stderr || stdout || String(error?.message ?? error)
+    const timedOut = error?.code === 'ETIMEDOUT' || error?.signal === 'SIGTERM' || /timed out|ETIMEDOUT|SIGTERM/iu.test(detail)
+    if (timedOut) {
+      throw new SkillsError(
+        `git ${args.slice(0, 2).join(' ')} timed out after ${options.timeoutMs ?? 120_000}ms. ` +
+        'Check network/proxy/GitHub access, retry with --timeout <ms>, or use --source <existing-checkout>.',
+        error,
+      )
+    }
+    if (/authentication|permission denied|could not read username|repository not found|access denied/iu.test(detail)) {
+      throw new SkillsError(
+        `git ${args.slice(0, 2).join(' ')} could not access ${options.repo ?? 'the Skills repository'}: ${detail}. ` +
+        'Verify GitHub authentication and private-repository permission; do not embed a token in the command or config.',
+        error,
+      )
+    }
     throw new SkillsError(`git ${args.slice(0, 2).join(' ')} failed: ${detail}`, error)
   }
 }

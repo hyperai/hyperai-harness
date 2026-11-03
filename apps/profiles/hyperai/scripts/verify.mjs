@@ -163,6 +163,7 @@ await check('the dry-run installer plans every managed file and writes nothing',
     const plan = result.plan.map(step => `${step.action} ${step.file}`)
     const expected = [
       'create package.json',
+      'create LICENSE',
       'create cordis.patch.yml',
       'create pnpm-workspace.yaml',
       'create patches/hyperai-tui.patch',

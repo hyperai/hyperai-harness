@@ -203,12 +203,15 @@ function writeManifest(path, manifest) {
 /** Run one git command with a hard timeout and one actionable error. */
 function runGit(args, options = {}) {
   try {
-    return execFileSync('git', args, {
+    const output = execFileSync('git', args, {
       encoding: 'utf8',
       timeout: options.timeoutMs ?? 120_000,
       stdio: options.stdio ?? ['ignore', 'pipe', 'pipe'],
       env: { ...process.env, GIT_TERMINAL_PROMPT: '0' },
-    }).trim()
+    })
+    // execFileSync returns null when stdout is ignored. A successful clone
+    // legitimately has no stdout; only a real failure should throw.
+    return output === null || output === undefined ? '' : String(output).trim()
   } catch (error) {
     if (error?.code === 'ETIMEDOUT' || error?.signal === 'SIGTERM') {
       throw new Error(`git ${args.slice(0, 2).join(' ')} timed out after ${options.timeoutMs ?? 120_000}ms`)
@@ -287,6 +290,66 @@ export function planSkill(skill, sourceDir, targetDir, manifest) {
   return { action: 'update', sourceDigest, recorded, extras }
 }
 
+/** Path of a per-skill journal used to recover a SIGKILL between swap and manifest write. */
+function journalPath(options, name) {
+  return join(options.stateDir, 'pending', `${name}.json`)
+}
+
+/**
+ * Recover journals left by a SIGKILL between the directory rename and the
+ * manifest write. Complete the manifest when the target already contains the
+ * journaled new files; otherwise restore the snapshot/previous entry.
+ */
+export function recoverSkillJournals(options) {
+  const pendingDir = join(options.stateDir, 'pending')
+  if (!existsSync(pendingDir)) return []
+  const recovered = []
+  for (const file of readdirSync(pendingDir).filter(name => name.endsWith('.json'))) {
+    const path = join(pendingDir, file)
+    let journal
+    try {
+      journal = JSON.parse(readFileSync(path, 'utf8'))
+    } catch {
+      rmSync(path, { force: true })
+      continue
+    }
+    const manifest = readManifest(options.manifestPath)
+    const name = journal.name
+    const target = journal.target ?? join(options.skillsDir, name)
+    const snapshotSkill = journal.snapshot === undefined ? undefined : join(options.stateDir, 'backups', journal.snapshot, 'skills', name)
+    try {
+      const currentAll = digestSkill(target)
+      const currentFor = entry => Object.fromEntries(
+        Object.entries(currentAll).filter(([file]) => file in (entry?.files ?? {})),
+      )
+      const currentMatchesNew = journal.newEntry !== undefined
+        && canonicalFiles(currentFor(journal.newEntry)) === canonicalFiles(journal.newEntry.files)
+      const currentMatchesOld = journal.beforeEntry !== undefined
+        && canonicalFiles(currentFor(journal.beforeEntry)) === canonicalFiles(journal.beforeEntry.files)
+      if (currentMatchesNew) {
+        manifest.skills[name] = journal.newEntry
+        writeManifest(options.manifestPath, manifest)
+      } else if (!currentMatchesOld) {
+        rmSync(target, { recursive: true, force: true })
+        if (snapshotSkill !== undefined && existsSync(snapshotSkill)) cpSync(snapshotSkill, target, { recursive: true })
+        else if (journal.beforeEntry === null || journal.beforeEntry === undefined) {
+          // A new install had no previous tree.
+        }
+        if (journal.beforeEntry === null || journal.beforeEntry === undefined) delete manifest.skills[name]
+        else manifest.skills[name] = journal.beforeEntry
+        writeManifest(options.manifestPath, manifest)
+      }
+      rmSync(path, { force: true })
+      if (journal.staging !== undefined) rmSync(journal.staging, { recursive: true, force: true })
+      if (journal.oldPath !== undefined) rmSync(journal.oldPath, { recursive: true, force: true })
+      recovered.push(name)
+    } catch {
+      // Leave the journal for a later retry; never hide the underlying state.
+    }
+  }
+  return recovered
+}
+
 /** Install the pinned skills. */
 export function installSkills(options = parseArgs([])) {
   options = normalizeSkillOptions(options)
@@ -302,6 +365,7 @@ export function installSkills(options = parseArgs([])) {
     skillsDir: options.skillsDir,
     dryRun: options.dryRun === true,
   }
+  const recovered = options.dryRun ? [] : recoverSkillJournals(options)
   const manifest = readManifest(options.manifestPath)
   let source
   let snapshot
@@ -343,21 +407,42 @@ export function installSkills(options = parseArgs([])) {
           if (existsSync(join(targetDir, file))) copyOne(join(targetDir, file), join(staging, file))
         }
         mkdirSync(dirname(targetDir), { recursive: true })
-        if (decision.action === 'update') rmSync(targetDir, { recursive: true, force: true })
-        renameSync(staging, targetDir)
-        manifest.skills[skill.name] = {
+        const oldPath = join(options.stateDir, 'staging', `${skill.name}-old-${process.pid}-${Date.now()}`)
+        const newEntry = {
           ref,
           validated: skill.validated !== false,
-          description: validateSkill(targetDir, skill.name).description,
+          description: validateSkill(sourceDir, skill.name).description,
           files: decision.sourceDigest,
           installedAt: new Date().toISOString(),
         }
+        const journal = {
+          name: skill.name,
+          target: targetDir,
+          staging,
+          oldPath,
+          snapshot: snapshot?.id,
+          beforeEntry: manifest.skills[skill.name] ?? null,
+          newEntry,
+          at: new Date().toISOString(),
+        }
+        mkdirSync(dirname(journalPath(options, skill.name)), { recursive: true })
+        writeFileSync(journalPath(options, skill.name), `${JSON.stringify(journal, undefined, 2)}\n`)
+        try {
+          if (decision.action === 'update' && existsSync(targetDir)) renameSync(targetDir, oldPath)
+          renameSync(staging, targetDir)
+        } catch (error) {
+          if (existsSync(oldPath) && !existsSync(targetDir)) renameSync(oldPath, targetDir)
+          rmSync(journalPath(options, skill.name), { force: true })
+          throw error
+        }
+        manifest.skills[skill.name] = newEntry
         if (decision.action === 'install') result.installed.push(skill.name)
         else result.updated.push(skill.name)
       } catch (error) {
         // Put the previous tree back before reporting the failed skill.
         try {
           rmSync(staging, { recursive: true, force: true })
+          rmSync(journalPath(options, skill.name), { force: true })
           if (snapshot !== undefined) {
             const before = join(snapshot.root, 'skills', skill.name)
             if (existsSync(before)) {
@@ -373,8 +458,11 @@ export function installSkills(options = parseArgs([])) {
     }
     if (!options.dryRun) {
       writeManifest(options.manifestPath, manifest)
+      for (const action of actions) rmSync(journalPath(options, action.skill.name), { force: true })
+      rmSync(join(options.stateDir, 'staging'), { recursive: true, force: true })
       appendHistory(options, ref, result)
     }
+    result.recovered = recovered
     return result
   } finally {
     if (source !== undefined && source.owned) rmSync(source.root, { recursive: true, force: true })
@@ -406,8 +494,9 @@ function appendHistory(options, ref, result) {
  */
 export function rollbackSkills(options = parseArgs([])) {
   options = normalizeSkillOptions(options)
+  const recovered = recoverSkillJournals(options)
   const plan = rollbackShared({ stateDir: options.stateDir, skillsDir: options.skillsDir, to: options.to })
-  return { stamp: plan.id, restored: plan.restore, removed: plan.remove, kept: plan.keep, backupBefore: plan.backupBefore }
+  return { stamp: plan.id, restored: plan.restore, removed: plan.remove, kept: plan.keep, backupBefore: plan.backupBefore, recovered }
 }
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   const options = parseArgs(process.argv.slice(2))

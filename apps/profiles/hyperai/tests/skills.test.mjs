@@ -247,3 +247,62 @@ test('legacy git checkout has a bounded timeout (QA-013)', async () => {
     rmSync(home, { recursive: true, force: true })
   }
 })
+
+
+test('default install clones a file:// remote without --source and tolerates ignored stdout (R2-01)', async () => {
+  const fixture = localSkillRepo()
+  const home = temporaryDir()
+  try {
+    const lockPath = localLock(fixture.root, `file://${fixture.repo}`, fixture.ref)
+    const result = installSkills({ dshHome: home, profile: 'hyperai', lockPath })
+    assert.deepEqual(result.installed, ['example'])
+    const profileDir = join(home, 'profiles', 'hyperai')
+    assert.ok(existsSync(join(profileDir, 'skills', 'example', 'SKILL.md')))
+    assert.equal(JSON.parse(readFileSync(join(profileDir, '.hyperai-skills', 'manifest.json'), 'utf8')).schema, 1)
+  } finally {
+    rmSync(fixture.root, { recursive: true, force: true })
+    rmSync(home, { recursive: true, force: true })
+  }
+})
+
+test('legacy SIGKILL between rename and manifest write is recovered (R2-08)', () => {
+  const fixture = localSkillRepo()
+  const home = temporaryDir()
+  try {
+    const lockPath = localLock(fixture.root, fixture.repo, fixture.ref)
+    const base = { dshHome: home, profile: 'hyperai', lockPath, source: fixture.repo }
+    installSkills(base)
+    const profileDir = join(home, 'profiles', 'hyperai')
+    const stateDir = join(profileDir, '.hyperai-skills')
+    const target = join(profileDir, 'skills', 'example')
+    const manifestPath = join(stateDir, 'manifest.json')
+    const oldManifestText = readFileSync(manifestPath, 'utf8')
+    const oldManifest = JSON.parse(oldManifestText)
+    // Simulate a process killed after staging was renamed but before manifest.
+    writeFileSync(join(target, 'SKILL.md'), skillBody('example', 'Use when testing v2'))
+    writeFileSync(join(target, 'references', 'user-notes.md'), 'user extra\n')
+    const newFiles = digestSkill(target)
+    delete newFiles['references/user-notes.md']
+    const newEntry = { ...oldManifest.skills.example, description: 'Use when testing v2', files: newFiles, installedAt: new Date().toISOString() }
+    mkdirSync(join(stateDir, 'pending'), { recursive: true })
+    writeFileSync(join(stateDir, 'pending', 'example.json'), JSON.stringify({
+      name: 'example', target, snapshot: undefined, beforeEntry: oldManifest.skills.example, newEntry,
+    }))
+    // A later v3 must recover the journal, then update normally.
+    writeFileSync(join(fixture.repo, 'skills', 'example', 'SKILL.md'), skillBody('example', 'Use when testing v3'))
+    fixture.git('add', '-A')
+    fixture.git('commit', '-qm', 'v3')
+    const v3 = fixture.git('rev-parse', 'HEAD')
+    const result = installSkills({ ...base, ref: v3 })
+    assert.deepEqual(result.recovered, ['example'])
+    assert.deepEqual(result.updated, ['example'])
+    assert.match(readFileSync(join(target, 'SKILL.md'), 'utf8'), /v3/u)
+    assert.equal(readFileSync(join(target, 'references', 'user-notes.md'), 'utf8'), 'user extra\n')
+    const manifest = JSON.parse(readFileSync(manifestPath, 'utf8'))
+    assert.equal(manifest.skills.example.ref, v3)
+    assert.equal(existsSync(join(stateDir, 'pending', 'example.json')), false)
+  } finally {
+    rmSync(fixture.root, { recursive: true, force: true })
+    rmSync(home, { recursive: true, force: true })
+  }
+})
