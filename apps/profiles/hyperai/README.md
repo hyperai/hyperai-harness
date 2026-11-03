@@ -204,6 +204,25 @@ checkout paths: it only carries the copied `patches/hyperai-tui.patch`.
 - Windows/Linux and a fresh public-user install are not yet part of the
   automated acceptance matrix.
 
+## Restoring an uninstall archive
+
+`uninstall --yes` writes an archive under
+`<dsh-home>/profiles/.hyperai-uninstall-backups/<profile>-<stamp>/` and a
+`README.txt` inside it. The archive is a copy of the profile; it is not a
+one-click restore command.
+
+1. Stop every DSH/TUI process using this profile.
+2. Choose a target that does not already contain a profile. If
+   `<dsh-home>/profiles/<profile>` exists, move it aside; do not merge archives.
+3. Copy the archive back to the profile path, preserving user skills, settings
+   and install state. Keep the archive until verification finishes.
+4. Remove the `.hyperai-uninstall.json` marker from the restored directory.
+5. Re-run the profile installer for this release, then
+   `node scripts/manage.mjs doctor --dsh-home <dsh-home>`.
+6. Review doctor warnings before launching the TUI. Shared credentials live in
+   `<dsh-home>/.credentials.yaml`, not in the archive; do not copy credentials
+   from an untrusted archive.
+
 ## Test-environment boundaries
 
 - The preflight runs `pnpm --version`. If pnpm is provided by Corepack and not
@@ -211,10 +230,13 @@ checkout paths: it only carries the copied `patches/hyperai-tui.patch`.
   `HOME`. This is a host toolchain side effect, not a profile write. QA should
   use a preinstalled pnpm or a disposable HOME and must not assume the check is
   side-effect-free.
-- `install.mjs` is safe in non-TTY automation; use `--json` for one
-  machine-readable document (dependency progress is not mixed into stdout).
-  The TUI itself is an interactive TTY application; non-TTY startup behavior
-  belongs to upstream dsh-tui and is out of this profile's control.
+- `install.mjs` / `manage.mjs` are the supported non-TTY automation surface;
+  use `--json` for one machine-readable document (dependency and pnpm progress
+  are kept off stdout; recoverable diagnostics go to stderr).
+- **The TUI requires a real TTY/PTY.** Headless/non-TTY TUI startup is not a
+  supported automation interface; upstream dsh-tui may wait without output.
+  Use a PTY for TUI automation, or use the installer/lifecycle CLI with
+  `--json` for CI and scripts.
 - Isolated end-to-end tests should set both `DSH_HOME` and `HOME` when checking
   UI state; the installer's `--dsh-home` controls profile files but not every
   upstream TUI preference path.

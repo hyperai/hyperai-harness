@@ -135,6 +135,10 @@ export function diagnoseProfile(options) {
   if (status.skillsError !== undefined) issues.push(`skills manifest: ${status.skillsError}`)
   const pending = join(options.profileDir, '.hyperai-skills', 'pending')
   if (existsSync(pending) && readdirSync(pending).length > 0) warnings.push('an interrupted skills transaction has a pending journal; run catalog/update or repair')
+  const failedNodeModules = join(options.profileDir, '.hyperai-failed-node_modules')
+  if (existsSync(failedNodeModules) && readdirSync(failedNodeModules).length > 0) {
+    warnings.push(`failed dependency tree quarantine exists at ${failedNodeModules}; a successful repair will remove it after verification`)
+  }
   return { ok: issues.length === 0, issues, warnings, environment, status }
 }
 
@@ -163,7 +167,23 @@ function archiveProfile(options) {
     recursive: true,
     filter: source => !source.split(/[\\/]/u).includes('node_modules'),
   })
-  writeFileSync(join(archiveRoot, 'README.txt'), 'Archived by manage.mjs uninstall; user skills, settings and install state are preserved here.\n')
+  writeFileSync(join(archiveRoot, 'README.txt'), [
+    'HyperAI Profile uninstall archive',
+    '',
+    `This directory is a copy of ${options.profileDir} made by manage.mjs uninstall.`,
+    'It contains user skills, settings, install state and (when available) backups.',
+    '',
+    'Safe restore steps:',
+    '1. Do not restore over an existing profile directory. Confirm the target path and move it aside first if needed.',
+    `2. Check that ${options.profileDir} does not exist or is an empty/unmanaged directory you intend to replace.`,
+    `3. Restore with: mkdir -p ${join(options.profileDir, '..')} && cp -R ${JSON.stringify(archiveRoot)} ${JSON.stringify(options.profileDir)}`,
+    '4. Remove any .hyperai-uninstall.json marker from the restored profile if present.',
+    '5. Re-run the profile installer for this release: node apps/profiles/hyperai/scripts/install.mjs --dsh-home <harness-home>',
+    '6. Run: node apps/profiles/hyperai/scripts/manage.mjs doctor --dsh-home <harness-home>',
+    '7. Review warnings before starting the TUI. Shared credentials are not inside this archive.',
+    '',
+    'Keep this archive until the restored profile has passed doctor and a normal TUI launch.',
+  ].join('\n') + '\n')
   return archiveRoot
 }
 

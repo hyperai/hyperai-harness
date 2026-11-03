@@ -33,7 +33,7 @@
  * (`apps/profiles/hyperai` -> `apps/tui`); the installed profile itself contains
  * no absolute paths or references back to the checkout.
  */
-import { execFileSync } from 'node:child_process'
+import { execFileSync, spawnSync } from 'node:child_process'
 import { cpSync, existsSync, mkdirSync, readFileSync, readdirSync, renameSync, rmSync, writeFileSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { dirname, join, resolve } from 'node:path'
@@ -391,13 +391,35 @@ export function dependencyInstallArgs(options) {
 /** Run the pinned-package install through the dsh CLI's own pnpm wrapper. */
 function installDependencies(options) {
   const args = dependencyInstallArgs(options)
-  execFileSync(options.dshBin, args, {
+  const env = { ...process.env, DSH_HOME: options.dshHome, CI: 'true' }
+  if (!options.json) {
+    execFileSync(options.dshBin, args, { cwd: options.profileDir, env, stdio: 'inherit' })
+    return
+  }
+  // --json promises exactly one machine-readable document on stdout. The
+  // dsh/pnpm child must therefore never inherit fd 1: capture both streams and
+  // forward them to stderr, preserving diagnostics for humans.
+  const child = spawnSync(options.dshBin, args, {
     cwd: options.profileDir,
-    env: { ...process.env, DSH_HOME: options.dshHome, CI: 'true' },
-    // --json promises one machine-readable document: keep pnpm's progress off
-    // stdout while preserving diagnostics on stderr.
-    stdio: options.json ? ['ignore', 'inherit', 'inherit'] : 'inherit',
+    env,
+    encoding: 'utf8',
+    stdio: ['ignore', 'pipe', 'pipe'],
   })
+  if (child.error) throw child.error
+  if (child.stdout) process.stderr.write(child.stdout)
+  if (child.stderr) process.stderr.write(child.stderr)
+  if (child.status !== 0) {
+    throw new Error(`dsh plugin install exited ${child.status ?? 'without a status'}; dependency output was written to stderr`)
+  }
+}
+
+/** Remove failed dependency trees only after a verified success. */
+function cleanupFailedNodeModules(options) {
+  const root = join(options.profileDir, '.hyperai-failed-node_modules')
+  if (!existsSync(root)) return 0
+  const removed = readdirSync(root)
+  rmSync(root, { recursive: true, force: true })
+  return removed.length
 }
 
 /** Confirm the branding patch landed and the splash art is actually gone. */
@@ -503,6 +525,8 @@ export async function install(options = parseArgs([])) {
     throw error
   }
   if (dependencyTransaction !== undefined) rmSync(dependencyTransaction.root, { recursive: true, force: true })
+  const cleanedFailedTrees = cleanupFailedNodeModules(options)
+  if (cleanedFailedTrees > 0) result.warnings.push({ phase: 'verify', message: `removed ${cleanedFailedTrees} quarantined failed dependency tree(s) after successful verification` })
   if (options.skills) {
     phase = 'skills'
     writeInstallState(options, { status: 'installing', phase, startedAt, error: null })
@@ -567,7 +591,19 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
       )
     }
   } catch (error) {
-    process.stderr.write(`hyperai-tui: ${error instanceof Error ? error.message : String(error)}\n`)
+    const message = error instanceof Error ? error.message : String(error)
+    if (options.json) {
+      process.stdout.write(`${JSON.stringify({
+        ok: false,
+        error: {
+          code: error?.code ?? 'INSTALL_FAILED',
+          message,
+          hint: 'Inspect .hyperai-install.json and stderr; fix the reported phase, then run manage.mjs repair --yes.',
+        },
+      }, undefined, 2)}\n`)
+    } else {
+      process.stderr.write(`hyperai-tui: ${message}\n`)
+    }
     process.exit(1)
   }
 }

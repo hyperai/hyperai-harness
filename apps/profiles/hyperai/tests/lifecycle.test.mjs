@@ -44,7 +44,10 @@ test('uninstall archives user data and removes only managed runtime files (QA-01
     assert.equal(existsSync(join(fixture.profileDir, 'package.json')), false)
     assert.equal(existsSync(join(fixture.profileDir, 'skills', 'example', 'SKILL.md')), true)
     assert.ok(existsSync(join(result.archive, 'skills', 'example', 'SKILL.md')))
-    assert.match(readFileSync(join(result.archive, 'README.txt'), 'utf8'), /Archived/u)
+    const readme = readFileSync(join(result.archive, 'README.txt'), 'utf8')
+    assert.match(readme, /Safe restore steps/u)
+    assert.match(readme, /doctor/u)
+    assert.match(readme, /Do not restore over an existing profile/u)
   } finally {
     rmSync(fixture.home, { recursive: true, force: true })
   }
@@ -87,6 +90,18 @@ test('uninstall then uninstall --purge is a two-stage idempotent cleanup (R2-07)
     assert.equal(second.purge, true)
     assert.equal(existsSync(fixture.profileDir), false)
     assert.ok(second.archive)
+  } finally {
+    rmSync(fixture.home, { recursive: true, force: true })
+  }
+})
+
+
+test('doctor warns about a quarantined failed dependency tree (BUG-R3-03)', () => {
+  const fixture = tempHome()
+  try {
+    mkdirSync(join(fixture.profileDir, '.hyperai-failed-node_modules', 'stamp'), { recursive: true })
+    const diagnosis = diagnoseProfile(optionsFor(fixture))
+    assert.ok(diagnosis.warnings.some(warning => /failed dependency tree quarantine/u.test(warning)))
   } finally {
     rmSync(fixture.home, { recursive: true, force: true })
   }

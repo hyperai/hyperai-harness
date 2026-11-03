@@ -11,7 +11,7 @@ node --test tests/                  # 13/13 branding + skills-bridge tests
 
 cd ../profiles/hyperai
 node scripts/verify.mjs             # 12/12 profile checks
-node --test tests/                  # 59/59 installer + skills/updater tests
+node --test tests/                  # 66/66 installer + skills/updater tests
 ```
 
 `build-patch.mjs` unpacks the pinned upstream package with `npm pack`, applies
@@ -25,7 +25,7 @@ credential variable or default model), the TUI patch wiring, the pinned skills
 lock, the installer plan/refusal rules and the reinstall migration that keeps
 user provider/TUI rows while dropping the removed environment-driven preset.
 
-Measured: patch is **78,614 bytes (72,577 code points) / 15 upstream files** (the previous logo
+Measured: patch is **81,048 bytes / 15 upstream files** (the previous logo
 distribution carried >150 KB of embedded PNG/sprites; none of it remains).
 The two added files are the HyperAI Skills TUI bridge; Chat/commands/settings
 only gain the branded command/hook/hint, the disabled upstream `/update` route,

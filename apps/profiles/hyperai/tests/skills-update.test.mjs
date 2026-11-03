@@ -550,3 +550,28 @@ test('check --json is compact and omits the full plan (R2-09)', () => {
   assert.equal('plan' in payload, false)
   assert.equal(Array.isArray(payload.updates), true)
 })
+
+test('check --json errors are one stable JSON envelope, not raw progress (BUG-R3B-04)', async () => {
+  const home = createHome()
+  const bin = tempDir('hyperai-fake-git-')
+  try {
+    const fakeGit = join(bin, 'git')
+    writeFileSync(fakeGit, '#!/bin/sh\nsleep 30\n')
+    const { chmodSync } = await import('node:fs')
+    chmodSync(fakeGit, 0o755)
+    const result = run(home, ['check', '--repo', 'https://example.invalid/hyperai-skills.git', '--timeout', '100', '--json'], {
+      PATH: `${bin}:${process.env.PATH ?? ''}`,
+    })
+    assert.equal(result.status, 1, result.stderr)
+    const payload = JSON.parse(result.stdout)
+    assert.equal(payload.ok, false)
+    assert.equal(payload.error.code, 'GIT_TIMEOUT')
+    assert.match(payload.error.message, /timed out/u)
+    assert.match(payload.error.hint, /--timeout|--source/u)
+    assert.doesNotMatch(result.stdout, /^===|Progress:/mu)
+    assert.equal(payload.error.message.includes('sleep 30'), false)
+  } finally {
+    rmSync(bin, { recursive: true, force: true })
+    rmSync(home.root, { recursive: true, force: true })
+  }
+})

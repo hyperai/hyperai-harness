@@ -15,6 +15,7 @@ import {
   installSkills,
   loadLock,
   planSkill,
+  recoverSkillJournals,
   rollbackSkills,
   selectedSkills,
   validateSkill,
@@ -303,6 +304,53 @@ test('legacy SIGKILL between rename and manifest write is recovered (R2-08)', ()
     assert.equal(existsSync(join(stateDir, 'pending', 'example.json')), false)
   } finally {
     rmSync(fixture.root, { recursive: true, force: true })
+    rmSync(home, { recursive: true, force: true })
+  }
+})
+
+
+test('recovery rejects an unreadable journal without deleting evidence (R2-08 fail-safe)', () => {
+  const home = temporaryDir()
+  try {
+    const profileDir = join(home, 'profiles', 'hyperai')
+    const stateDir = join(profileDir, '.hyperai-skills')
+    const pending = join(stateDir, 'pending')
+    mkdirSync(pending, { recursive: true })
+    const journal = join(pending, 'example.json')
+    writeFileSync(journal, '{not-json')
+    assert.throws(
+      () => recoverSkillJournals({ stateDir, skillsDir: join(profileDir, 'skills'), manifestPath: join(stateDir, 'manifest.json') }),
+      error => error?.code === 'SKILL_RECOVERY_FAILED' && /parse|inspection/iu.test(error.message),
+    )
+    assert.equal(existsSync(journal), true, 'unreadable journal must be preserved')
+    assert.equal(existsSync(pending), true)
+  } finally {
+    rmSync(home, { recursive: true, force: true })
+  }
+})
+
+test('undecidable missing-tree recovery fails loudly and keeps journal/staging (R2-08)', () => {
+  const home = temporaryDir()
+  try {
+    const profileDir = join(home, 'profiles', 'hyperai')
+    const stateDir = join(profileDir, '.hyperai-skills')
+    const pending = join(stateDir, 'pending')
+    mkdirSync(pending, { recursive: true })
+    const journal = join(pending, 'example.json')
+    writeFileSync(journal, `${JSON.stringify({
+      name: 'example',
+      target: join(profileDir, 'skills', 'example'),
+      staging: join(stateDir, 'staging', 'example-new'),
+      oldPath: undefined,
+      beforeEntry: { ref: 'a'.repeat(40), files: { 'SKILL.md': '0'.repeat(64) } },
+      newEntry: { ref: 'b'.repeat(40), files: { 'SKILL.md': '1'.repeat(64) } },
+    })}\n`)
+    assert.throws(
+      () => recoverSkillJournals({ stateDir, skillsDir: join(profileDir, 'skills'), manifestPath: join(stateDir, 'manifest.json') }),
+      error => error?.code === 'SKILL_RECOVERY_FAILED' && /undecidable|manual recovery/iu.test(error.message),
+    )
+    assert.equal(existsSync(journal), true)
+  } finally {
     rmSync(home, { recursive: true, force: true })
   }
 })

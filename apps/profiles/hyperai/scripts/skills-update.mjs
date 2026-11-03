@@ -213,9 +213,40 @@ async function confirm(message) {
   }
 }
 
+/** Remove credentials accidentally embedded in URLs before printing an error. */
+function redactErrorText(value) {
+  return String(value).replace(/https?:\/\/[^\s/@]+@/gu, 'https://<redacted>@')
+}
+
+/** Classify an updater failure for the machine-readable contract. */
+export function errorEnvelope(error) {
+  const raw = error instanceof Error ? error.message : String(error)
+  const message = redactErrorText(raw)
+  let code = 'SKILLS_UPDATE_FAILED'
+  let hint = 'Inspect the message, then retry; use --timeout or --source when appropriate.'
+  if (/timed out|ETIMEDOUT/iu.test(raw)) {
+    code = 'GIT_TIMEOUT'
+    hint = 'Check network/proxy/GitHub access, retry with --timeout <ms>, or use --source <existing-checkout>.'
+  } else if (/authentication|permission denied|could not read username|repository not found|access denied/iu.test(raw)) {
+    code = 'GIT_AUTH'
+    hint = 'Verify GitHub authentication and private-repository permission; never embed a token in the command or config.'
+  } else if (/no backups|rollback/iu.test(raw)) {
+    code = 'ROLLBACK_FAILED'
+    hint = 'List backups with rollback --list and inspect the archive/state paths before deleting anything.'
+  } else if (/manifest|invalid JSON|parse/iu.test(raw)) {
+    code = 'SKILLS_STATE_INVALID'
+    hint = 'Preserve .hyperai-skills and backups; inspect the reported JSON/state error before retrying.'
+  }
+  return { ok: false, error: { code, message, hint } }
+}
+
 /** Print an error in the CLI's consistent form. */
 function fail(error) {
-  process.stderr.write(`skills-update: ${error instanceof Error ? error.message : String(error)}\n`)
+  if (process.argv.includes('--json')) {
+    process.stdout.write(`${JSON.stringify(errorEnvelope(error), undefined, 2)}\n`)
+  } else {
+    process.stderr.write(`skills-update: ${error instanceof Error ? error.message : String(error)}\n`)
+  }
   process.exitCode = 1
 }
 
@@ -312,6 +343,9 @@ async function main() {
   }
   // check / update
   if (options.auto && options.manual) throw new SkillsError('--auto and --manual are mutually exclusive')
+  // Recover an interrupted prior update before planning this one. Otherwise a
+  // skill rolled back by recovery can be missing from this run's plan (D3).
+  if (options.command === 'update' && !options.dryRun) recoverPending(options)
   const stateBefore = readTuiState(options)
   if (options.command === 'check' && options.auto && !options.manual && !autoCheckDue(stateBefore, options)) {
     const payload = {
@@ -375,7 +409,6 @@ async function main() {
       process.stdout.write('cancelled\n')
       return
     }
-    recoverPending(options)
     const result = applyPlan({
       plan,
       skillsDir: options.skillsDir,

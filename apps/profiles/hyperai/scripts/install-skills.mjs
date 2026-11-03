@@ -295,59 +295,235 @@ function journalPath(options, name) {
   return join(options.stateDir, 'pending', `${name}.json`)
 }
 
+/** A recovery failure that must keep all evidence and fail the caller loudly. */
+export class SkillRecoveryError extends Error {
+  constructor(message, details = {}) {
+    super(message)
+    this.name = 'SkillRecoveryError'
+    this.code = 'SKILL_RECOVERY_FAILED'
+    this.details = details
+  }
+}
+
+/** Atomically rewrite a journal after a swap phase. */
+function writeJournalFile(path, journal) {
+  mkdirSync(dirname(path), { recursive: true })
+  const temporary = `${path}.tmp-${process.pid}-${Date.now()}`
+  writeFileSync(temporary, `${JSON.stringify(journal, undefined, 2)}\n`)
+  renameSync(temporary, path)
+}
+
+/** Digest a tree without throwing for a missing/partial target. */
+function safeSkillDigest(dir) {
+  if (dir === undefined || !existsSync(join(dir, 'SKILL.md'))) return undefined
+  try { return digestSkill(dir) } catch { return undefined }
+}
+
+/** Whether a tree contains exactly the managed files recorded in an entry. */
+function managedMatches(digest, entry) {
+  if (digest === undefined || entry === undefined || entry === null || typeof entry.files !== 'object') return false
+  const current = Object.fromEntries(Object.entries(digest).filter(([file]) => file in entry.files))
+  return canonicalFiles(current) === canonicalFiles(entry.files)
+}
+
+/** Files under a tree that the given entry does not own (user content). */
+function extrasAgainst(dir, owned) {
+  if (!existsSync(dir)) return []
+  return allSkillFiles(dir).filter(file => !(file in (owned ?? {})))
+}
+
 /**
- * Recover journals left by a SIGKILL between the directory rename and the
- * manifest write. Complete the manifest when the target already contains the
- * journaled new files; otherwise restore the snapshot/previous entry.
+ * Preserve user extras while completing a new tree. A missing extra is copied
+ * from the old tree. A hash conflict is never overwritten silently: the old
+ * copy is retained under a visible conflict name and recovery fails.
+ */
+function preserveExtras(source, target, owned) {
+  if (!existsSync(source) || !existsSync(target)) return []
+  const copied = []
+  const stamp = new Date().toISOString().replaceAll(':', '-').replace(/\.\d+Z$/u, 'Z')
+  for (const relative of extrasAgainst(source, owned)) {
+    const from = join(source, relative)
+    const to = join(target, relative)
+    if (!existsSync(to)) {
+      copyOne(from, to)
+      copied.push(relative)
+      continue
+    }
+    const sourceHash = sha256(readFileSync(from))
+    const targetHash = sha256(readFileSync(to))
+    if (sourceHash !== targetHash) {
+      const conflict = `${to}.hyperai-recovered-${stamp}`
+      mkdirSync(dirname(conflict), { recursive: true })
+      cpSync(from, conflict)
+      throw new SkillRecoveryError(
+        `user file conflict during recovery at ${relative}; old copy preserved at ${conflict}`,
+        { source, target, file: relative, conflict },
+      )
+    }
+  }
+  return copied
+}
+
+/** Restore a tree from oldPath/snapshot without ever deleting the source first. */
+function restoreTree(source, target) {
+  if (!existsSync(source)) throw new SkillRecoveryError(`cannot restore missing old tree ${source}`, { source, target })
+  if (existsSync(target)) throw new SkillRecoveryError(`refusing to overwrite existing target ${target}`, { source, target })
+  mkdirSync(dirname(target), { recursive: true })
+  try {
+    renameSync(source, target)
+  } catch {
+    cpSync(source, target, { recursive: true })
+    rmSync(source, { recursive: true, force: true })
+  }
+}
+
+/**
+ * Recover journals left by a SIGKILL during the legacy directory swap.
+ *
+ * Journal states are interpreted from the actual filesystem, never from a
+ * mutable "phase" alone:
+ *
+ * - target matches newEntry: finish the manifest, preserve missing extras from
+ *   oldPath/snapshot, then clean staging/oldPath.
+ * - target matches beforeEntry: keep the old tree, restore the old manifest,
+ *   preserve extras from oldPath, then clean the new staging tree.
+ * - target missing + oldPath complete: restore oldPath to target and keep the
+ *   old manifest (the P1 mid-swap case).
+ * - target missing + no oldPath + staging is a complete new install: finish a
+ *   new install only when there was no previous entry.
+ * - target missing + snapshot available: restore the snapshot.
+ * - anything else: fail safe with SKILL_RECOVERY_FAILED. No journal, oldPath,
+ *   staging or backup is deleted on an undecidable state.
+ *
+ * @param {ReturnType<typeof normalizeSkillOptions>} options normalized options.
+ * @returns {string[]} names whose journals were completed.
  */
 export function recoverSkillJournals(options) {
   const pendingDir = join(options.stateDir, 'pending')
   if (!existsSync(pendingDir)) return []
   const recovered = []
-  for (const file of readdirSync(pendingDir).filter(name => name.endsWith('.json'))) {
+  // Journal phase writes are atomic temp+rename. A SIGKILL can leave a
+  // `.json.tmp-*` beside the last committed journal; it is never a source of
+  // truth and must not survive a successful recovery.
+  const cleanJournalTemps = () => {
+    for (const name of readdirSync(pendingDir)) {
+      if (name.endsWith('.json') || !/\.json\.tmp-/u.test(name)) continue
+      rmSync(join(pendingDir, name), { force: true })
+    }
+  }
+  const journalFiles = readdirSync(pendingDir).filter(name => name.endsWith('.json'))
+  if (journalFiles.length === 0) {
+    cleanJournalTemps()
+    return []
+  }
+  for (const file of journalFiles) {
     const path = join(pendingDir, file)
     let journal
     try {
       journal = JSON.parse(readFileSync(path, 'utf8'))
-    } catch {
-      rmSync(path, { force: true })
-      continue
+    } catch (error) {
+      throw new SkillRecoveryError(
+        `cannot parse recovery journal ${path}; it was kept for manual inspection (${error instanceof Error ? error.message : String(error)})`,
+        { journalPath: path },
+      )
     }
-    const manifest = readManifest(options.manifestPath)
+    if (journal === null || typeof journal !== 'object' || typeof journal.name !== 'string') {
+      throw new SkillRecoveryError(`invalid recovery journal ${path}; it was kept for manual inspection`, { journalPath: path })
+    }
     const name = journal.name
     const target = journal.target ?? join(options.skillsDir, name)
-    const snapshotSkill = journal.snapshot === undefined ? undefined : join(options.stateDir, 'backups', journal.snapshot, 'skills', name)
-    try {
-      const currentAll = digestSkill(target)
-      const currentFor = entry => Object.fromEntries(
-        Object.entries(currentAll).filter(([file]) => file in (entry?.files ?? {})),
+    const expectedTarget = join(options.skillsDir, name)
+    if (resolve(target) !== resolve(expectedTarget)) {
+      throw new SkillRecoveryError(
+        `recovery journal ${path} targets ${target}, outside the profile skill root ${expectedTarget}; refusing to touch it`,
+        { journalPath: path, target, expectedTarget },
       )
-      const currentMatchesNew = journal.newEntry !== undefined
-        && canonicalFiles(currentFor(journal.newEntry)) === canonicalFiles(journal.newEntry.files)
-      const currentMatchesOld = journal.beforeEntry !== undefined
-        && canonicalFiles(currentFor(journal.beforeEntry)) === canonicalFiles(journal.beforeEntry.files)
-      if (currentMatchesNew) {
+    }
+    const oldPath = typeof journal.oldPath === 'string' ? journal.oldPath : undefined
+    const staging = typeof journal.staging === 'string' ? journal.staging : undefined
+    const snapshotSkill = typeof journal.snapshot === 'string'
+      ? join(options.stateDir, 'backups', journal.snapshot, 'skills', name)
+      : undefined
+    const targetDigest = safeSkillDigest(target)
+    const oldDigest = safeSkillDigest(oldPath)
+    const stagingDigest = safeSkillDigest(staging)
+    const manifest = readManifest(options.manifestPath)
+    const newMatches = targetDigest !== undefined && managedMatches(targetDigest, journal.newEntry)
+    const oldMatches = targetDigest !== undefined && managedMatches(targetDigest, journal.beforeEntry)
+    const oldTreeMatches = oldDigest !== undefined && managedMatches(oldDigest, journal.beforeEntry)
+    const stagingNew = stagingDigest !== undefined && managedMatches(stagingDigest, journal.newEntry)
+    const before = journal.beforeEntry ?? null
+    const detail = {
+      journalPath: path,
+      name,
+      target,
+      oldPath,
+      staging,
+      snapshot: journal.snapshot,
+      targetDigest,
+      oldDigest,
+      stagingDigest,
+    }
+    try {
+      if (newMatches) {
+        // The new tree is already in place. Copy back any extra that was not
+        // carried over by the staging copy, then complete the manifest.
+        if (oldPath !== undefined && oldTreeMatches) preserveExtras(oldPath, target, before?.files)
+        else if (snapshotSkill !== undefined && existsSync(snapshotSkill)) preserveExtras(snapshotSkill, target, before?.files)
         manifest.skills[name] = journal.newEntry
         writeManifest(options.manifestPath, manifest)
-      } else if (!currentMatchesOld) {
-        rmSync(target, { recursive: true, force: true })
-        if (snapshotSkill !== undefined && existsSync(snapshotSkill)) cpSync(snapshotSkill, target, { recursive: true })
-        else if (journal.beforeEntry === null || journal.beforeEntry === undefined) {
-          // A new install had no previous tree.
-        }
-        if (journal.beforeEntry === null || journal.beforeEntry === undefined) delete manifest.skills[name]
-        else manifest.skills[name] = journal.beforeEntry
+      } else if (oldMatches) {
+        // The swap never replaced target (or recovery already restored it).
+        if (oldPath !== undefined && existsSync(oldPath)) preserveExtras(oldPath, target, before?.files)
+        if (before === null) delete manifest.skills[name]
+        else manifest.skills[name] = before
         writeManifest(options.manifestPath, manifest)
+      } else if (targetDigest === undefined && oldPath !== undefined && existsSync(oldPath) && oldTreeMatches) {
+        // P1 MID-SWAP: target was renamed to oldPath but the new tree never
+        // reached target. Restore the old tree, including all user extras.
+        restoreTree(oldPath, target)
+        if (before === null) delete manifest.skills[name]
+        else manifest.skills[name] = before
+        writeManifest(options.manifestPath, manifest)
+      } else if (targetDigest === undefined && before === null && stagingNew) {
+        // A new install was killed before its only swap. Complete it.
+        restoreTree(staging, target)
+        manifest.skills[name] = journal.newEntry
+        writeManifest(options.manifestPath, manifest)
+      } else if (targetDigest === undefined && before !== null && snapshotSkill !== undefined && existsSync(snapshotSkill)) {
+        // Last safe fallback: the pre-run backup still has the old tree.
+        copyOneTree(snapshotSkill, target)
+        manifest.skills[name] = before
+        writeManifest(options.manifestPath, manifest)
+      } else {
+        throw new SkillRecoveryError(
+          `undecidable recovery state for ${name}; journal, old tree, staging and backups were kept for manual recovery`,
+          detail,
+        )
       }
+      // Only after the manifest and extras are safe may evidence be removed.
+      if (staging !== undefined) rmSync(staging, { recursive: true, force: true })
+      if (oldPath !== undefined) rmSync(oldPath, { recursive: true, force: true })
       rmSync(path, { force: true })
-      if (journal.staging !== undefined) rmSync(journal.staging, { recursive: true, force: true })
-      if (journal.oldPath !== undefined) rmSync(journal.oldPath, { recursive: true, force: true })
       recovered.push(name)
-    } catch {
-      // Leave the journal for a later retry; never hide the underlying state.
+    } catch (error) {
+      if (error instanceof SkillRecoveryError) throw error
+      throw new SkillRecoveryError(
+        `recovery failed for ${name}: ${error instanceof Error ? error.message : String(error)}. ` +
+          'Journal, oldPath, staging and backups were left untouched; run --rollback or inspect the listed paths.',
+        { ...detail, cause: error instanceof Error ? error.message : String(error) },
+      )
     }
   }
+  cleanJournalTemps()
   return recovered
+}
+
+/** Copy a directory recursively to a target that must not already exist. */
+function copyOneTree(source, target) {
+  if (existsSync(target)) throw new SkillRecoveryError(`refusing to overwrite existing target ${target}`, { source, target })
+  mkdirSync(dirname(target), { recursive: true })
+  cpSync(source, target, { recursive: true })
 }
 
 /** Install the pinned skills. */
@@ -423,17 +599,36 @@ export function installSkills(options = parseArgs([])) {
           snapshot: snapshot?.id,
           beforeEntry: manifest.skills[skill.name] ?? null,
           newEntry,
+          phase: 'prepared',
           at: new Date().toISOString(),
         }
-        mkdirSync(dirname(journalPath(options, skill.name)), { recursive: true })
-        writeFileSync(journalPath(options, skill.name), `${JSON.stringify(journal, undefined, 2)}\n`)
+        const currentJournalPath = journalPath(options, skill.name)
+        writeJournalFile(currentJournalPath, journal)
         try {
-          if (decision.action === 'update' && existsSync(targetDir)) renameSync(targetDir, oldPath)
+          if (decision.action === 'update' && existsSync(targetDir)) {
+            renameSync(targetDir, oldPath)
+            journal.phase = 'old-moved'
+            writeJournalFile(currentJournalPath, journal)
+          }
           renameSync(staging, targetDir)
+          journal.phase = 'new-moved'
+          writeJournalFile(currentJournalPath, journal)
         } catch (error) {
-          if (existsSync(oldPath) && !existsSync(targetDir)) renameSync(oldPath, targetDir)
-          rmSync(journalPath(options, skill.name), { force: true })
-          throw error
+          // Preserve a new tree if it already reached target, then put the
+          // previous tree back. Never delete the only copy of user extras.
+          let failedNew
+          try {
+            if (existsSync(targetDir) && existsSync(oldPath)) {
+              failedNew = join(options.stateDir, 'staging', `${skill.name}-new-failed-${process.pid}-${Date.now()}`)
+              mkdirSync(dirname(failedNew), { recursive: true })
+              renameSync(targetDir, failedNew)
+            }
+            if (existsSync(oldPath) && !existsSync(targetDir)) renameSync(oldPath, targetDir)
+          } catch { /* keep both paths for manual recovery */ }
+          rmSync(currentJournalPath, { force: true })
+          rmSync(staging, { recursive: true, force: true })
+          const suffix = failedNew === undefined ? '' : `; failed new tree kept at ${failedNew}`
+          throw new Error(`${error instanceof Error ? error.message : String(error)}${suffix}`)
         }
         manifest.skills[skill.name] = newEntry
         if (decision.action === 'install') result.installed.push(skill.name)

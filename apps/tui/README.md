@@ -154,7 +154,10 @@ as a follow-up, not part of this distribution.
 - Narrow terminals stack the workspace/version footer instead of shrinking it
   into collision; the checked-in 120/110/80/56-column PTY captures under
   [`docs/screenshots/real/`](docs/screenshots/real/) show the product version
-  remains readable. Exact terminal certificates remain QA-owned.
+  remains readable. At 56 columns the footer intentionally shows the compact
+  `hyperai v0.2.0` product label and omits the upstream `dsh-tui` version rather
+  than squeezing or overlapping text; 80 columns is the comfortable minimum for
+  the full pair. Exact terminal certificates remain QA-owned.
 
 
 - `/settings` keeps upstream fields for header art, maid portrait, welcome

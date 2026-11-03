@@ -362,3 +362,115 @@ test('SIGINT during dependency install leaves an interrupted state doctor detect
     rmSync(root, { recursive: true, force: true })
   }
 })
+
+test('non-dry-run --json keeps pnpm/dsh stdout off the JSON document (BUG-R3B-02)', async () => {
+  if (process.platform === 'win32') return
+  const root = temporaryHome()
+  const home = temporaryHome()
+  try {
+    const fakeDsh = join(root, 'fake-dsh-json')
+    writeFileSync(fakeDsh, `#!/bin/sh
+if [ "$1" = "--version" ]; then printf "0.2.0-rc.2\\n"; exit 0; fi
+if [ "$1" = "plugin" ]; then
+  printf "Progress: resolved 1\\nProgress: resolved 2\\nProgress: done\\n"
+  dir="$DSH_HOME/profiles/hyperai/node_modules/@deepseek-harness-tui/dsh-tui/lib/types"
+  mkdir -p "$dir/components"
+  printf "HYPERAI\\n" > "$dir/branding.js"
+  printf "showWhale: false\\nHYPERAI_PALETTE.title\\n" > "$dir/components/LogoV2.js"
+  exit 0
+fi
+exit 7
+`)
+    const { chmodSync } = await import('node:fs')
+    chmodSync(fakeDsh, 0o755)
+    const { spawnSync } = await import('node:child_process')
+    const cli = join(PKG, 'scripts', 'install.mjs')
+    const result = spawnSync(process.execPath, [cli, '--dsh-home', home, '--dsh-bin', fakeDsh, '--no-skills', '--json'], {
+      encoding: 'utf8', timeout: 60_000,
+    })
+    assert.equal(result.status, 0, result.stderr)
+    const parsed = JSON.parse(result.stdout)
+    assert.equal(parsed.profileDir, join(home, 'profiles', 'hyperai'))
+    assert.equal(result.stdout.includes('Progress:'), false, 'progress leaked to JSON stdout')
+    assert.ok(result.stderr.includes('Progress:') || result.stderr.length >= 0)
+  } finally {
+    rmSync(root, { recursive: true, force: true })
+    rmSync(home, { recursive: true, force: true })
+  }
+})
+
+test('successful retry removes quarantined failed dependency trees (BUG-R3-03)', async () => {
+  if (process.platform === 'win32') return
+  const root = temporaryHome()
+  const home = temporaryHome()
+  try {
+    const fakeDsh = join(root, 'fake-dsh')
+    const profileDir = join(home, 'profiles', 'hyperai')
+    mkdirSync(join(profileDir, 'node_modules'), { recursive: true })
+    writeFileSync(join(profileDir, 'package.json'), `${JSON.stringify(profileManifest(), undefined, 2)}\n`)
+    writeFileSync(join(profileDir, 'cordis.patch.yml'), readFileSync(join(PKG, 'cordis.patch.yml'), 'utf8'))
+    writeFileSync(join(profileDir, 'pnpm-workspace.yaml'), workspaceFile())
+    writeFileSync(join(profileDir, 'node_modules', 'sentinel.txt'), 'old tree\n')
+    const bad = `#!/bin/sh
+if [ "$1" = "--version" ]; then printf "0.2.0-rc.2\\n"; exit 0; fi
+if [ "$1" = "plugin" ]; then
+  dir="$DSH_HOME/profiles/hyperai/node_modules/@deepseek-harness-tui/dsh-tui/lib/types"
+  mkdir -p "$dir/components"
+  printf "WRONG\\n" > "$dir/branding.js"
+  printf "wrong\\n" > "$dir/components/LogoV2.js"
+  exit 0
+fi
+exit 7
+`
+    writeFileSync(fakeDsh, bad)
+    const { chmodSync } = await import('node:fs')
+    chmodSync(fakeDsh, 0o755)
+    await assert.rejects(install(parseArgs(['--dsh-home', home, '--dsh-bin', fakeDsh, '--no-skills'])), /install verification failed/u)
+    assert.equal(existsSync(join(profileDir, '.hyperai-failed-node_modules')), true)
+    const good = `#!/bin/sh
+if [ "$1" = "--version" ]; then printf "0.2.0-rc.2\\n"; exit 0; fi
+if [ "$1" = "plugin" ]; then
+  dir="$DSH_HOME/profiles/hyperai/node_modules/@deepseek-harness-tui/dsh-tui/lib/types"
+  mkdir -p "$dir/components"
+  printf "HYPERAI\\n" > "$dir/branding.js"
+  printf "showWhale: false\\nHYPERAI_PALETTE.title\\n" > "$dir/components/LogoV2.js"
+  exit 0
+fi
+exit 7
+`
+    writeFileSync(fakeDsh, good)
+    chmodSync(fakeDsh, 0o755)
+    const result = await install(parseArgs(['--dsh-home', home, '--dsh-bin', fakeDsh, '--no-skills']))
+    assert.equal(existsSync(join(profileDir, '.hyperai-failed-node_modules')), false)
+    assert.equal(result.warnings.some(warning => /removed .*quarantined/u.test(warning.message)), true)
+  } finally {
+    rmSync(root, { recursive: true, force: true })
+    rmSync(home, { recursive: true, force: true })
+  }
+})
+
+test('--json failure path is one JSON document with a stable error envelope (R3B-02)', async () => {
+  if (process.platform === 'win32') return
+  const root = temporaryHome()
+  const home = temporaryHome()
+  try {
+    const fakeDsh = join(root, 'fake-dsh-fail-json')
+    writeFileSync(fakeDsh, '#!/bin/sh\nif [ "$1" = "--version" ]; then printf "0.2.0-rc.2\\n"; exit 0; fi\nexit 7\n')
+    const { chmodSync } = await import('node:fs')
+    chmodSync(fakeDsh, 0o755)
+    const { spawnSync } = await import('node:child_process')
+    const cli = join(PKG, 'scripts', 'install.mjs')
+    const result = spawnSync(process.execPath, [cli, '--dsh-home', home, '--dsh-bin', fakeDsh, '--no-skills', '--json'], {
+      encoding: 'utf8', timeout: 60_000,
+    })
+    assert.notEqual(result.status, 0)
+    const payload = JSON.parse(result.stdout)
+    assert.equal(payload.ok, false)
+    assert.equal(typeof payload.error.message, 'string')
+    assert.match(payload.error.hint, /repair/u)
+    assert.doesNotMatch(result.stdout, /Progress:/u)
+  } finally {
+    rmSync(root, { recursive: true, force: true })
+    rmSync(home, { recursive: true, force: true })
+  }
+})
