@@ -1,0 +1,38 @@
+
+
+  ✦ hyperai-tui  v0.2.0-beta.1
+  ██  ██  ██  ██  ██▀▀▄▄  ██▀▀▀▀  ██▀▀▄▄   ▄▀▀▄   ▀▀██▀▀
+  ██  ██  ██  ██  ██  ██  ██      ██  ██  ██  ██    ██
+  ██▀▀██  ▀▀██▀▀  ██▄▄▀▀  ██▀▀▀   ██▄▄▀▀  ██▀▀██    ██
+  ██  ██    ██    ██      ██      ██ ██   ██  ██    ██
+  ██  ██    ██    ██      ██▄▄▄▄  ██  ██  ██  ██  ▄▄██▄▄
+
+  ██  ██   ▄▀▀▄   ██▀▀▄▄  ██  ██  ██▀▀▀▀  ██▀▀▀▀  ██▀▀▀▀
+  ██  ██  ██  ██  ██  ██  ███ ██  ██      ██      ██
+  ██▀▀██  ██▀▀██  ██▄▄▀▀  ██ ███  ██▀▀▀    ▀▀▀▀▄   ▀▀▀▀▄
+  ██  ██  ██  ██  ██ ██   ██  ██  ██          ██      ██
+  ██  ██  ██  ██  ██  ██  ██  ██  ██▄▄▄▄  ██▄▄▄▀  ██▄▄▄▀
+  deepseek-flash · Max effort
+  $BETA_ROOT/dsh-home/profiles/hyperai
+  提示：全屏模式鼠标拖选即复制；Esc 取消选区 · /tips 更多技巧
+
+    HyperAI Harness
+
+  ❯ hello from ubuntu beta
+
+   turn error · llm-deepseek: no API key for provider route "deepseek-official"; store DEEPSEEK_API_KEY through the cre…
+
+
+
+
+
+
+
+
+
+
+    回合出错 · llm-deepseek: no API key for provider route "deepseek-official"; store DEEPSEEK_API_KEY through the c…
+  ╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+  ⌸ ❯                                                                                                                ⛶
+  ╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+   deepseek-flash · max · hyperai

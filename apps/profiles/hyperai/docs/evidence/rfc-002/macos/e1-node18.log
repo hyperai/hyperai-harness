@@ -1,0 +1,15 @@
+[2026-11-04T10:34:44Z] HyperAI Harness 内测版安装程序
+[2026-11-04T10:34:44Z]   安装包：$BETA_ROOT/hyperai-harness-0.2.0-beta.1
+[2026-11-04T10:34:44Z]   HyperAI 目录：$BETA_ROOT/e1-home/.hyperai
+[2026-11-04T10:34:44Z]   Harness home：$BETA_ROOT/e1-home/.dsh
+[2026-11-04T10:34:44Z] 
+[2026-11-04T10:34:45Z] 当前 Node.js 版本是 18.20.4，不满足要求（^22.19 或 >=24）。
+[2026-11-04T10:34:45Z] 
+[2026-11-04T10:34:45Z] macOS（Homebrew）：
+[2026-11-04T10:34:45Z]   brew install node@24 && brew link --overwrite node@24
+[2026-11-04T10:34:45Z] Ubuntu / Linux（nvm）：
+[2026-11-04T10:34:45Z]   curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.1/install.sh | bash
+[2026-11-04T10:34:45Z]   nvm install 24 && nvm use 24
+[2026-11-04T10:34:45Z] 官方下载：https://nodejs.org/zh-cn/download
+[2026-11-04T10:34:45Z] 
+[2026-11-04T10:34:45Z] 装好后重新打开终端，再运行本脚本。没有写入任何文件。

@@ -1,0 +1,38 @@
+
+
+  ✦ hyperai-tui  v0.2.0-beta.1
+  ██  ██  ██  ██  ██▀▀▄▄  ██▀▀▀▀  ██▀▀▄▄   ▄▀▀▄   ▀▀██▀▀
+  ██  ██  ██  ██  ██  ██  ██      ██  ██  ██  ██    ██
+  ██▀▀██  ▀▀██▀▀  ██▄▄▀▀  ██▀▀▀   ██▄▄▀▀  ██▀▀██    ██
+  ██  ██    ██    ██      ██      ██ ██   ██  ██    ██
+  ██  ██    ██    ██      ██▄▄▄▄  ██  ██  ██  ██  ▄▄██▄▄
+
+  ██  ██   ▄▀▀▄   ██▀▀▄▄  ██  ██  ██▀▀▀▀  ██▀▀▀▀  ██▀▀▀▀
+  ██  ██  ██  ██  ██  ██  ███ ██  ██      ██      ██
+  ██▀▀██  ██▀▀██  ██▄▄▀▀  ██ ███  ██▀▀▀    ▀▀▀▀▄   ▀▀▀▀▄
+  ██  ██  ██  ██  ██ ██   ██  ██  ██          ██      ██
+  ██  ██  ██  ██  ██  ██  ██  ██  ██▄▄▄▄  ██▄▄▄▀  ██▄▄▄▀
+  deepseek-flash · Max effort
+  $HOME/orca/projects/xuexidsh
+  Tip: Question, plan-review and plugin dialogs all accept Ctrl+V paste · /tips more tips
+
+    HyperAI Harness
+
+
+   ▶ （Ctrl+P to expand） Context loaded · System prompt 17 sections · Runtime context 2 items · Skills 2 · Tools 26
+
+
+
+  ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+    Skills
+
+    ❯ /example-verified-skill
+      custom · Use when 需要一个可被 Hermes tap 安装的规范 skill 示例. 展示标准结构。
+      /ppt-generation
+      custom · Use when 用户要生成/做一份 PPT、幻灯片、演示文稿、汇报材料（从零产出 .pptx）。模型只写内容 JSON，脚…
+    Enter to insert · Esc to exit
+
+  ╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+  ⌸ ❯                                                                                                                ⛶
+  ╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+   deepseek-flash · max · xuexidsh

@@ -1,0 +1,13 @@
+{
+  "profileDir": "$BETA_ROOT/dsh-home/profiles/hyperai",
+  "archive": "$BETA_ROOT/dsh-home/profiles/.hyperai-uninstall-backups/hyperai-2026-11-04T10-38-15Z",
+  "purge": false,
+  "kept": [
+    ".hyperai-skills",
+    ".hyperai-uninstall.json",
+    "cordis.yml",
+    "pnpm-lock.yaml",
+    "skills"
+  ],
+  "launcher": "$BETA_ROOT/home/.hyperai/bin/hyperai"
+}
