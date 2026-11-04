@@ -25,7 +25,7 @@ credential variable or default model), the TUI patch wiring, the pinned skills
 lock, the installer plan/refusal rules and the reinstall migration that keeps
 user provider/TUI rows while dropping the removed environment-driven preset.
 
-Measured: patch is **81,685 bytes / 15 upstream files** (the previous logo
+Measured: patch is **81,685 bytes / 16 upstream files** (the previous logo
 distribution carried >150 KB of embedded PNG/sprites; none of it remains).
 The two added files are the HyperAI Skills TUI bridge; Chat/commands/settings
 only gain the branded command/hook/hint, the disabled upstream `/update` route,
