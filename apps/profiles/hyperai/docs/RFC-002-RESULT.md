@@ -124,6 +124,8 @@ if (packageJson.name === PACKAGE_NAME && typeof version === 'string' && valid(ve
 
 构建报告（`dist/build-report.json`）记录了上述所有哈希与断言结果。
 
+安装包是在 commit `8cee5aeb92` 上构建的。该 commit 之后的提交只增加证据和本报告（以及 PR 链接），不改变任何构建输入（`apps/tui/`、`apps/profiles/hyperai/scripts/`、`docs/beta-install.md`）；manifest 里的 `commit` 字段是构建时记录的，所以在本分支最新 tip 上重新构建会得到不同的哈希，这是预期行为。
+
 ## 已知问题与限制
 
 1. **E11 未测**：没有测试用 API key，真实模型轮次与 `ppt-generation` 生成 `.pptx` 都没有跑。拿到 key 后需要补一次。
