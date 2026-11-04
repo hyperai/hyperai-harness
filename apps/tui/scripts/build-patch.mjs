@@ -441,6 +441,26 @@ export const DATA_DIR = join(homeDir(), dataDirName());`,
     },
     {
       file: 'lib/types/update.js',
+      why: 'self-version reads report the upstream dsh-tui version, not the HyperAI release',
+      find: `                if (packageJson.name === PACKAGE_NAME && typeof version === 'string' && valid(version) !== null) {
+                    return version;
+                }`,
+      replace: `                // hyperai-tui: package.json.version is the HyperAI release
+                // (0.2.0-beta.1); the dsh-tui version is recorded in
+                // hyperai.upstreamVersion. Every caller of this function means
+                // the upstream TUI package — the dsh-tui half of the version
+                // plate, the version-drift warning and /update target checks —
+                // so it must keep returning the upstream version.
+                const upstream = packageJson.hyperai?.upstreamVersion;
+                if (packageJson.name === PACKAGE_NAME && typeof upstream === 'string' && valid(upstream) !== null) {
+                    return upstream;
+                }
+                if (packageJson.name === PACKAGE_NAME && typeof version === 'string' && valid(version) !== null) {
+                    return version;
+                }`,
+    },
+    {
+      file: 'lib/types/update.js',
       why: 'disable the upstream TUI version check before it can contact npm/GitHub',
       find: `export async function checkForTuiUpdate() {
     // Callers start this during the first render; the first \`fetch()\` loads

@@ -29,6 +29,7 @@ function check(name, fn) {
 }
 
 const brand = JSON.parse(readFileSync(join(PKG, 'src', 'brand.json'), 'utf8'))
+const tuiPackage = JSON.parse(readFileSync(join(PKG, 'package.json'), 'utf8'))
 const patch = readFileSync(join(PKG, 'patches', `dsh-tui@${brand.upstream.version}.patch`), 'utf8')
 const addedLines = patch
   .split('\n')
@@ -123,7 +124,7 @@ check('brand strings and profile isolation remain wired', () => {
     'HARNESS',
     'hyperai-tui',
     'HyperAI Harness',
-    'hyperai-tui v0.2.0',
+    `hyperai-tui v${tuiPackage.version}`,
     ' · dsh-tui v${tuiVersion}',
     '.dsh-tui-${profile}',
     'https://github.com/hyperai/hyperai-harness',
@@ -141,7 +142,8 @@ check('brand strings and profile isolation remain wired', () => {
     'Splash font (HyperAI fixed solid)',
     'Companion skin (not used by HyperAI)',
     'HyperAI Harness · ${channel.sessionTitle}',
-    "children: '  v0.2.0'",
+    `children: '  v${tuiPackage.version}'`,
+    "const upstream = packageJson.hyperai?.upstreamVersion;",
     'columns < 72',
     'columns < 110',
     'provider/model setup to native /provider and /model',
@@ -156,6 +158,28 @@ check('brand strings and profile isolation remain wired', () => {
     if (!patch.includes(marker)) throw new Error(`missing brand wiring: ${marker}`)
   }
   return 'words, wordmark, version plate, state isolation, branded links'
+})
+
+check('the product version is the HyperAI release and dsh-tui stays upstream', () => {
+  const upstream = JSON.parse(readFileSync(join(PKG, 'upstream.json'), 'utf8'))
+  if (upstream.package !== brand.upstream.package || upstream.version !== brand.upstream.version) {
+    throw new Error('upstream.json is not pinned to the same upstream as brand.json')
+  }
+  if (!/^[0-9a-f]{64}$/u.test(upstream.sha256) || !upstream.integrity.startsWith('sha512-')) {
+    throw new Error('upstream.json must record sha256 and npm integrity')
+  }
+  // installedTuiVersion() powers the dsh-tui half of the plate, the version
+  // drift warning and /update target checks: it must report the upstream
+  // version, not the HyperAI release.
+  for (const marker of [
+    'const upstream = packageJson.hyperai?.upstreamVersion;',
+    'typeof upstream === \'string\'',
+  ]) {
+    if (!patch.includes(marker)) throw new Error(`missing version-source patch: ${marker}`)
+  }
+  if (!patch.includes(`children: '  v${tuiPackage.version}'`)) throw new Error('chat header does not bake the product version')
+  if (!patch.includes(`hyperai-tui v${tuiPackage.version}`)) throw new Error('version plate does not bake the product version')
+  return `${tuiPackage.version} (product) / ${brand.upstream.version} (upstream)`
 })
 
 check('the TUI tree carries no logo toolchain or generated art', () => {

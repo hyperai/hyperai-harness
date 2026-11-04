@@ -14,6 +14,7 @@ import { fileURLToPath } from 'node:url'
 
 const PKG = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const brand = JSON.parse(readFileSync(join(PKG, 'src', 'brand.json'), 'utf8'))
+const tuiPackage = JSON.parse(readFileSync(join(PKG, 'package.json'), 'utf8'))
 const patch = readFileSync(join(PKG, 'patches', `dsh-tui@${brand.upstream.version}.patch`), 'utf8')
 const addedLines = patch
   .split('\n')
@@ -88,7 +89,7 @@ test('the patch touches only the documented upstream files and stays small', () 
 
 test('profile isolation, version plate and branded links stay wired', () => {
   for (const marker of [
-    'hyperai-tui v0.2.0',
+    `hyperai-tui v${tuiPackage.version}`,
     ' · dsh-tui v${tuiVersion}',
     '.dsh-tui-${profile}',
     'https://github.com/hyperai/hyperai-harness',
@@ -100,6 +101,15 @@ test('profile isolation, version plate and branded links stay wired', () => {
   ]) {
     assert.ok(patch.includes(marker), marker)
   }
+})
+
+test('the product version is the HyperAI release and dsh-tui stays upstream', () => {
+  assert.ok(patch.includes('const upstream = packageJson.hyperai?.upstreamVersion;'))
+  assert.ok(patch.includes(`children: '  v${tuiPackage.version}'`))
+  assert.ok(patch.includes(`hyperai-tui v${tuiPackage.version}`))
+  const upstream = JSON.parse(readFileSync(join(PKG, 'upstream.json'), 'utf8'))
+  assert.equal(upstream.version, brand.upstream.version)
+  assert.match(upstream.sha256, /^[0-9a-f]{64}$/u)
 })
 
 test('the brand splash is pinned to the upstream solid font', () => {

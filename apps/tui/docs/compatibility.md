@@ -8,7 +8,7 @@ runtime “ignore the warning” switch.
 
 | Layer | Pinned/tested value |
 | --- | --- |
-| HyperAI TUI product | `apps/tui/package.json` (`0.2.0`) |
+| HyperAI TUI product | `apps/tui/package.json` (`0.2.0-beta.1`) |
 | Upstream dsh-tui | `@deepseek-harness-tui/dsh-tui@0.16.1`, tag `v0.16.1`, commit `73ff99fbed56563bf154d719effd09f9f9725349` |
 | Validated DSH Core lines | `brand.json` → `core.validated` (includes the tested `0.2.0-rc.2`) |
 | Unsupported example | `0.2.1-rc.5` is not in the validated set and is refused by the installer |
