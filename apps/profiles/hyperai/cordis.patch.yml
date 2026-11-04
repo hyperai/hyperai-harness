@@ -1,0 +1,36 @@
+# hyperai profile patch layer, applied after the dsh-base and dsh-tui bundle
+# layers.
+#
+# The profile deliberately does NOT configure any model provider or default
+# model. DSH's native model configuration owns that surface: users add and edit
+# providers with `/provider` and pick a model with `/model`. Those choices are
+# persisted by DSH in this profile's own `cordis.patch.yml` (as an `llm-pi-ai`
+# row) and in `~/.dsh-tui-<profile>/` UI state, exactly like the original
+# `dsh-tui` profile.
+#
+# Do not put `!!js` expressions inside a schema-typed `llm-pi-ai.providers`
+# entry here: settings writes resolve the raw profile config through the plugin
+# schema before expressions are evaluated, so an expression node would fail as
+# `apiKeyEnv expected string but got [object Object]`. A provider row created by
+# `/provider` is plain values and stays editable.
+#
+# This layer only adds the profile-scoped skill root that the HyperAI skills
+# installer fills under `<profile>/skills/<name>/SKILL.md`.
+
+# ── skills ─────────────────────────────────────────────────────────────────
+# The dsh-tui bundle disables the host skill rows because its agent presets own
+# per-agent discovery. Re-enabling the host provider adds a global-layer skill
+# root on top of the preset providers: every agent reads the merged catalog.
+# The installer drops hyperai-skills bundles under
+# `<profile>/skills/<skill>/SKILL.md`; HYPERAI_SKILLS_DIR relocates the root.
+- id: skill-filesystem
+  disabled: false
+  config:
+    providerName: filesystem
+    customSkillDirs:
+      - !!js >-
+        process.env.DSH_HYPERAI_SKILLS_DIR
+          ?? process.getBuiltinModule('node:path').join(
+            process.env.DSH_HOME ?? process.getBuiltinModule('node:path').join(process.getBuiltinModule('node:os').homedir(), '.dsh'),
+            'profiles', 'hyperai', 'skills')
+    watch: true
