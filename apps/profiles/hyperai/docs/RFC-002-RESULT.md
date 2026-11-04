@@ -23,7 +23,7 @@
 | TUI 成品包 | `@hyperai/hyperai-tui@0.2.0-beta.1`，sha256 `ae43b7f50ce9e54cd5e7e17544d2c807f71a26c980a4214d29f6290e3562ad68`，3296 个文件 |
 | Skills 快照 | `hyperai-skills@34f0a1be0cb3ae9905aecebba13efae6a8657be1`（`feat/ppt-generation-upstream`，2 个 Skill，27 个文件） |
 | 同事使用说明 | 安装包内 `README.md`，源文件 `apps/profiles/hyperai/docs/beta-install.md` |
-| Draft PR | 推送后创建：`feat/hyperai-internal-beta` → `main` |
+| Draft PR | <https://github.com/hyperai/hyperai-harness/pull/2>（`feat/hyperai-internal-beta` → `master`，Draft，不合并） |
 
 安装包与 `dist/` 构建产物**不入库**（`apps/profiles/hyperai/.gitignore`），Skills 内容、成品 tarball、上游原包都不在公开仓库里。
 
@@ -146,3 +146,4 @@ if (packageJson.name === PACKAGE_NAME && typeof version === 'string' && valid(ve
 5. **E2 的“不访问 GitHub”用代理黑名单而不是断网**：dsh/pnpm 安装需要 npm registry，完全断网会误伤；用 `NO_PROXY` 只放行 registry 更精确。
 6. **证据不提交 PNG**：截图里有本机绝对路径，无法逐像素脱敏；改为提交同等内容的屏幕文本，并单独记录品牌像素统计。
 7. **P2 / P3 未实现**：RFC 只要求 P1，按 RFC 执行。
+8. **PR 的 base 分支**：RFC 写的是 `feat/hyperai-internal-beta` → `main`，但这个仓库没有 `main` 分支，默认分支是 `master`。Draft PR #2 因此开到 `master`；分支内容与 RFC 要求一致。
