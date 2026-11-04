@@ -1,0 +1,34 @@
+Progress: resolved 1, reused 0, downloaded 0, added 0
+Progress: resolved 31, reused 0, downloaded 0, added 0
+Progress: resolved 43, reused 0, downloaded 0, added 0
+Progress: resolved 103, reused 0, downloaded 0, added 0
+ WARN  Issues with peer dependencies found
+.
+└─┬ @hyperai/hyperai-tui 0.16.1
+  ├── ✕ missing peer @deepseek-ai/cordis@"^4.0.1 || 4.0.5-alpha.2"
+  ├── ✕ missing peer @deepseek-ai/dsh-agent@"^0.1.0-rc.6 || ^0.1.1-rc.1 || 0.1.2-alpha.3 || 0.1.2-alpha.4 || 0.1.2-alpha.5 || 0.1.2-rc.1 || 0.1.3-alpha.2 || 0.1.5-alpha.1 || 0.1.5-alpha.2 || 0.1.5-rc.1 || 0.1.7-rc.1 || 0.1.7-rc.2 || 0.2.0-rc.1 || 0.2.0-rc.2 || 0.2.1-rc.2"
+  ├── ✕ missing peer @deepseek-ai/dsh-session@"^0.1.0-rc.6 || ^0.1.1-rc.1 || 0.1.2-alpha.3 || 0.1.2-alpha.4 || 0.1.2-alpha.5 || 0.1.2-rc.1 || 0.1.3-alpha.2 || 0.1.5-alpha.1 || 0.1.5-alpha.2 || 0.1.5-rc.1 || 0.1.7-rc.1 || 0.1.7-rc.2 || 0.2.0-rc.1 || 0.2.0-rc.2 || 0.2.1-rc.2"
+  ├── ✕ missing peer @deepseek-ai/schemastery@"^3.18.1 || 3.18.5-alpha.2"
+  ├── ✕ missing peer @deepseek-ai/dsh-system-prompt@"^0.1.0-rc.6 || ^0.1.1-rc.1 || 0.1.2-alpha.3 || 0.1.2-alpha.4 || 0.1.2-alpha.5 || 0.1.2-rc.1 || 0.1.3-alpha.2 || 0.1.5-alpha.1 || 0.1.5-alpha.2 || 0.1.5-rc.1 || 0.1.7-rc.1 || 0.1.7-rc.2 || 0.2.0-rc.1 || 0.2.0-rc.2 || 0.2.1-rc.2"
+  └─┬ dsh-working-activity 0.5.1
+    ├── ✕ missing peer @deepseek-ai/cordis@^4.0.1
+    ├── ✕ missing peer @deepseek-ai/dsh-agent@"^0.1.0-rc.6 || ^0.1.1-rc.1 || ^0.1.2-alpha.2 || ^0.1.7-rc.2"
+    ├── ✕ missing peer @deepseek-ai/dsh-session@"^0.1.0-rc.6 || ^0.1.1-rc.1 || ^0.1.2-alpha.2 || ^0.1.7-rc.2"
+    ├── ✕ missing peer @deepseek-ai/schemastery@^3.18.1
+    ├── ✕ missing peer @deepseek-ai/dsh-invariants@"^0.1.0-rc.6 || ^0.1.1-rc.1 || ^0.1.2-alpha.2 || ^0.1.7-rc.2"
+    ├── ✕ missing peer @deepseek-ai/dsh-system-prompt@"^0.1.0-rc.6 || ^0.1.1-rc.1 || ^0.1.2-alpha.2 || ^0.1.7-rc.2"
+    └── ✕ unmet peer react@^18.2.0: found 19.3.1 in @hyperai/hyperai-tui
+Peer dependencies that should be installed:
+  @deepseek-ai/cordis@">=4.0.1 <5.0.0-0"
+  @deepseek-ai/dsh-agent@">=0.1.0-rc.6 <0.2.0-0 || >=0.1.1-rc.1 <0.2.0-0"
+  @deepseek-ai/dsh-invariants@"^0.1.0-rc.6 || ^0.1.1-rc.1 || ^0.1.2-alpha.2 || ^0.1.7-rc.2"
+  @deepseek-ai/dsh-session@">=0.1.0-rc.6 <0.2.0-0 || >=0.1.1-rc.1 <0.2.0-0"
+  @deepseek-ai/dsh-system-prompt@">=0.1.0-rc.6 <0.2.0-0 || >=0.1.1-rc.1 <0.2.0-0"
+  @deepseek-ai/schemastery@">=3.18.1 <4.0.0-0"
+
+Packages: +21 -33
++++++++++++++++++++++---------------------------------
+Progress: resolved 104, reused 19, downloaded 4, added 15
+ WARN  GET http://127.0.0.1:4873/@img/sharp-wasm32/-/sharp-wasm32-0.35.4.tgz error (ERR_PNPM_FETCH_500). Will retry in 10 seconds. 3 retries left.
+Progress: resolved 104, reused 19, downloaded 10, added 21, done
+Done in 6s using pnpm v10.28.1

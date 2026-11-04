@@ -1,0 +1,38 @@
+
+
+  ✦ hyperai-tui  v0.2.0
+  ██  ██  ██  ██  ██▀▀▄▄  ██▀▀▀▀  ██▀▀▄▄   ▄▀▀▄   ▀▀██▀▀
+  ██  ██  ██  ██  ██  ██  ██      ██  ██  ██  ██    ██
+  ██▀▀██  ▀▀██▀▀  ██▄▄▀▀  ██▀▀▀   ██▄▄▀▀  ██▀▀██    ██
+  ██  ██    ██    ██      ██      ██ ██   ██  ██    ██
+  ██  ██    ██    ██      ██▄▄▄▄  ██  ██  ██  ██  ▄▄██▄▄
+
+  ██  ██   ▄▀▀▄   ██▀▀▄▄  ██  ██  ██▀▀▀▀  ██▀▀▀▀  ██▀▀▀▀
+  ██  ██  ██  ██  ██  ██  ███ ██  ██      ██      ██
+  ██▀▀██  ██▀▀██  ██▄▄▀▀  ██ ███  ██▀▀▀    ▀▀▀▀▄   ▀▀▀▀▄
+  ██  ██  ██  ██  ██ ██   ██  ██  ██          ██      ██
+  ██  ██  ██  ██  ██  ██  ██  ██  ██▄▄▄▄  ██▄▄▄▀  ██▄▄▄▀
+  deepseek-flash · Max effort
+  /Users/zhenhaoli/orca/projects/xuexidsh
+  Tip: Double-Esc on empty input rewinds time; edit and resend · /tips more tips
+
+    HyperAI Harness
+
+  ❯ hello from the old package
+
+   turn error · llm-deepseek: no API key for provider route "deepseek-official"; store DEEPSEEK_API_KEY through the cre…
+
+
+
+
+
+
+
+
+
+
+
+  ╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+  ⌸ ❯                                                                                                                ⛶
+  ╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+   deepseek-flash · max · xuexidsh

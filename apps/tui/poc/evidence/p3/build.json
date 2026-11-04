@@ -1,0 +1,13 @@
+{
+  "mode": "p3",
+  "distribution": "tarball-url",
+  "package": "@deepseek-harness-tui/dsh-tui",
+  "version": "0.16.1",
+  "tuiVersion": "0.2.0",
+  "upstreamVersion": "0.16.1",
+  "renamedFiles": [],
+  "tarball": "/Users/zhenhaoli/orca/projects/xuexidsh/poc-env/products/deepseek-harness-tui-dsh-tui-0.16.1-p3.tgz",
+  "sizeBytes": 18371362,
+  "sha256": "9060c0fe2882c02ca311434353179bc454299b7c6ac1be240fd1759f30f63b76",
+  "integrity": "sha512-AWf4WXRVcHs6vTXigyrxmnIGLQs9yqQiJHEK1W4O9vz6R6Ftcy0VNXPJIaCh3kQjqrVvy3XXwLMppXdWNCVgWA=="
+}

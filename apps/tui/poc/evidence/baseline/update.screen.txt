@@ -1,0 +1,38 @@
+
+
+  ✦ hyperai-tui  v0.2.0
+  ██  ██  ██  ██  ██▀▀▄▄  ██▀▀▀▀  ██▀▀▄▄   ▄▀▀▄   ▀▀██▀▀
+  ██  ██  ██  ██  ██  ██  ██      ██  ██  ██  ██    ██
+  ██▀▀██  ▀▀██▀▀  ██▄▄▀▀  ██▀▀▀   ██▄▄▀▀  ██▀▀██    ██
+  ██  ██    ██    ██      ██      ██ ██   ██  ██    ██
+  ██  ██    ██    ██      ██▄▄▄▄  ██  ██  ██  ██  ▄▄██▄▄
+
+  ██  ██   ▄▀▀▄   ██▀▀▄▄  ██  ██  ██▀▀▀▀  ██▀▀▀▀  ██▀▀▀▀
+  ██  ██  ██  ██  ██  ██  ███ ██  ██      ██      ██
+  ██▀▀██  ██▀▀██  ██▄▄▀▀  ██ ███  ██▀▀▀    ▀▀▀▀▄   ▀▀▀▀▄
+  ██  ██  ██  ██  ██ ██   ██  ██  ██          ██      ██
+  ██  ██  ██  ██  ██  ██  ██  ██  ██▄▄▄▄  ██▄▄▄▀  ██▄▄▄▀
+  deepseek-flash · Max effort
+  /Users/zhenhaoli/orca/projects/xuexidsh
+  Tip: When dsh exits badly, dsh-tui safe offers read-only diagnostics and a clean rescue profile · /tips more tips
+
+    HyperAI Harness
+
+
+  ! /update
+    HyperAI Harness does not upgrade through /update; use the HyperAI profile installer/release flow.
+
+
+
+
+
+
+
+
+
+
+
+  ╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+  ⌸ ❯                                                                                                                ⛶
+  ╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+   deepseek-flash · max · xuexidsh

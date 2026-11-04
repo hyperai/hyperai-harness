@@ -1,0 +1,13 @@
+{
+  "mode": "p2",
+  "distribution": "renamed-alias",
+  "package": "@hyperai/hyperai-tui",
+  "version": "0.16.1",
+  "tuiVersion": "0.2.0",
+  "upstreamVersion": "0.16.1",
+  "renamedFiles": [],
+  "tarball": "/Users/zhenhaoli/orca/projects/xuexidsh/poc-env/products/hyperai-hyperai-tui-0.16.1-p2.tgz",
+  "sizeBytes": 18371364,
+  "sha256": "038073401204be5bc19c91adfc5bc39285387bea5d927afc46e1a0ec000bda08",
+  "integrity": "sha512-Z+C/Mla9sfuQ8cnTxQqaQ/E14RZXq4G+4JxB3GtBTT3eL1UBQQoTiD19B1hNacO+rMPM0uHeNm0EeH1Kr/FMiA=="
+}

@@ -1,0 +1,7 @@
+# T1-1 原包 integrity 核对（npm pack 离线副本）
+$ npm pack @deepseek-harness-tui/dsh-tui@0.16.1
+tarball: deepseek-harness-tui-dsh-tui-0.16.1.tgz
+size: 18473587 bytes
+sha256: 2144b317d0c25ae4d2688f1ef2c73bc2c95e121085ac5977d00407dcd2b1336e
+integrity: sha512-xk8Nviy55RvLnAdjYj04DekUu6D1Pc0kEa5R+2EXoL3H/h6ZEzv8L0bxtSTrWxtNdXd4ufOXMu4TQ7HjrpYhbg==
+RFC 3.1 期望: sha512-xk8Nviy55RvLnAdjYj04DekUu6D1Pc0kEa5R+2EXoL3H/h6ZEzv8L0bxtSTrWxtNdXd4ufOXMu4TQ7HjrpYhbg==

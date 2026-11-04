@@ -1,0 +1,38 @@
+
+
+  ✦ hyperai-tui  v0.2.0
+  ██  ██  ██  ██  ██▀▀▄▄  ██▀▀▀▀  ██▀▀▄▄   ▄▀▀▄   ▀▀██▀▀
+  ██  ██  ██  ██  ██  ██  ██      ██  ██  ██  ██    ██
+  ██▀▀██  ▀▀██▀▀  ██▄▄▀▀  ██▀▀▀   ██▄▄▀▀  ██▀▀██    ██
+  ██  ██    ██    ██      ██      ██ ██   ██  ██    ██
+  ██  ██    ██    ██      ██▄▄▄▄  ██  ██  ██  ██  ▄▄██▄▄
+
+  ██  ██   ▄▀▀▄   ██▀▀▄▄  ██  ██  ██▀▀▀▀  ██▀▀▀▀  ██▀▀▀▀
+  ██  ██  ██  ██  ██  ██  ███ ██  ██      ██      ██
+  ██▀▀██  ██▀▀██  ██▄▄▀▀  ██ ███  ██▀▀▀    ▀▀▀▀▄   ▀▀▀▀▄
+  ██  ██  ██  ██  ██ ██   ██  ██  ██          ██      ██
+  ██  ██  ██  ██  ██  ██  ██  ██  ██▄▄▄▄  ██▄▄▄▀  ██▄▄▄▀
+  deepseek-flash · Max effort
+  /Users/zhenhaoli/orca/projects/xuexidsh
+  Tip: If the text under your selection is replaced in place, the copy is cancelled · /tips more tips
+
+    HyperAI Harness
+
+
+  ! /update
+    HyperAI Harness does not upgrade through /update; use the HyperAI profile installer/release flow.
+
+
+
+
+
+
+
+
+
+
+
+  ╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+  ⌸ ❯                                                                                                                ⛶
+  ╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+   deepseek-flash · max · xuexidsh

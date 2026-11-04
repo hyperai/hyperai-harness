@@ -1,0 +1,15 @@
+{
+  "name": "dsh-profile-hyperai",
+  "private": true,
+  "dependencies": {
+    "@deepseek-harness-tui/dsh-tui": "npm:@hyperai/hyperai-tui@0.16.1"
+  },
+  "dsh": {
+    "profile": {
+      "bundles": [
+        "@deepseek-ai/dsh-base",
+        "@hyperai/hyperai-tui"
+      ]
+    }
+  }
+}

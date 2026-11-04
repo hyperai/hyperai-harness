@@ -1,0 +1,2 @@
+# T1-2 已提交补丁 sha256
+81e077bbaf637088518e0aabd45caf4ad17ca44f265c19fa81cf2148a93d65ab  /Users/zhenhaoli/orca/projects/xuexidsh/hyperai-harness/apps/tui/patches/dsh-tui@0.16.1.patch

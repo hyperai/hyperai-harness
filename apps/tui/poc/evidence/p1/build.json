@@ -1,0 +1,474 @@
+{
+  "mode": "p1",
+  "distribution": "renamed",
+  "package": "@hyperai/hyperai-tui",
+  "version": "0.16.1",
+  "tuiVersion": "0.2.0",
+  "upstreamVersion": "0.16.1",
+  "renamedFiles": [
+    {
+      "file": "README.md",
+      "count": 7
+    },
+    {
+      "file": "bin/dsh-tui.js",
+      "count": 4
+    },
+    {
+      "file": "cordis.patch.yml",
+      "count": 11
+    },
+    {
+      "file": "cordis.yml",
+      "count": 9
+    },
+    {
+      "file": "guide/dsh-tui-guide/configuration.md",
+      "count": 1
+    },
+    {
+      "file": "guide/dsh-tui-guide/getting-started.en.md",
+      "count": 10
+    },
+    {
+      "file": "guide/dsh-tui-guide/getting-started.md",
+      "count": 16
+    },
+    {
+      "file": "guide/dsh-tui-guide/interaction.en.md",
+      "count": 1
+    },
+    {
+      "file": "guide/dsh-tui-guide/interaction.md",
+      "count": 1
+    },
+    {
+      "file": "guide/dsh-tui-guide/plugins.en.md",
+      "count": 4
+    },
+    {
+      "file": "guide/dsh-tui-guide/plugins.md",
+      "count": 4
+    },
+    {
+      "file": "guide/dsh-tui-guide/user-guide.en.md",
+      "count": 2
+    },
+    {
+      "file": "guide/dsh-tui-guide/user-guide.md",
+      "count": 2
+    },
+    {
+      "file": "guide/dsh-tui-guide/vscode.en.md",
+      "count": 1
+    },
+    {
+      "file": "guide/dsh-tui-guide/vscode.md",
+      "count": 1
+    },
+    {
+      "file": "lib/settings.json",
+      "count": 1
+    },
+    {
+      "file": "lib/types/adapter/ports/channel-session.d.ts",
+      "count": 1
+    },
+    {
+      "file": "lib/types/adapter/standard/descriptor.js",
+      "count": 2
+    },
+    {
+      "file": "lib/types/dsh-adapter/agent-view.d.ts",
+      "count": 1
+    },
+    {
+      "file": "lib/types/dsh-adapter/agent-view.js",
+      "count": 1
+    },
+    {
+      "file": "lib/types/dsh-adapter/channel/upstream-retry.d.ts",
+      "count": 1
+    },
+    {
+      "file": "lib/types/dsh-adapter/channel/upstream-retry.js",
+      "count": 1
+    },
+    {
+      "file": "lib/types/dsh-adapter/compat/index.d.ts",
+      "count": 1
+    },
+    {
+      "file": "lib/types/dsh-adapter/compat/index.js",
+      "count": 1
+    },
+    {
+      "file": "lib/types/dsh-adapter/compat/liveSession.js",
+      "count": 1
+    },
+    {
+      "file": "lib/types/dsh-adapter/compat/sessionLog.d.ts",
+      "count": 1
+    },
+    {
+      "file": "lib/types/dsh-adapter/entry-slot.js",
+      "count": 1
+    },
+    {
+      "file": "lib/types/dsh-adapter/index.d.ts",
+      "count": 1
+    },
+    {
+      "file": "lib/types/dsh-adapter/invariant.d.ts",
+      "count": 2
+    },
+    {
+      "file": "lib/types/dsh-adapter/invariant.js",
+      "count": 3
+    },
+    {
+      "file": "lib/types/dsh-adapter/migrate/adapters/claude-code.js",
+      "count": 1
+    },
+    {
+      "file": "lib/types/dsh-adapter/migrate/adapters/claude-code.parse.js",
+      "count": 1
+    },
+    {
+      "file": "lib/types/dsh-adapter/migrate/adapters/codex.js",
+      "count": 1
+    },
+    {
+      "file": "lib/types/dsh-adapter/migrate/adapters/codex.parse.js",
+      "count": 1
+    },
+    {
+      "file": "lib/types/dsh-adapter/migrate/adapters/grok-build.js",
+      "count": 1
+    },
+    {
+      "file": "lib/types/dsh-adapter/migrate/adapters/grok-build.parse.js",
+      "count": 1
+    },
+    {
+      "file": "lib/types/dsh-adapter/migrate/adapters/omp.js",
+      "count": 1
+    },
+    {
+      "file": "lib/types/dsh-adapter/migrate/adapters/scan-fs.js",
+      "count": 1
+    },
+    {
+      "file": "lib/types/dsh-adapter/migrate/adapters/scan.js",
+      "count": 1
+    },
+    {
+      "file": "lib/types/dsh-adapter/migrate/adapters/zcode.js",
+      "count": 1
+    },
+    {
+      "file": "lib/types/dsh-adapter/migrate/adapters/zcode.parse.js",
+      "count": 1
+    },
+    {
+      "file": "lib/types/dsh-adapter/migrate/bin-path.js",
+      "count": 1
+    },
+    {
+      "file": "lib/types/dsh-adapter/migrate/browse.d.ts",
+      "count": 1
+    },
+    {
+      "file": "lib/types/dsh-adapter/migrate/cli.js",
+      "count": 1
+    },
+    {
+      "file": "lib/types/dsh-adapter/migrate/import-one.d.ts",
+      "count": 1
+    },
+    {
+      "file": "lib/types/dsh-adapter/migrate/import-one.js",
+      "count": 1
+    },
+    {
+      "file": "lib/types/dsh-adapter/migrate/index.js",
+      "count": 1
+    },
+    {
+      "file": "lib/types/dsh-adapter/migrate/parse/injection.d.ts",
+      "count": 1
+    },
+    {
+      "file": "lib/types/dsh-adapter/migrate/parse/injection.js",
+      "count": 1
+    },
+    {
+      "file": "lib/types/dsh-adapter/migrate/parse/jsonl.d.ts",
+      "count": 1
+    },
+    {
+      "file": "lib/types/dsh-adapter/migrate/parse/jsonl.js",
+      "count": 1
+    },
+    {
+      "file": "lib/types/dsh-adapter/migrate/parse/role-turns.d.ts",
+      "count": 1
+    },
+    {
+      "file": "lib/types/dsh-adapter/migrate/parse/title.d.ts",
+      "count": 1
+    },
+    {
+      "file": "lib/types/dsh-adapter/migrate/parse/title.js",
+      "count": 1
+    },
+    {
+      "file": "lib/types/dsh-adapter/migrate/parse/tools.d.ts",
+      "count": 1
+    },
+    {
+      "file": "lib/types/dsh-adapter/migrate/picker.js",
+      "count": 1
+    },
+    {
+      "file": "lib/types/dsh-adapter/migrate/recent-agents.js",
+      "count": 1
+    },
+    {
+      "file": "lib/types/dsh-adapter/migrate/sessionize.js",
+      "count": 1
+    },
+    {
+      "file": "lib/types/dsh-adapter/migrate/types.d.ts",
+      "count": 1
+    },
+    {
+      "file": "lib/types/dsh-adapter/migrate/types.js",
+      "count": 1
+    },
+    {
+      "file": "lib/types/dsh-adapter/migrate/uuid.js",
+      "count": 1
+    },
+    {
+      "file": "lib/types/dsh-adapter/oauth/command.d.ts",
+      "count": 1
+    },
+    {
+      "file": "lib/types/dsh-adapter/oauth/command.js",
+      "count": 1
+    },
+    {
+      "file": "lib/types/dsh-adapter/oauth/credentials.d.ts",
+      "count": 1
+    },
+    {
+      "file": "lib/types/dsh-adapter/oauth/credentials.js",
+      "count": 1
+    },
+    {
+      "file": "lib/types/dsh-adapter/oauth/deepseek.js",
+      "count": 1
+    },
+    {
+      "file": "lib/types/dsh-adapter/oauth/index.d.ts",
+      "count": 2
+    },
+    {
+      "file": "lib/types/dsh-adapter/oauth/index.js",
+      "count": 2
+    },
+    {
+      "file": "lib/types/dsh-adapter/oauth/interaction.d.ts",
+      "count": 1
+    },
+    {
+      "file": "lib/types/dsh-adapter/oauth/interaction.js",
+      "count": 1
+    },
+    {
+      "file": "lib/types/dsh-adapter/oauth/opener.d.ts",
+      "count": 1
+    },
+    {
+      "file": "lib/types/dsh-adapter/oauth/opener.js",
+      "count": 1
+    },
+    {
+      "file": "lib/types/dsh-adapter/oauth/profiles.d.ts",
+      "count": 1
+    },
+    {
+      "file": "lib/types/dsh-adapter/oauth/profiles.js",
+      "count": 1
+    },
+    {
+      "file": "lib/types/dsh-adapter/oauth/service.d.ts",
+      "count": 1
+    },
+    {
+      "file": "lib/types/dsh-adapter/oauth/service.js",
+      "count": 1
+    },
+    {
+      "file": "lib/types/dsh-adapter/packaged-presets.js",
+      "count": 1
+    },
+    {
+      "file": "lib/types/dsh-adapter/plugin-declaration.d.ts",
+      "count": 1
+    },
+    {
+      "file": "lib/types/dsh-adapter/plugin-declaration.js",
+      "count": 1
+    },
+    {
+      "file": "lib/types/dsh-adapter/plugin-guard.d.ts",
+      "count": 2
+    },
+    {
+      "file": "lib/types/dsh-adapter/plugin-guard.js",
+      "count": 1
+    },
+    {
+      "file": "lib/types/dsh-adapter/promptDebug.js",
+      "count": 1
+    },
+    {
+      "file": "lib/types/dsh-adapter/scenes.d.ts",
+      "count": 1
+    },
+    {
+      "file": "lib/types/dsh-adapter/sessionTree.d.ts",
+      "count": 1
+    },
+    {
+      "file": "lib/types/dsh-adapter/sessions/digest.js",
+      "count": 1
+    },
+    {
+      "file": "lib/types/dsh-adapter/sessions/frames.js",
+      "count": 1
+    },
+    {
+      "file": "lib/types/dsh-adapter/sessions/header.d.ts",
+      "count": 1
+    },
+    {
+      "file": "lib/types/dsh-adapter/sessions/index.d.ts",
+      "count": 1
+    },
+    {
+      "file": "lib/types/dsh-adapter/sessions/index.js",
+      "count": 1
+    },
+    {
+      "file": "lib/types/dsh-adapter/sessions/list.js",
+      "count": 1
+    },
+    {
+      "file": "lib/types/dsh-adapter/sessions/store.js",
+      "count": 1
+    },
+    {
+      "file": "lib/types/dsh-adapter/trajectory/index.d.ts",
+      "count": 1
+    },
+    {
+      "file": "lib/types/dsh-adapter/trajectory/index.js",
+      "count": 1
+    },
+    {
+      "file": "lib/types/dsh-adapter/workspace.d.ts",
+      "count": 1
+    },
+    {
+      "file": "lib/types/extensions.js",
+      "count": 1
+    },
+    {
+      "file": "lib/types/homePrefs.js",
+      "count": 1
+    },
+    {
+      "file": "lib/types/i18n.d.ts",
+      "count": 8
+    },
+    {
+      "file": "lib/types/i18n.js",
+      "count": 8
+    },
+    {
+      "file": "lib/types/jsx-runtime.js",
+      "count": 1
+    },
+    {
+      "file": "lib/types/oauth.d.ts",
+      "count": 1
+    },
+    {
+      "file": "lib/types/oauth.js",
+      "count": 1
+    },
+    {
+      "file": "lib/types/onboardingPrefs.js",
+      "count": 1
+    },
+    {
+      "file": "lib/types/preset-patch.d.ts",
+      "count": 1
+    },
+    {
+      "file": "lib/types/preset-patch.js",
+      "count": 1
+    },
+    {
+      "file": "lib/types/sessions/format.js",
+      "count": 1
+    },
+    {
+      "file": "lib/types/sessions/resumeFailure.d.ts",
+      "count": 1
+    },
+    {
+      "file": "lib/types/sessions/resumeFailure.js",
+      "count": 1
+    },
+    {
+      "file": "lib/types/sessions/view.d.ts",
+      "count": 1
+    },
+    {
+      "file": "lib/types/update.js",
+      "count": 1
+    },
+    {
+      "file": "lib/types/working-activity.d.ts",
+      "count": 4
+    },
+    {
+      "file": "lib/types/working-activity.js",
+      "count": 4
+    },
+    {
+      "file": "package.json",
+      "count": 1
+    },
+    {
+      "file": "presets/liangshen/.dsh-tui-managed.json",
+      "count": 1
+    },
+    {
+      "file": "tui-profile/feed/README.md",
+      "count": 2
+    },
+    {
+      "file": "tui-profile/feed/first-party.json",
+      "count": 2
+    }
+  ],
+  "tarball": "/Users/zhenhaoli/orca/projects/xuexidsh/poc-env/products/hyperai-hyperai-tui-0.16.1-p1.tgz",
+  "sizeBytes": 18371346,
+  "sha256": "02007274abd7f0407eee31b3a8f30fd2b34d154174aa3c79e72b0a4ce9c02553",
+  "integrity": "sha512-1dyxxTlQ0+LDRSFmceuM5lHmuw1f6fr1YzAkDj6aOUJMStTZwS7dewOm7YygPU398PucOtqfhIS8Rv0TmfuIYA=="
+}

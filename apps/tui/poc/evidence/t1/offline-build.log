@@ -1,0 +1,23 @@
+# T1-3 断网构建：registry/proxy 指向不可达地址，仅用本地 --from 目录
+$ npm_config_registry=http://127.0.0.1:9/ HTTPS_PROXY=http://127.0.0.1:9 HTTP_PROXY=http://127.0.0.1:9 node apps/tui/scripts/build-patch.mjs --from <pristine>
+hyperai-tui: wrote /Users/zhenhaoli/orca/projects/xuexidsh/hyperai-harness/apps/tui/patches/dsh-tui@0.16.1.patch
+  lib/types/branding.js
+  lib/types/commands.js
+  lib/types/components/LogoV2.js
+  lib/types/components/launchpadLayout.js
+  lib/types/components/splashEggs.js
+  lib/types/components/splashFonts.js
+  lib/types/dsh-adapter/plugin.js
+  lib/types/hyperaiSkills.js
+  lib/types/hyperaiSkillsCore.js
+  lib/types/i18n.js
+  lib/types/screens/Chat.js
+  lib/types/screens/Launchpad.js
+  lib/types/settings/definitions.js
+  lib/types/tips.js
+  lib/types/update.js
+  lib/types/utils/paths.js
+=== 断网重建结果对比 ===
+COMPARE: 断网构建结果与已提交补丁逐字节相同
+81e077bbaf637088518e0aabd45caf4ad17ca44f265c19fa81cf2148a93d65ab  apps/tui/patches/dsh-tui@0.16.1.patch
+=== 证明 npm 未被调用（registry 不可达也不失败）===

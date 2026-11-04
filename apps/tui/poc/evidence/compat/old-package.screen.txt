@@ -1,0 +1,38 @@
+
+
+  ✦ hyperai-tui  v0.2.0
+  ██  ██  ██  ██  ██▀▀▄▄  ██▀▀▀▀  ██▀▀▄▄   ▄▀▀▄   ▀▀██▀▀
+  ██  ██  ██  ██  ██  ██  ██      ██  ██  ██  ██    ██
+  ██▀▀██  ▀▀██▀▀  ██▄▄▀▀  ██▀▀▀   ██▄▄▀▀  ██▀▀██    ██
+  ██  ██    ██    ██      ██      ██ ██   ██  ██    ██
+  ██  ██    ██    ██      ██▄▄▄▄  ██  ██  ██  ██  ▄▄██▄▄
+
+  ██  ██   ▄▀▀▄   ██▀▀▄▄  ██  ██  ██▀▀▀▀  ██▀▀▀▀  ██▀▀▀▀
+  ██  ██  ██  ██  ██  ██  ███ ██  ██      ██      ██
+  ██▀▀██  ██▀▀██  ██▄▄▀▀  ██ ███  ██▀▀▀    ▀▀▀▀▄   ▀▀▀▀▄
+  ██  ██  ██  ██  ██ ██   ██  ██  ██          ██      ██
+  ██  ██  ██  ██  ██  ██  ██  ██  ██▄▄▄▄  ██▄▄▄▀  ██▄▄▄▀
+  deepseek-flash · Max effort
+  /Users/zhenhaoli/orca/projects/xuexidsh
+  Tip: /preset liangshen starts minimal, then opens up · /tips more tips
+
+    HyperAI Harness
+
+  ❯ hello from the old package
+
+   turn error · llm-deepseek: no API key for provider route "deepseek-official"; store DEEPSEEK_API_KEY through the cre…
+
+
+
+
+
+
+
+
+
+
+    Turn error · llm-deepseek: no API key for provider route "deepseek-official"; store DEEPSEEK_API_KEY through the…
+  ╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+  ⌸ ❯                                                                                                                ⛶
+  ╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+   deepseek-flash · max · xuexidsh

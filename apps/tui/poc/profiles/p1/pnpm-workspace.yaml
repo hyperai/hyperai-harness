@@ -1,0 +1,8 @@
+# hyperai profile pnpm workspace: one package (the profile itself) with a
+# hoisted node_modules so the dsh loader can resolve the TUI bundle from the
+# profile root.
+packages:
+  - .
+
+nodeLinker: hoisted
+autoInstallPeers: false

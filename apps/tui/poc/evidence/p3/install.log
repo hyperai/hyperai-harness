@@ -1,0 +1,75 @@
+# case p3
+# HOME=/Users/zhenhaoli/orca/projects/xuexidsh/poc-env/cases/p3/home
+# DSH_HOME=/Users/zhenhaoli/orca/projects/xuexidsh/poc-env/cases/p3/dsh-home
+# registry=https://registry.npmjs.org
+# profile package.json:
+  {
+    "name": "dsh-profile-hyperai",
+    "private": true,
+    "dependencies": {
+      "@deepseek-harness-tui/dsh-tui": "http://127.0.0.1:4874/deepseek-harness-tui-dsh-tui-0.16.1-p3.tgz"
+    },
+    "dsh": {
+      "profile": {
+        "bundles": [
+          "@deepseek-ai/dsh-base",
+          "@deepseek-harness-tui/dsh-tui"
+        ]
+      }
+    }
+  }
+# dsh version: 0.2.0-rc.2
+# isolation: checkout moved to /Users/zhenhaoli/orca/projects/xuexidsh/hyperai-harness.hidden-p3
+# isolation check: test -e /Users/zhenhaoli/orca/projects/xuexidsh/hyperai-harness -> absent
+Progress: resolved 0, reused 0, downloaded 1, added 0
+ WARN  GET https://registry.npmjs.org/stack-utils error (ECONNRESET). Will retry in 10 seconds. 3 retries left.
+Progress: resolved 23, reused 0, downloaded 1, added 0
+Progress: resolved 30, reused 0, downloaded 1, added 0
+Progress: resolved 31, reused 0, downloaded 1, added 0
+Progress: resolved 32, reused 0, downloaded 1, added 0
+ WARN  Request took 11153ms: https://registry.npmjs.org/stack-utils
+Progress: resolved 33, reused 0, downloaded 1, added 0
+ WARN  GET https://registry.npmjs.org/@img%2Fsharp-libvips-linux-arm error (ECONNRESET). Will retry in 10 seconds. 3 retries left.
+Progress: resolved 61, reused 0, downloaded 1, added 0
+Progress: resolved 92, reused 0, downloaded 1, added 0
+Progress: resolved 100, reused 0, downloaded 1, added 0
+ WARN  GET https://registry.npmjs.org/@img%2Fsharp-libvips-linux-arm error (ECONNRESET). Will retry in 1 minute. 2 retries left.
+ WARN  Request took 72449ms: https://registry.npmjs.org/@img%2Fsharp-libvips-linux-arm
+Progress: resolved 101, reused 0, downloaded 1, added 0
+ WARN  Issues with peer dependencies found
+.
+└─┬ @deepseek-harness-tui/dsh-tui 0.16.1
+  ├── ✕ missing peer @deepseek-ai/cordis@"^4.0.1 || 4.0.5-alpha.2"
+  ├── ✕ missing peer @deepseek-ai/dsh-agent@"^0.1.0-rc.6 || ^0.1.1-rc.1 || 0.1.2-alpha.3 || 0.1.2-alpha.4 || 0.1.2-alpha.5 || 0.1.2-rc.1 || 0.1.3-alpha.2 || 0.1.5-alpha.1 || 0.1.5-alpha.2 || 0.1.5-rc.1 || 0.1.7-rc.1 || 0.1.7-rc.2 || 0.2.0-rc.1 || 0.2.0-rc.2 || 0.2.1-rc.2"
+  ├── ✕ missing peer @deepseek-ai/dsh-session@"^0.1.0-rc.6 || ^0.1.1-rc.1 || 0.1.2-alpha.3 || 0.1.2-alpha.4 || 0.1.2-alpha.5 || 0.1.2-rc.1 || 0.1.3-alpha.2 || 0.1.5-alpha.1 || 0.1.5-alpha.2 || 0.1.5-rc.1 || 0.1.7-rc.1 || 0.1.7-rc.2 || 0.2.0-rc.1 || 0.2.0-rc.2 || 0.2.1-rc.2"
+  ├── ✕ missing peer @deepseek-ai/schemastery@"^3.18.1 || 3.18.5-alpha.2"
+  ├── ✕ missing peer @deepseek-ai/dsh-system-prompt@"^0.1.0-rc.6 || ^0.1.1-rc.1 || 0.1.2-alpha.3 || 0.1.2-alpha.4 || 0.1.2-alpha.5 || 0.1.2-rc.1 || 0.1.3-alpha.2 || 0.1.5-alpha.1 || 0.1.5-alpha.2 || 0.1.5-rc.1 || 0.1.7-rc.1 || 0.1.7-rc.2 || 0.2.0-rc.1 || 0.2.0-rc.2 || 0.2.1-rc.2"
+  └─┬ dsh-working-activity 0.5.1
+    ├── ✕ missing peer @deepseek-ai/cordis@^4.0.1
+    ├── ✕ missing peer @deepseek-ai/dsh-agent@"^0.1.0-rc.6 || ^0.1.1-rc.1 || ^0.1.2-alpha.2 || ^0.1.7-rc.2"
+    ├── ✕ missing peer @deepseek-ai/dsh-session@"^0.1.0-rc.6 || ^0.1.1-rc.1 || ^0.1.2-alpha.2 || ^0.1.7-rc.2"
+    ├── ✕ missing peer @deepseek-ai/schemastery@^3.18.1
+    ├── ✕ missing peer @deepseek-ai/dsh-invariants@"^0.1.0-rc.6 || ^0.1.1-rc.1 || ^0.1.2-alpha.2 || ^0.1.7-rc.2"
+    ├── ✕ missing peer @deepseek-ai/dsh-system-prompt@"^0.1.0-rc.6 || ^0.1.1-rc.1 || ^0.1.2-alpha.2 || ^0.1.7-rc.2"
+    └── ✕ unmet peer react@^18.2.0: found 19.3.1 in @deepseek-harness-tui/dsh-tui
+Peer dependencies that should be installed:
+  @deepseek-ai/cordis@">=4.0.1 <5.0.0-0"
+  @deepseek-ai/dsh-agent@">=0.1.0-rc.6 <0.2.0-0 || >=0.1.1-rc.1 <0.2.0-0"
+  @deepseek-ai/dsh-invariants@"^0.1.0-rc.6 || ^0.1.1-rc.1 || ^0.1.2-alpha.2 || ^0.1.7-rc.2"
+  @deepseek-ai/dsh-session@">=0.1.0-rc.6 <0.2.0-0 || >=0.1.1-rc.1 <0.2.0-0"
+  @deepseek-ai/dsh-system-prompt@">=0.1.0-rc.6 <0.2.0-0 || >=0.1.1-rc.1 <0.2.0-0"
+  @deepseek-ai/schemastery@">=3.18.1 <4.0.0-0"
+
+Packages: +79
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+Progress: resolved 104, reused 0, downloaded 1, added 0
+Progress: resolved 104, reused 0, downloaded 26, added 23
+Progress: resolved 104, reused 0, downloaded 72, added 73
+Progress: resolved 104, reused 0, downloaded 77, added 78
+Progress: resolved 104, reused 0, downloaded 78, added 79, done
+Done in 1m 29.4s using pnpm v10.28.1
+# dsh plugin install exit=0
+# installed tree:
+  /Users/zhenhaoli/orca/projects/xuexidsh/poc-env/cases/p3/dsh-home/profiles/hyperai/node_modules/@deepseek-harness-tui/dsh-tui/package.json
+# node_modules/@deepseek-harness-tui present: yes
+# node_modules/@hyperai present: no

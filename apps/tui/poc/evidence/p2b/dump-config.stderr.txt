@@ -1,0 +1,1 @@
+dsh: skipping profile bundle "@hyperai/hyperai-tui": Error: dsh: cannot resolve profile bundle "@hyperai/hyperai-tui" from the dsh installation or /Users/zhenhaoli/orca/projects/xuexidsh/poc-env/cases/p2b/dsh-home/profiles/hyperai; run 'dsh plugin --profile hyperai install' if its dependency is not installed

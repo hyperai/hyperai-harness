@@ -1,0 +1,11 @@
+{
+  "$comment": "RFC-001 T1 record: the pinned upstream tarball observed by the PoC. The tarball itself is NOT committed (18 MB > the 5 MB repo limit); this file records the bytes that any offline copy must match. scripts/build-package.mjs verifies --upstream against these values before it builds anything.",
+  "package": "@deepseek-harness-tui/dsh-tui",
+  "version": "0.16.1",
+  "tarball": "deepseek-harness-tui-dsh-tui-0.16.1.tgz",
+  "sizeBytes": 18473587,
+  "sha256": "2144b317d0c25ae4d2688f1ef2c73bc2c95e121085ac5977d00407dcd2b1336e",
+  "integrity": "sha512-xk8Nviy55RvLnAdjYj04DekUu6D1Pc0kEa5R+2EXoL3H/h6ZEzv8L0bxtSTrWxtNdXd4ufOXMu4TQ7HjrpYhbg==",
+  "observedAt": "2026-11-04",
+  "source": "npm pack @deepseek-harness-tui/dsh-tui@0.16.1"
+}
