@@ -46,6 +46,38 @@ node scripts/verify.mjs                          # offline template/installer ch
 node --test tests/                               # installer + skills unit tests
 ```
 
+## Internal-beta installation package (RFC-002)
+
+The internal beta is shipped as one self-contained archive instead of a source
+checkout. On a development machine:
+
+```sh
+cd apps/profiles/hyperai
+node scripts/build-beta.mjs          # -> dist/hyperai-harness-0.2.0-beta.1.tar.gz(.sha256)
+```
+
+`dist/` is git-ignored: the archive embeds a pre-built `@hyperai/hyperai-tui`
+tarball and a Skills snapshot from the company-internal repository, neither of
+which may land in this public repository.
+
+The archive contains `install.sh`, the bundle-aware profile scripts, the product
+tarball, the Skills snapshot and a Chinese `README.md`. `install.sh` checks Node
+(`^22.19 || >=24`), installs `dsh@0.2.0-rc.2` and `pnpm@10.28.1` into
+`~/.hyperai/runtime` (never the system global environment), then runs the same
+`install.mjs` against the bundle:
+
+- `HYPERAI_DIST_ROOT` points the profile scripts at the bundle
+  (`scripts/distribution.mjs`), so no source checkout is read;
+- the profile depends on `@hyperai/hyperai-tui` through a profile-local
+  `file:packages/…tgz` copy, and `dsh.profile.bundles` uses the renamed package;
+- there is no `patchedDependencies` block: the product is already branded;
+- Skills install from the bundled snapshot (no GitHub), and the launcher sets
+  `HYPERAI_SKILLS_TUI_AUTO=0` so the beta never auto-checks a repository the
+  colleague cannot access.
+
+`node scripts/install.sh` is only the bundle entry point; the repository flow
+above is unchanged for development.
+
 `--include-unverified` is the only way to install the three `inbox/` candidates;
 the default release path installs only the repo-verified `skills/` set. The
 updater still labels legacy/unverified entries and never silently promotes them.

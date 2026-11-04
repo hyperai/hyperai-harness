@@ -14,17 +14,17 @@
  */
 import { cpSync, existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs'
 import { homedir } from 'node:os'
-import { dirname, join, resolve } from 'node:path'
+import { dirname, join, resolve, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { install, parseArgs as parseInstallerArgs, readInstallState } from './install.mjs'
 import { inspectEnvironment, nodeVersionSupported, coreVersionSupported, parseNodeVersion } from './preflight.mjs'
 import { listBackups, readManifest } from './skills-lib.mjs'
+import { brand, tuiPackage } from './distribution.mjs'
 
 const HERE = dirname(fileURLToPath(import.meta.url))
 const PKG = resolve(HERE, '..')
-const TUI = resolve(PKG, '..', '..', 'tui')
-const BRAND = JSON.parse(readFileSync(join(TUI, 'src', 'brand.json'), 'utf8'))
-const TUI_PACKAGE = JSON.parse(readFileSync(join(TUI, 'package.json'), 'utf8'))
+const BRAND = brand()
+const TUI_PACKAGE = tuiPackage()
 
 function readJson(path) {
   try { return JSON.parse(readFileSync(path, 'utf8')) } catch { return undefined }
@@ -74,8 +74,21 @@ function wasUninstalled(profileDir) {
   return readJson(join(profileDir, UNINSTALL_MARKER))?.status === 'uninstalled'
 }
 
+function installedTuiManifest(profileDir) {
+  for (const relative of [
+    ['@hyperai', 'hyperai-tui'],
+    BRAND.upstream.package.split('/'),
+  ]) {
+    const manifest = readJson(join(profileDir, 'node_modules', ...relative, 'package.json'))
+    if (manifest !== undefined) return manifest
+  }
+  return undefined
+}
+
+/** The pinned upstream TUI version of the installed product (not the HyperAI release). */
 function installedTuiVersion(profileDir) {
-  return readJson(join(profileDir, 'node_modules', ...BRAND.upstream.package.split('/'), 'package.json'))?.version
+  const manifest = installedTuiManifest(profileDir)
+  return manifest?.hyperai?.upstreamVersion ?? manifest?.version
 }
 
 /** Read-only status payload. */
@@ -154,7 +167,7 @@ function requireManaged(options) {
  * package.json is gone.
  */
 function removeManagedRuntime(options) {
-  const managedPaths = ['package.json', 'cordis.patch.yml', 'pnpm-workspace.yaml', 'patches', 'scripts', 'LICENSE', 'node_modules', '.plugin-manager', '.hyperai-install.json']
+  const managedPaths = ['package.json', 'cordis.patch.yml', 'pnpm-workspace.yaml', 'patches', 'packages', 'scripts', 'LICENSE', 'node_modules', '.plugin-manager', '.hyperai-install.json']
   for (const relative of managedPaths) rmSync(join(options.profileDir, relative), { recursive: true, force: true })
   return existsSync(options.profileDir) ? readdirSync(options.profileDir) : []
 }
@@ -202,14 +215,33 @@ export function uninstallProfile(options) {
   requireManaged(options)
   if (!options.yes) throw new Error('uninstall requires --yes')
   const archive = archiveProfile(options)
+  const launcher = removeLauncher()
   if (options.purge) {
     rmSync(options.profileDir, { recursive: true, force: true })
-    return { profileDir: options.profileDir, archive, purge: true, kept: [] }
+    return { profileDir: options.profileDir, archive, purge: true, kept: [], launcher }
   }
   const kept = removeManagedRuntime(options)
   mkdirSync(options.profileDir, { recursive: true })
   writeFileSync(join(options.profileDir, UNINSTALL_MARKER), `${JSON.stringify({ status: 'uninstalled', profile: options.profile, archive, at: new Date().toISOString() }, undefined, 2)}\n`)
-  return { profileDir: options.profileDir, archive, purge: false, kept: [...kept, UNINSTALL_MARKER].sort() }
+  return { profileDir: options.profileDir, archive, purge: false, kept: [...kept, UNINSTALL_MARKER].sort(), launcher }
+}
+
+/**
+ * Remove the `hyperai` launcher written by install.sh.
+ *
+ * Only the file recorded in `~/.hyperai/.hyperai-launcher.json` is touched, and
+ * only when it lives inside that HyperAI home; a shared or hand-edited launcher
+ * is never guessed at.
+ */
+function removeLauncher() {
+  const home = process.env.HYPERAI_HOME ?? join(homedir(), '.hyperai')
+  const marker = join(home, '.hyperai-launcher.json')
+  const record = readJson(marker)
+  if (record === undefined) return undefined
+  const launcher = typeof record.launcher === 'string' ? resolve(record.launcher) : undefined
+  if (launcher !== undefined && launcher.startsWith(`${resolve(home)}${sep}`) && existsSync(launcher)) rmSync(launcher, { force: true })
+  rmSync(marker, { force: true })
+  return launcher
 }
 
 function printStatus(value) {

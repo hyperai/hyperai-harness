@@ -37,13 +37,11 @@ import { tmpdir } from 'node:os'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { createSnapshot, rollback as rollbackShared } from './skills-lib.mjs'
+import { brand, skillsLockPath } from './distribution.mjs'
 
 const HERE = dirname(fileURLToPath(import.meta.url))
-const PKG = resolve(HERE, '..')
-/** Repository TUI package: brand data only; no TUI code is imported here. */
-const TUI = resolve(HERE, '..', '..', '..', 'tui')
-const BRAND = JSON.parse(readFileSync(join(TUI, 'src', 'brand.json'), 'utf8'))
-const DEFAULT_LOCK = resolve(PKG, 'skills', 'hyperai-skills.lock.json')
+const BRAND = brand()
+const DEFAULT_LOCK = skillsLockPath()
 /** Resource directories a hyperai skill may reference from its SKILL.md. */
 const RESOURCE_DIRS = ['references', 'templates', 'scripts', 'assets', 'examples']
 const SKILL_NAME = /^[a-z0-9]+(?:-[a-z0-9]+)*$/u
@@ -70,6 +68,7 @@ export function parseArgs(argv) {
     else if (arg === '--lock') options.lockPath = resolve(argv[++index])
     else if (arg === '--ref') options.ref = argv[++index]
     else if (arg === '--source') options.source = resolve(argv[++index])
+    else if (arg === '--local-snapshot') options.localSnapshot = true
     else if (arg === '--verified-only') options.verifiedOnly = true
     else if (arg === '--include-unverified') options.verifiedOnly = false
     else if (arg === '--dry-run') options.dryRun = true
@@ -222,8 +221,16 @@ function runGit(args, options = {}) {
 }
 
 /** Check out the pinned source; returns the directory holding skills/ and inbox/. */
-function checkoutSource(lock, ref, source, timeoutMs = 120_000) {
+function checkoutSource(lock, ref, source, timeoutMs = 120_000, localSnapshot = false) {
   if (source !== undefined) {
+    // A bundled snapshot is a plain directory: it carries its provenance in
+    // SNAPSHOT.json and the lock, and `git -C` would otherwise resolve the
+    // enclosing repository of whatever checkout the bundle happens to sit in
+    // (or fail when there is none). Only an explicit local snapshot skips git;
+    // a developer's `--source` checkout is still verified against the lock.
+    if (localSnapshot && !existsSync(join(source, '.git'))) {
+      return { root: source, head: ref, owned: false, local: true }
+    }
     const head = runGit(['-C', source, 'rev-parse', 'HEAD'], { timeoutMs })
     if (head !== ref) throw new Error(`--source ${source} is at ${head}, expected pinned ref ${ref}`)
     return { root: source, head, owned: false }
@@ -546,7 +553,7 @@ export function installSkills(options = parseArgs([])) {
   let source
   let snapshot
   try {
-    source = checkoutSource(lock, ref, options.source, options.timeoutMs)
+    source = checkoutSource(lock, ref, options.source, options.timeoutMs, options.localSnapshot === true)
     // Plan before writing so a dry-run has no side effects and a failure has
     // one consistent pre-change snapshot for manifest-aware rollback.
     const actions = []

@@ -36,18 +36,18 @@
 import { execFileSync, spawnSync } from 'node:child_process'
 import { cpSync, existsSync, mkdirSync, readFileSync, readdirSync, renameSync, rmSync, writeFileSync } from 'node:fs'
 import { homedir } from 'node:os'
-import { dirname, join, resolve } from 'node:path'
+import { basename, dirname, join, resolve } from 'node:path'
 import { preflight as runPreflight } from './preflight.mjs'
+import { brand, isBundled, profileTemplateDir, skillsLockPath, skillsSnapshotDir, tuiPackage, tuiTarballPath } from './distribution.mjs'
 import { fileURLToPath } from 'node:url'
 
 const HERE = dirname(fileURLToPath(import.meta.url))
 const PKG = resolve(HERE, '..')
-/** Repository TUI package: `apps/tui`. */
-const TUI = resolve(HERE, '..', '..', '..', 'tui')
-const BRAND = JSON.parse(readFileSync(join(TUI, 'src', 'brand.json'), 'utf8'))
-const TUI_PACKAGE = JSON.parse(readFileSync(join(TUI, 'package.json'), 'utf8'))
-const PROFILE_TEMPLATE = PKG
-const PATCH_FILE = join(TUI, 'patches', `dsh-tui@${BRAND.upstream.version}.patch`)
+const BRAND = brand()
+const TUI_PACKAGE = tuiPackage()
+const PROFILE_TEMPLATE = profileTemplateDir()
+/** Repository branding patch; unused when installing from an installation package. */
+const PATCH_FILE = join(HERE, '..', '..', '..', 'tui', 'patches', `dsh-tui@${BRAND.upstream.version}.patch`)
 /** Marker written into managed profile manifests; its absence means "not ours". */
 const MANAGED_MARKER = 'hyperaiTuiManaged'
 const PATCH_MARKER = '# hyperai profile patch layer'
@@ -77,6 +77,7 @@ export function parseArgs(argv) {
     if (arg === '--dsh-home') options.dshHome = argv[++index]
     else if (arg === '--profile') options.profile = argv[++index]
     else if (arg === '--dsh-bin') options.dshBin = argv[++index]
+    else if (arg === '--pnpm-bin') options.pnpmBin = argv[++index]
     else if (arg === '--no-skills') options.skills = false
     else if (arg === '--verified-only') options.verifiedOnly = true
     else if (arg === '--include-unverified') options.verifiedOnly = false
@@ -90,7 +91,7 @@ export function parseArgs(argv) {
     else if (arg === '--help' || arg === '-h') {
       process.stdout.write(
         [
-          'usage: node scripts/install.mjs [--dsh-home <dir>] [--profile <name>] [--dsh-bin <path>]',
+          'usage: node scripts/install.mjs [--dsh-home <dir>] [--profile <name>] [--dsh-bin <path>] [--pnpm-bin <path>]',
           '                                 [--no-skills] [--verified-only] [--include-unverified]',
           '                                 [--frozen-lockfile] [--skills-ref <sha>]',
           '                                 [--skills-source <dir>] [--skills-lock <file>]',
@@ -320,7 +321,23 @@ function stageFile(options, relative, content, { marker, plan }) {
   writeFileSync(target, content)
 }
 
-/** Copy a file into the profile, backing up a differing previous copy. */
+/** Copy a binary file into the profile verbatim (never through a UTF-8 string). */
+export function stageBinary(options, relative, source, plan) {
+  const target = join(options.profileDir, relative)
+  const content = readFileSync(source)
+  const previous = existsSync(target) ? readFileSync(target) : undefined
+  if (previous !== undefined && previous.equals(content)) {
+    plan.push({ file: relative, action: 'unchanged' })
+    return
+  }
+  plan.push({ file: relative, action: previous === undefined ? 'create' : 'replace' })
+  if (options.dryRun) return
+  if (previous !== undefined) backupFile(options, relative)
+  mkdirSync(dirname(target), { recursive: true })
+  cpSync(source, target)
+}
+
+/** Copy a text file into the profile, backing up a differing previous copy. */
 function stageCopy(options, relative, source, plan) {
   stageFile(options, relative, readFileSync(source, 'utf8'), { plan })
 }
@@ -424,7 +441,9 @@ function cleanupFailedNodeModules(options) {
 
 /** Confirm the branding patch landed and the splash art is actually gone. */
 function verifyInstall(options) {
-  const tui = join(options.profileDir, 'node_modules', ...BRAND.upstream.package.split('/'))
+  const tui = isBundled()
+    ? join(options.profileDir, 'node_modules', '@hyperai', 'hyperai-tui')
+    : join(options.profileDir, 'node_modules', ...BRAND.upstream.package.split('/'))
   const types = join(tui, 'lib', 'types')
   const branding = join(types, 'branding.js')
   const logoV2 = join(types, 'components', 'LogoV2.js')
@@ -471,8 +490,12 @@ export async function install(options = parseArgs([])) {
         'to create the lock, review it, then rerun with --frozen-lockfile; the installer will not silently fall back to a mutable install.',
     )
   }
-  if (!existsSync(PATCH_FILE)) {
+  if (!isBundled() && !existsSync(PATCH_FILE)) {
     throw new Error(`missing branding patch ${PATCH_FILE}; build it with "node apps/tui/scripts/build-patch.mjs" first`)
+  }
+  if (isBundled()) {
+    const tarball = tuiTarballPath()
+    if (!existsSync(tarball)) throw new Error(`installation package product tarball is missing: ${tarball}`)
   }
   const exists = existsSync(join(options.profileDir, 'package.json'))
   if (exists && !isManagedProfile(options.profileDir) && !options.force) {
@@ -495,7 +518,14 @@ export async function install(options = parseArgs([])) {
   stageCopy(options, 'LICENSE', join(PROFILE_TEMPLATE, 'LICENSE'), plan)
   stageCordisPatch(options, readFileSync(join(PROFILE_TEMPLATE, 'cordis.patch.yml'), 'utf8'), plan)
   stageFile(options, 'pnpm-workspace.yaml', workspaceFile(), { marker: WORKSPACE_MARKER, plan })
-  stageCopy(options, join('patches', 'hyperai-tui.patch'), PATCH_FILE, plan)
+  if (isBundled()) {
+    // The product tarball becomes a profile-local `file:` dependency, so the
+    // installed profile keeps working after the installation package is moved.
+    const tarball = tuiTarballPath()
+    stageBinary(options, join('packages', basename(tarball)), tarball, plan)
+  } else {
+    stageCopy(options, join('patches', 'hyperai-tui.patch'), PATCH_FILE, plan)
+  }
   // Ship the independent skills updater into the installed profile so the user
   // can check/update/rollback skills without keeping this checkout around.
   for (const file of ['skills-lib.mjs', 'skills-update.mjs']) {
@@ -535,8 +565,9 @@ export async function install(options = parseArgs([])) {
       dshHome: options.dshHome,
       profile: options.profile,
       ref: options.skillsRef,
-      lockPath: options.skillsLock,
-      source: options.skillsSource,
+      lockPath: options.skillsLock ?? skillsLockPath(),
+      source: options.skillsSource ?? skillsSnapshotDir(),
+      localSnapshot: isBundled(),
       verifiedOnly: options.verifiedOnly,
       dshBin: options.dshBin,
     })
