@@ -42,19 +42,41 @@ HYPERAI_NPM_REGISTRY=https://registry.npmmirror.com ./install.sh
 
 ## 2. 安装步骤
 
+### 2.1 获取安装包
+
+从分发人处获取安装包和 `.sha256` 文件：`hyperai-harness-0.2.0-beta.1.tar.gz` 与 `hyperai-harness-0.2.0-beta.1.tar.gz.sha256`。
+
+### 2.2 校验并解压
+
 ```sh
-# 1) 校验安装包（macOS）
+# 校验（macOS）
 shasum -a 256 -c hyperai-harness-0.2.0-beta.1.tar.gz.sha256
-# Ubuntu
+# 校验（Ubuntu）
 sha256sum -c hyperai-harness-0.2.0-beta.1.tar.gz.sha256
 
-# 2) 解压
+# 解压
 tar xzf hyperai-harness-0.2.0-beta.1.tar.gz
 cd hyperai-harness-0.2.0-beta.1
-
-# 3) 安装
-./install.sh
 ```
+
+### 2.3 安装
+
+两种方式，按你的网络情况选一种：
+
+```sh
+# 方式 A：官方源（默认）
+./install.sh
+
+# 方式 B：国内镜像（官方源慢或超时时用）
+HYPERAI_NPM_REGISTRY=https://registry.npmmirror.com ./install.sh
+```
+
+**怎么选：**
+
+- 在国内，或者前面用官方源下载很慢、报超时，就用**方式 B**；
+- 网络访问 npm 官方源正常，用**方式 A** 即可。
+
+**`install.sh` 默认使用官方源，不会自动切换到镜像**，选择权在你手里。安装过程会下载 dsh 与 pnpm（约 500 MB、500 多个包）：网络正常时几分钟，慢的时候可能十几分钟甚至更久；卡住不动就换方式 B 重跑（脚本是幂等的，可以重复执行）。
 
 `install.sh` 会做四件事：检查 Node 版本、安装隔离的 dsh/pnpm、安装 `hyperai` profile（成品 TUI 包 + 内置 Skills）、生成启动命令 `~/.hyperai/bin/hyperai`。全程不访问 GitHub。
 
@@ -205,6 +227,6 @@ node profile/scripts/manage.mjs doctor --dsh-bin ~/.hyperai/runtime/node_modules
 
 ## 9. 反馈
 
-遇到问题请反馈给：`<待负责人填写>`。
+内测期间请直接联系分发安装包给你的同事。
 
 反馈时请附上：操作系统与版本、`node -v`、安装包文件名、报错截图或文本、以及 `~/.dsh/profiles/hyperai/.hyperai-install.json` 的内容（不含密钥）。
