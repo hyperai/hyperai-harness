@@ -9,9 +9,10 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { execFileSync } from 'node:child_process'
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join, resolve } from 'node:path'
+import { pathToFileURL } from 'node:url'
 import { fileURLToPath } from 'node:url'
 import { stageBinary } from '../scripts/install.mjs'
 
@@ -119,5 +120,26 @@ test('a bundled Skills snapshot installs from disk without git', () => {
   } finally {
     rmSync(root, { recursive: true, force: true })
     rmSync(home, { recursive: true, force: true })
+  }
+})
+
+test('the installation-package root is inferred from the script location', () => {
+  const root = makeBundle()
+  try {
+    cpSync(join(PKG, 'scripts', 'distribution.mjs'), join(root, 'profile', 'scripts', 'distribution.mjs'))
+    const env = { ...process.env }
+    delete env.HYPERAI_DIST_ROOT
+    const module = pathToFileURL(join(root, 'profile', 'scripts', 'distribution.mjs')).href
+    const output = execFileSync(process.execPath, [
+      '--input-type=module',
+      '-e',
+      `const m = await import(${JSON.stringify(module)}); console.log(JSON.stringify({ bundled: m.isBundled(), root: m.BUNDLE_ROOT, brand: m.brand().productName }))`,
+    ], { encoding: 'utf8', env })
+    const parsed = JSON.parse(output)
+    assert.equal(parsed.bundled, true)
+    assert.equal(realpathSync(parsed.root), realpathSync(root))
+    assert.equal(parsed.brand, 'HyperAI Harness')
+  } finally {
+    rmSync(root, { recursive: true, force: true })
   }
 })

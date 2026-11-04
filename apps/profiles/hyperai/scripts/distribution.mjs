@@ -20,8 +20,24 @@ const HERE = dirname(fileURLToPath(import.meta.url))
 export const PROFILE_PACKAGE = resolve(HERE, '..')
 /** Repository root in a source checkout. */
 export const REPO_ROOT = resolve(PROFILE_PACKAGE, '..', '..', '..')
-/** Unpacked installation package root, set by install.sh. */
-export const BUNDLE_ROOT = process.env.HYPERAI_DIST_ROOT === undefined ? undefined : resolve(process.env.HYPERAI_DIST_ROOT)
+
+/**
+ * Installation-package root, inferred from this script's own location.
+ *
+ * Inside an unpacked archive the scripts live at `<bundle>/profile/scripts/`,
+ * so two levels up is a directory holding `profile/brand.json`. Inferring it
+ * keeps `manage.mjs uninstall` working when the colleague follows the README
+ * verbatim, without requiring `HYPERAI_DIST_ROOT` to be set by hand.
+ */
+function deriveBundleRoot() {
+  const candidate = resolve(HERE, '..', '..')
+  return existsSync(join(candidate, 'profile', 'brand.json')) ? candidate : undefined
+}
+
+/** Unpacked installation package root (explicit env wins over inference). */
+export const BUNDLE_ROOT = process.env.HYPERAI_DIST_ROOT === undefined
+  ? deriveBundleRoot()
+  : resolve(process.env.HYPERAI_DIST_ROOT)
 
 /** Read JSON or return undefined. */
 export function readJson(path) {

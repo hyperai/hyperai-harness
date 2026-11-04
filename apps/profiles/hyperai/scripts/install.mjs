@@ -523,6 +523,17 @@ export async function install(options = parseArgs([])) {
     // installed profile keeps working after the installation package is moved.
     const tarball = tuiTarballPath()
     stageBinary(options, join('packages', basename(tarball)), tarball, plan)
+    // A profile created by the old patch flow still carries an unused
+    // patchedDependencies patch. Removing it leaves exactly one TUI source.
+    const stalePatch = join(options.profileDir, 'patches', 'hyperai-tui.patch')
+    if (existsSync(stalePatch)) {
+      plan.push({ file: join('patches', 'hyperai-tui.patch'), action: 'remove' })
+      if (!options.dryRun) {
+        rmSync(stalePatch, { force: true })
+        const patchDir = join(options.profileDir, 'patches')
+        if (existsSync(patchDir) && readdirSync(patchDir).length === 0) rmSync(patchDir, { recursive: true, force: true })
+      }
+    }
   } else {
     stageCopy(options, join('patches', 'hyperai-tui.patch'), PATCH_FILE, plan)
   }
