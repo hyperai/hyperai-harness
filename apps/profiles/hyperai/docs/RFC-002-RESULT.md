@@ -133,7 +133,7 @@ if (packageJson.name === PACKAGE_NAME && typeof version === 'string' && valid(ve
 3. **首次安装要下载 dsh/pnpm**：约 541 个包，开发机上约 2 分钟。默认官方 npm 源，可用 `HYPERAI_NPM_REGISTRY` 切换镜像。
 4. **profile 自带 18 MB tarball**：`<profile>/packages/hyperai-tui-0.2.0-beta.1.tgz` 会让 profile 目录变大；换来的是安装包目录可以删除、重装不依赖它。
 5. **`manage.mjs repair` 在安装包模式下需要 `HYPERAI_DIST_ROOT`**：说明文档里让用户直接重跑 `install.sh`，而不是手动 repair。
-6. **手动 `/skills-update` 对无权限用户不可用**：它仍然会尝试访问内部仓库并失败；TUI 会给出一次提示，不刷屏。更新机制本身按 RFC 不在范围内。
+6. **手动 `/skills-update` 的失败提示未实测**：需要交互式对话框，且在无内部仓库权限的环境里要等一次网络失败；本次只验证了“启动不自动检查”（E7）。代码路径是 TUI 的 `useSkillsUpdate` 捕获错误后弹一次 toast，不刷屏；更新机制本身按 RFC 不在范围内。
 7. **版本对齐的范围**：`lib/settings.json` 的 `packageVersion` 与插件 feed 的 `version` 已改成 HyperAI 版本；`lib/settings.json` 的 `namespace: "dsh-tui"` 按 RFC/验收要求保持不变。
 8. **平台**：只验证了 macOS arm64 与 Ubuntu 20.04 x86_64；其它 Linux 发行版、Windows、Node 22 之外的 22.x 小版本未测。
 9. **没有代码签名**：安装包是 `.tar.gz`，macOS Gatekeeper 不会拦；但 `install.sh` 与启动器依赖可执行位，解压工具若丢掉权限需要 `chmod +x`。
