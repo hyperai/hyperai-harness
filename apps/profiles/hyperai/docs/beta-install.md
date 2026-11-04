@@ -116,7 +116,10 @@ cat ~/.dsh/profiles/hyperai/.hyperai-skills/manifest.json
 `ppt-generation` 需要 Python 3 和 `python-pptx`（安装器不会自动装）：
 
 ```sh
-python3 -m pip install python-pptx
+python3 -m pip install --user python-pptx
+# 如果系统 Python 受管（PEP 668）或不想装到用户目录：
+python3 -m venv ~/hyperai-ppt && ~/hyperai-ppt/bin/pip install python-pptx
+# 用 venv 时，把 ~/hyperai-ppt/bin 加到 PATH 后再启动 hyperai
 ```
 
 ---
@@ -127,23 +130,32 @@ python3 -m pip install python-pptx
 
 - 你的 provider/model 配置、API key、会话记录、`~/.dsh-tui-hyperai` 里的偏好都会保留；
 - 被替换的受管文件会先备份到 `~/.dsh/profiles/hyperai/.hyperai-backups/<时间戳>/`；
-- 旧版本的 `~/.hyperai/runtime` 会被新版覆盖，启动命令不变。
+- 旧版本的 `~/.hyperai/runtime` 会被新版覆盖，启动命令不变；
+- **从旧版（补丁方式）可以直接覆盖安装**，不需要先卸载：安装器会把依赖换成 `file:packages/…tgz`、去掉 `patchedDependencies`，并清理不再使用的 `patches/hyperai-tui.patch`；
+- 安装日志会显示 `replace` / `create` / `unchanged` / `remove`，可以据此确认哪些文件变了。
 
 ---
 
 ## 7. 卸载
 
-用安装包里自带的 `manage.mjs`（需要保留解压后的安装包目录）：
+用安装包里自带的 `manage.mjs`（需要保留解压后的安装包目录）。在解压目录里直接执行即可，脚本会自己找到安装包根目录：
 
 ```sh
-# 归档用户数据并移除受管文件（保留会话/配置归档）
 node profile/scripts/manage.mjs uninstall --yes
-
-# 彻底删除 profile 目录（第二步）
-node profile/scripts/manage.mjs uninstall --yes --purge
 ```
 
-`uninstall` 会把 profile 里的 Skills、状态和用户文件归档到 `~/.dsh/profiles/.hyperai-uninstall-backups/`，同时删掉启动命令 `~/.hyperai/bin/hyperai`。
+它会：
+
+- 把 profile 归档到 `~/.dsh/profiles/.hyperai-uninstall-backups/<时间戳>/`（包含 Skills、`cordis.patch.yml`、`.hyperai-skills`、`cordis.yml`、`pnpm-lock.yaml` 等用户数据，不含 `node_modules`）；
+- 删除安装器写入的受管文件（`package.json`、`pnpm-workspace.yaml`、`packages/`、`node_modules/`、`.hyperai-install.json` 等）；
+- 删除启动命令 `~/.hyperai/bin/hyperai`。
+
+`skills/`、`.hyperai-skills`、`cordis.yml`、`pnpm-lock.yaml` 会留在 profile 目录里（已归档一份），这样误卸载后还能手工恢复；确认不要了再走第二步：
+
+```sh
+# 彻底删除 profile 目录
+node profile/scripts/manage.mjs uninstall --yes --purge
+```
 
 想连 dsh/pnpm 运行时一起清掉：
 
@@ -165,6 +177,29 @@ rm -rf ~/.hyperai
 - **`ppt-generation` 依赖**：需要 Python 3 + `python-pptx`，以及可用的模型服务。
 - **首次启动**：没有配置 provider 时发消息会报 `no API key`，属于预期；先按第 4 节配置。
 - **终端**：需要真实交互终端（iTerm2 / Terminal.app / gnome-terminal 等），不要在管道或 CI 里启动。
+
+### 排障
+
+先看状态和诊断（同样在解压目录里执行）：
+
+```sh
+node profile/scripts/manage.mjs status
+# doctor 默认用 PATH 上的 dsh；想检查安装包自带的那份，显式传 --dsh-bin：
+node profile/scripts/manage.mjs doctor --dsh-bin ~/.hyperai/runtime/node_modules/.bin/dsh
+```
+
+| 现象 | 处理 |
+|---|---|
+| `install.sh` 提示 Node 版本不满足 | 按第 1 节装 Node 24；脚本不会自动改系统 Node |
+| 下载 dsh/pnpm 失败（`ETIMEDOUT`/`EAI_AGAIN`） | 换镜像：`HYPERAI_NPM_REGISTRY=https://registry.npmmirror.com ./install.sh` |
+| `dsh plugin install` 失败 | 先 `node profile/scripts/manage.mjs doctor --dsh-bin …`，再把错误信息按第 9 节反馈 |
+| 启动后发消息报 `no API key` | 正常：先用 `/provider` 配服务、`/model` 选模型 |
+| 生成 PPT 时报 `python-pptx` 缺失 | `python3 -m pip install --user python-pptx` |
+| 手动 `/skills-update` 失败 | 内测版默认关闭自动检查；手动检查需要内部 Skills 仓库权限，失败只提示一次，不影响对话 |
+| 解压后 `./install.sh` 提示 Permission denied | `chmod +x install.sh` 后重试（部分解压工具会丢可执行位） |
+| 升级后 `doctor` 报 dsh 版本 warning | 说明 `doctor` 用了 PATH 上的 dsh；加 `--dsh-bin ~/.hyperai/runtime/node_modules/.bin/dsh` |
+
+磁盘占用：安装包约 18 MB，解压后约 18 MB，`~/.hyperai/runtime` 约 500 MB（dsh 依赖），profile（含自带的 TUI tarball 与 Skills）约 30 MB。确认够用再装。
 
 ---
 

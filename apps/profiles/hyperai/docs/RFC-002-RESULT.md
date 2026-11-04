@@ -7,7 +7,8 @@
 
 **可以交给同事使用。** 一条命令构建出安装包，同事解压后运行 `./install.sh`，再用 `~/.hyperai/bin/hyperai` 启动；macOS（arm64）与 Ubuntu 20.04（x86_64）上 E1～E10 全部通过，安装过程不读取源码仓库、不访问 GitHub，TUI 成品包已完成改名与品牌化。
 
-三个平台差异都记录在案：E11（真实模型轮次）因为没有 API key **未测**；macOS 的 E1 用 shim 模拟 Node 18，真实 Node 18 的 E1 在 Ubuntu 上通过；Windows 不在范围内。
+验收（RFC-002 验收报告）在 macOS 与 Ubuntu 上补测了 E11：两个平台都用真实模型完成了对话，并用 `ppt-generation` 生成了 3 页中文 `.pptx`，`python-pptx` 可读。开发侧当时没有 API key，这一项由验收覆盖。
+E1 在 macOS 上用 shim 模拟 Node 18，真实 Node 18 的 E1 在 Ubuntu 上通过；Windows 不在范围内。
 
 已知限制集中在“内测版”本身：默认关闭 Skills 自动更新、`/update` 禁用、固定 dsh `0.2.0-rc.2` 与上游 TUI `0.16.1`、`ppt-generation` 需要用户自行安装 `python-pptx`。
 
@@ -95,7 +96,7 @@ if (packageJson.name === PACKAGE_NAME && typeof version === 'string' && valid(ve
 |---|---|---|---|
 | E1 系统 Node 18 被拒绝、不写文件 | 通过（shim 模拟 Node 18；exit 1，`$HOME` 未创建） | 通过（真实系统 Node v18.20.4；exit 1，未创建目录） | `*/e1-node18.log` |
 | E2 全新环境安装成功、不读源码仓库、不访问 GitHub | 通过 | 通过 | `*/install.log`；E8 的 `install-e8.log` 是在 checkout 被 `mv` 隐藏、`HTTPS_PROXY` 指向不可达地址（`NO_PROXY` 只放行 registry）时重装的 |
-| E3 粉色像素字、无鲸鱼/logo | 通过 | 通过 | `*/pty/startup.screen.txt`、`brand-pixel-check.json`（`#FF6096` 21 699 像素，splash 区域无其它颜色） |
+| E3 粉色像素字、无鲸鱼/logo | 通过 | 通过 | `*/pty/startup.screen.txt`、`brand-pixel-check.json`（整帧 `#FF6096` **40 176** 像素；顶部 36% 的 splash 区域 21 699 像素，且该区域除背景色外只有粉色） |
 | E4 铭牌 `hyperai-tui v0.2.0-beta.1 · dsh-tui v0.16.1` | 通过 | 通过 | `*/pty/startup.screen.txt` |
 | E5 `--dump-config` 有 `@hyperai/hyperai-tui` 与 `skill-filesystem`，无跳过 | 通过（611 行，stderr 0） | 通过（611 行，stderr 0） | `*/dump-config.txt`、`*.err` |
 | E6 `/update` 禁用提示；`/provider`、`/model` 可打开 | 通过 | 通过 | `*/pty/update.screen.txt`、`provider`、`model` |
@@ -103,13 +104,14 @@ if (packageJson.name === PACKAGE_NAME && typeof version === 'string' && valid(ve
 | E8 第二次安装成功且用户数据保留 | 通过（假 provider 行、`lang=en` 偏好、会话索引前后一致） | 通过（假 provider 行、`lang=en` 偏好、会话文件仍存在） | `*/install-e8.log`、`*/cordis.after.yml`、`*/settings.after.json`、`macos/session-index.*.json`、`ubuntu/session-files.txt` |
 | E9 卸载清理受管文件、归档用户数据 | 通过 | 通过 | `*/uninstall.json` |
 | E10 不影响已安装的其它 dsh | 通过（哈希不变） | 通过（哈希不变） | `*/install-e10.log` |
-| E11 真实模型轮次 + 用 `ppt-generation` 生成 pptx | 未测（没有提供 API key） | 未测（同左） | — |
+| E11 真实模型轮次 + 用 `ppt-generation` 生成 pptx | 通过（验收 agent 实测：3 页中文 PPT，44 751 B） | 通过（验收 agent 实测：3 页中文 PPT，42 700 B） | 验收报告第 98 行；开发侧无 key，未独立复测 |
 
 补充说明：
 
 - E2 的“不访问 GitHub”不是断网测试：dsh/pnpm 需要访问 npm registry，所以用 `HTTPS_PROXY`/`HTTP_PROXY` 指向 `127.0.0.1:9`，只把 `registry.npmjs.org` 放进 `NO_PROXY`。安装成功说明 GitHub 没有被访问。
 - E8 的“会话数据保留”在 macOS 上是 `session-index.json` 前后条目一致（1 → 1，同一 session id）；Ubuntu 上证据是 `dsh-home/storages/session_projcache/sessions/` 里的会话文件仍在（`session-files.txt`）。
 - E7 的“启动不自动检查”由启动器导出的 `HYPERAI_SKILLS_TUI_AUTO=0` 保证（该变量由 TUI 的 `hyperaiSkills.js` 读取），并实测启动画面没有 Skills 更新提示。
+- 验收 agent 额外验证了“从旧版（补丁方式）覆盖升级”与“手动 `/skills-update` 的失败提示”（Ubuntu 上弹一次 `HyperAI skill check failed` 对话框，不刷屏）；本报告后续的修复轮也覆盖了升级清理。
 
 ## 可复现构建
 
@@ -118,7 +120,7 @@ if (packageJson.name === PACKAGE_NAME && typeof version === 'string' && valid(ve
 | 同一 commit 构建两次，安装包 sha256 相同 | 通过：两次都是 `60fd3d7e…a4513f` |
 | TUI 成品包两次构建 sha256 相同 | 通过：`ae43b7f5…62ad68`（`build-beta.mjs` 内部构建两次并比对，不一致直接失败） |
 | 输入按 size、sha256、integrity 校验 | 通过：`apps/tui/upstream.json` 固定 `18 473 587` 字节 / `2144b317…336e` / `sha512-xk8Nvi…hbg==`，不符即退出 |
-| 豁免文件逐字节不变 | 通过：`LICENSE`、`licenses/`（5 份）、`README.md`、`guide/**`、所有非运行时代码文件与“打完补丁的树”逐字节相同；每个被改名文件里的 `Copyright` 行逐字节相同 |
+| 豁免文件逐字节不变 | 通过：`LICENSE`、`README.md`、`guide/**`、所有非运行时代码文件与“打完补丁的树”逐字节相同；每个被改名文件里的 `Copyright` 行逐字节相同。`licenses/` 的 5 份是**本仓库 `apps/tui/docs/licenses/` 的副本**（上游原包里没有这个目录），与仓库副本逐字节相同 |
 | 上游仓库/作者 URL 未被改写 | 通过：构建前后收集所有含 `ccch1mneyyy` 的 URL 集合，完全一致；`package.json` 的 `author` 字段保留上游署名 |
 | 产物清单断言 | 通过：3296 个文件 = 上游 3287 个 + 9 个新增（`LICENSE-HYPERAI.txt`、`HYPERAI.md`、`licenses/` 5 份）。`vendor/` 的 114 个文件明确保留（RFC-001 曾因依赖 `npm pack` 而静默丢失） |
 
@@ -126,18 +128,32 @@ if (packageJson.name === PACKAGE_NAME && typeof version === 'string' && valid(ve
 
 安装包是在 commit `8cee5aeb92` 上构建的。该 commit 之后的提交只增加证据和本报告（以及 PR 链接），不改变任何构建输入（`apps/tui/`、`apps/profiles/hyperai/scripts/`、`docs/beta-install.md`）；manifest 里的 `commit` 字段是构建时记录的，所以在本分支最新 tip 上重新构建会得到不同的哈希，这是预期行为。
 
+## 验收反馈修复（RFC-002 验收报告）
+
+验收结论是“修复后可以发”，列了 4 项必须修复。本分支已处理：
+
+| 验收问题 | 处理 | 位置 |
+|---|---|---|
+| 公开仓库里有内部 Skills 的 description 原文 | 把 `skills.screen.txt` 第 30/32 行的描述替换成 `<描述已移除：内部仓库内容>`，只保留技能名；证据 README 记录了这一处理，并 `grep` 复查过 | `docs/evidence/rfc-002/{macos,ubuntu}/pty/skills.screen.txt` |
+| 说明里的卸载命令跑不通（缺 `HYPERAI_DIST_ROOT`） | 让 `distribution.mjs` 从脚本自身位置推导安装包根目录（`<bundle>/profile/scripts/` → 上两级），文档不再需要环境变量；新增单元测试 | `scripts/distribution.mjs`、`tests/beta.test.mjs`、`docs/beta-install.md` §7 |
+| 像素统计 21 699 与实测 40 176 不符 | 确实是口径问题：21 699 只统计了顶部 splash 区域。证据改成同时记录整帧 40 176 与 splash 区域 21 699，并写明区域与方法 | `docs/evidence/rfc-002/brand-pixel-check.json`、本报告 E3 行 |
+| 说明缺排障 / `doctor` / 磁盘说明 | 第 8 节增加“排障”小节：`status`/`doctor --dsh-bin` 用法、常见报错对照表、磁盘占用；第 5 节补 `--user`/venv 装 `python-pptx`；第 6 节补“从旧版覆盖升级” | `docs/beta-install.md` |
+| 升级后旧补丁残留 | 安装器在安装包模式下删除不再使用的 `<profile>/patches/hyperai-tui.patch`（空目录一并清理），并在计划里记录 `remove` | `scripts/install.mjs` |
+
 ## 已知问题与限制
 
-1. **E11 未测**：没有测试用 API key，真实模型轮次与 `ppt-generation` 生成 `.pptx` 都没有跑。拿到 key 后需要补一次。
+1. **E11 的开发侧复测**：开发机没有 API key，这一项由验收 agent 在两平台实测通过（见测试结果表）；如果后续要 CI 化，需要单独的测试 key。
 2. **macOS 的 E1 是模拟的**：用 PATH 上的 node shim 返回 `18.20.4`。真实 Node 18 的拒绝路径在 Ubuntu 上验证过；macOS 上只验证了“拒绝且不写入”的逻辑分支。
 3. **首次安装要下载 dsh/pnpm**：约 541 个包，开发机上约 2 分钟。默认官方 npm 源，可用 `HYPERAI_NPM_REGISTRY` 切换镜像。
 4. **profile 自带 18 MB tarball**：`<profile>/packages/hyperai-tui-0.2.0-beta.1.tgz` 会让 profile 目录变大；换来的是安装包目录可以删除、重装不依赖它。
 5. **`manage.mjs repair` 在安装包模式下需要 `HYPERAI_DIST_ROOT`**：说明文档里让用户直接重跑 `install.sh`，而不是手动 repair。
-6. **手动 `/skills-update` 的失败提示未实测**：需要交互式对话框，且在无内部仓库权限的环境里要等一次网络失败；本次只验证了“启动不自动检查”（E7）。代码路径是 TUI 的 `useSkillsUpdate` 捕获错误后弹一次 toast，不刷屏；更新机制本身按 RFC 不在范围内。
+6. **手动 `/skills-update` 的成功路径未测**：验收 agent 在 Ubuntu 上验证了失败提示（一次对话框，不刷屏），macOS 未单独跑；成功更新需要内部仓库权限，仍不在本次范围。
 7. **版本对齐的范围**：`lib/settings.json` 的 `packageVersion` 与插件 feed 的 `version` 已改成 HyperAI 版本；`lib/settings.json` 的 `namespace: "dsh-tui"` 按 RFC/验收要求保持不变。
 8. **平台**：只验证了 macOS arm64 与 Ubuntu 20.04 x86_64；其它 Linux 发行版、Windows、Node 22 之外的 22.x 小版本未测。
 9. **没有代码签名**：安装包是 `.tar.gz`，macOS Gatekeeper 不会拦；但 `install.sh` 与启动器依赖可执行位，解压工具若丢掉权限需要 `chmod +x`。
-10. **完成时间**：本报告完成于 2026-11-04 晚，早于 RFC 的周四 12:00 交付线；不需要触发进度风险汇报。
+10. **卸载会保留少量文件**：`skills/`、`.hyperai-skills`、`cordis.yml`、`pnpm-lock.yaml` 会留在 profile 目录（同时已归档），方便误卸载后手工恢复；`--purge` 才会删掉整个目录。说明文档第 7 节已写清。
+11. **升级时 `cordis.patch.yml` 可能只差空行**：`install.mjs` 的合并逻辑会重新排版顶层块，语义不变。验收时观测到 Ubuntu 前后哈希不同、diff 仅空行，属于可接受行为。
+12. **完成时间**：本报告完成于 2026-11-04 晚，早于 RFC 的周四 12:00 交付线；不需要触发进度风险汇报。
 
 ## 偏离 RFC 的地方
 
@@ -149,3 +165,4 @@ if (packageJson.name === PACKAGE_NAME && typeof version === 'string' && valid(ve
 6. **证据不提交 PNG**：截图里有本机绝对路径，无法逐像素脱敏；改为提交同等内容的屏幕文本，并单独记录品牌像素统计。
 7. **P2 / P3 未实现**：RFC 只要求 P1，按 RFC 执行。
 8. **PR 的 base 分支**：RFC 写的是 `feat/hyperai-internal-beta` → `main`，但这个仓库没有 `main` 分支，默认分支是 `master`。Draft PR #2 因此开到 `master`；分支内容与 RFC 要求一致。
+9. **证据里的 Skills 描述已打码**：`/skills` 屏幕文本原本带内部仓库的 description 原文，提交前替换成 `<描述已移除：内部仓库内容>`；技能名保留。

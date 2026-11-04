@@ -27,9 +27,9 @@
     Skills
 
     ❯ /example-verified-skill
-      custom · Use when 需要一个可被 Hermes tap 安装的规范 skill 示例. 展示标准结构。
+      custom · <描述已移除：内部仓库内容>
       /ppt-generation
-      custom · Use when 用户要生成/做一份 PPT、幻灯片、演示文稿、汇报材料（从零产出 .pptx）。模型只写内容 JSON，脚…
+      custom · <描述已移除：内部仓库内容>
     Enter to insert · Esc to exit
 
   ╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮

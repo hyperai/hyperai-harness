@@ -56,5 +56,7 @@ cd hyperai-harness-0.2.0-beta.1
 ## 脱敏与取舍
 
 - 所有文本证据里的本机绝对路径已替换成 `$HOME`、`$REPO`、`$BETA_ROOT`，主机名替换成 `$HOST`；测试服务器地址、账号和口令不在任何证据里。
+- `*/pty/skills.screen.txt` 第 30、32 行原来的 Skills description 属于公司内部仓库内容，已替换成 `<描述已移除：内部仓库内容>`；技能名本身保留，仍能证明 `/skills` 能发现它们。提交前用 `grep` 自查过 `hyperai-skills` 的内容，只有技能名出现。
 - 屏幕截图（PNG）没有提交：像素图无法逐像素脱敏，画面里的工作目录会暴露本机路径。改为提交同样内容的屏幕文本（`*.screen.txt`），并用 `brand-pixel-check.json` 记录品牌色像素统计。
+- `brand-pixel-check.json` 给出两个口径：`pinkPixelsFullFrame`（整帧 1080×720，两平台都是 **40 176**）和 `pinkPixelsSplashRegion`（画面顶部 36% 的 splash 区域，两平台都是 21 699）。早期版本只写了一个没有标注区域的 21 699，容易被误读成整帧数字。
 - `E11`（真实模型轮次 + 用 `ppt-generation` 生成 `.pptx`）需要测试用 API key，本次没有提供，按 RFC 标记为“未测”。
