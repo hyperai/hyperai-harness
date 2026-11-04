@@ -91,7 +91,7 @@ python3 -m http.server 4874 --bind 127.0.0.1 --directory "$BASE/products" &   # 
 # Verdaccio 需要账号才能发布：先拿 token（legacy couchdb 用户接口），写进 npmrc
 curl -X PUT http://127.0.0.1:4873/-/user/org.couchdb.user:poc \
   -H 'Content-Type: application/json' \
-  -d '{"name":"poc","password":"<poc-password>","email":"poc@example.com"}'
+  -d '{"name":"poc","password":"<本地测试口令>","email":"poc@example.com"}'
 npm publish "$BASE/products/hyperai-hyperai-tui-0.16.1-p1.tgz" \
   --registry http://127.0.0.1:4873/ --userconfig "$BASE/verdaccio/p1/npmrc"
 ```
