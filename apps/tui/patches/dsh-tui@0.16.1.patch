@@ -1064,7 +1064,7 @@ index f6d3e1c..fa86ce0 100644
          id: 'disp-smooth',
          group: 'display',
 diff --git a/lib/types/update.js b/lib/types/update.js
-index 8efb701..e9a50a9 100644
+index 8efb701..ece5f37 100644
 --- a/lib/types/update.js
 +++ b/lib/types/update.js
 @@ -875,6 +875,9 @@ export async function downloadAndReplaceStandaloneBinary(downloadUrl, onProgress
@@ -1077,6 +1077,17 @@ index 8efb701..e9a50a9 100644
      const current = installedTuiVersion();
      const currentVersion = current === undefined ? null : valid(current);
      if (currentVersion === null)
+@@ -919,6 +922,10 @@ export async function resolveTuiUpdateTarget() {
+  * or blocks the interactive TUI.
+  */
+ export async function checkForTuiUpdate() {
++    // hyperai-tui: the branded package is versioned by the HyperAI profile
++    // installer. Never contact npm/GitHub for an upstream self-update; both the
++    // chat launchpad and the adapter's background notice call this function.
++    return undefined;
+     // Callers start this during the first render; the first `fetch()` loads
+     // undici synchronously, so yield first and let that cost land after the frame.
+     await new Promise(resolve => setImmediate(resolve));
 diff --git a/lib/types/utils/paths.js b/lib/types/utils/paths.js
 index cdef174..e315699 100644
 --- a/lib/types/utils/paths.js

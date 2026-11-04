@@ -7,11 +7,11 @@ Run from `apps/tui` unless stated otherwise.
 ```sh
 node scripts/build-patch.mjs        # rebuild patches/dsh-tui@0.16.1.patch
 node scripts/verify.mjs             # 13/13 distribution checks
-node --test tests/                  # 13/13 branding + skills-bridge tests
+node --test tests/                  # 14/14 branding + skills-bridge tests
 
 cd ../profiles/hyperai
 node scripts/verify.mjs             # 12/12 profile checks
-node --test tests/                  # 66/66 installer + skills/updater tests
+node --test tests/                  # 67/67 installer + skills/updater tests
 ```
 
 `build-patch.mjs` unpacks the pinned upstream package with `npm pack`, applies
@@ -25,12 +25,13 @@ credential variable or default model), the TUI patch wiring, the pinned skills
 lock, the installer plan/refusal rules and the reinstall migration that keeps
 user provider/TUI rows while dropping the removed environment-driven preset.
 
-Measured: patch is **81,048 bytes / 15 upstream files** (the previous logo
+Measured: patch is **81,685 bytes / 15 upstream files** (the previous logo
 distribution carried >150 KB of embedded PNG/sprites; none of it remains).
 The two added files are the HyperAI Skills TUI bridge; Chat/commands/settings
 only gain the branded command/hook/hint, the disabled upstream `/update` route,
-the branded terminal title and explicit “not used by HyperAI” labels for the
-upstream mascot toggles.
+the branded terminal title, explicit “not used by HyperAI” labels for the
+upstream mascot toggles, and the runtime early-return that disables upstream
+TUI self-update checks before any npm/GitHub request.
 
 ## Real terminal acceptance (macOS 26.1, arm64)
 

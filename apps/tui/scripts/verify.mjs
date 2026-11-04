@@ -145,6 +145,8 @@ check('brand strings and profile isolation remain wired', () => {
     'columns < 72',
     'columns < 110',
     'provider/model setup to native /provider and /model',
+    'Never contact npm/GitHub for an upstream self-update',
+    "return { kind: 'unknown' };",
   ]
   const added = addedLines.join('\n')
   for (const banned of ["id: 'disp-whale'", "id: 'disp-whale-click'"]) {

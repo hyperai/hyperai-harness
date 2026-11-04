@@ -45,7 +45,11 @@ Upgrading DSH Core or dsh-tui requires rebuilding this patch and updating the
 compatibility list/test evidence; see [`docs/compatibility.md`](docs/compatibility.md).
 
 The upstream `/update` command is intentionally disabled in the branded build:
-it would replace the patched package with an unbranded upstream release. `/update`
+it would replace the patched package with an unbranded upstream release. The
+runtime update-check entry point also returns before contacting npm or GitHub,
+so the branded build neither shows the upstream “new version available” notice
+nor performs its background version request. This is separate from HyperAI
+Skills updates. `/update`
 now points at the HyperAI profile installer/release flow. `/restart` and the
 normal upstream session/chat/tool features remain available.
 

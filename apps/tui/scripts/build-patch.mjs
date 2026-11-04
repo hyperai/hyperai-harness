@@ -441,6 +441,22 @@ export const DATA_DIR = join(homeDir(), dataDirName());`,
     },
     {
       file: 'lib/types/update.js',
+      why: 'disable the upstream TUI version check before it can contact npm/GitHub',
+      find: `export async function checkForTuiUpdate() {
+    // Callers start this during the first render; the first \`fetch()\` loads
+    // undici synchronously, so yield first and let that cost land after the frame.
+    await new Promise(resolve => setImmediate(resolve));`,
+      replace: `export async function checkForTuiUpdate() {
+    // hyperai-tui: the branded package is versioned by the HyperAI profile
+    // installer. Never contact npm/GitHub for an upstream self-update; both the
+    // chat launchpad and the adapter's background notice call this function.
+    return undefined;
+    // Callers start this during the first render; the first \`fetch()\` loads
+    // undici synchronously, so yield first and let that cost land after the frame.
+    await new Promise(resolve => setImmediate(resolve));`,
+    },
+    {
+      file: 'lib/types/update.js',
       why: 'upstream updater would replace the branded package',
       find: `export async function resolveTuiUpdateTarget() {
     const current = installedTuiVersion();`,

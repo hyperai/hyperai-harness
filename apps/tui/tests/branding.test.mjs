@@ -139,3 +139,15 @@ test('the TUI tree carries no logo toolchain', () => {
     assert.ok(readme.includes(marker), `README marker ${marker}`)
   }
 })
+
+
+test('upstream self-update checks are disabled before any registry/GitHub fetch', () => {
+  const updateSection = patch.slice(patch.indexOf('diff --git a/lib/types/update.js'))
+  assert.match(updateSection, /export async function checkForTuiUpdate\(\) \{\n\+\s+.*return undefined;/su, 'checkForTuiUpdate must return before its fetch path')
+  assert.match(updateSection, /^\+\s+return undefined;$/mu)
+  assert.match(updateSection, /return \{ kind: 'unknown' \};/u)
+  // The visible prompt may stay upstream, but both callers must receive undefined.
+  const chat = patch.slice(patch.indexOf('diff --git a/lib/types/screens/Chat.js'))
+  assert.match(chat, /checkForTuiUpdate\(\)/u)
+  assert.ok(patch.length < 96 * 1024)
+})
