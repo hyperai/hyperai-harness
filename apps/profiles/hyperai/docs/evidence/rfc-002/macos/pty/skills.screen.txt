@@ -14,7 +14,7 @@
   ██  ██  ██  ██  ██  ██  ██  ██  ██▄▄▄▄  ██▄▄▄▀  ██▄▄▄▀
   deepseek-flash · Max effort
   $HOME/orca/projects/xuexidsh
-  Tip: Question, plan-review and plugin dialogs all accept Ctrl+V paste · /tips more tips
+  Tip: Fullscreen: PgUp/PgDn page through the message list like a book · /tips more tips
 
     HyperAI Harness
 

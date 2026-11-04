@@ -1,6 +1,6 @@
 {
   "profileDir": "$BETA_ROOT/dsh-home/profiles/hyperai",
-  "archive": "$BETA_ROOT/dsh-home/profiles/.hyperai-uninstall-backups/hyperai-2026-11-04T10-38-15Z",
+  "archive": "$BETA_ROOT/dsh-home/profiles/.hyperai-uninstall-backups/hyperai-2026-11-04T14-29-54Z",
   "purge": false,
   "kept": [
     ".hyperai-skills",

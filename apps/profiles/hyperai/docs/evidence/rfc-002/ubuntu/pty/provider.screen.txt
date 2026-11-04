@@ -14,7 +14,7 @@
   ██  ██  ██  ██  ██  ██  ██  ██  ██▄▄▄▄  ██▄▄▄▀  ██▄▄▄▀
   deepseek-flash · Max effort
   $BETA_ROOT/dsh-home/profiles/hyperai
-  提示：Ctrl+R 搜历史输入；转录态 / 搜会话全文 · /tips 更多技巧
+  提示：/plan 计划模式；/goal 设置会话目标 · /tips 更多技巧
 
     HyperAI Harness
 

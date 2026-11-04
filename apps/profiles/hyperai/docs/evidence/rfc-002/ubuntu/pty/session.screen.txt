@@ -14,7 +14,7 @@
   ██  ██  ██  ██  ██  ██  ██  ██  ██▄▄▄▄  ██▄▄▄▀  ██▄▄▄▀
   deepseek-flash · Max effort
   $BETA_ROOT/dsh-home/profiles/hyperai
-  提示：全屏模式鼠标拖选即复制；Esc 取消选区 · /tips 更多技巧
+  提示：悬停底栏字段：ctx 原地变等宽压力条，明细走常驻底行，布局不动 · /tips 更多技巧
 
     HyperAI Harness
 

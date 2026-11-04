@@ -14,7 +14,7 @@
   ██  ██  ██  ██  ██  ██  ██  ██  ██▄▄▄▄  ██▄▄▄▀  ██▄▄▄▀
   deepseek-flash · Max effort
   $HOME/orca/projects/xuexidsh
-  Tip: TPS and trajectory bars are off by default, context bar on; all switch in /settings · /tips more tips
+  Tip: /reload re-reads pref files (theme/lang/preset/model/activity) and applies live · /tips more tips
 
     HyperAI Harness
 

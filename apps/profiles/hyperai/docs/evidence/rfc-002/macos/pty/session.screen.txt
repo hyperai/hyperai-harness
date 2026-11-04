@@ -14,7 +14,7 @@
   ██  ██  ██  ██  ██  ██  ██  ██  ██▄▄▄▄  ██▄▄▄▀  ██▄▄▄▀
   deepseek-flash · Max effort
   $HOME/orca/projects/xuexidsh
-  Tip: Unknown commands are sent to the model as plain messages · /tips more tips
+  Tip: /balance shows your DeepSeek balance; click the row to refresh · /tips more tips
 
     HyperAI Harness
 

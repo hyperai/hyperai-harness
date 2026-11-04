@@ -1,10 +1,10 @@
-[2026-11-04T10:34:45Z] HyperAI Harness 内测版安装程序
-[2026-11-04T10:34:45Z]   安装包：$BETA_ROOT/hyperai-harness-0.2.0-beta.1
-[2026-11-04T10:34:45Z]   HyperAI 目录：$BETA_ROOT/home/.hyperai
-[2026-11-04T10:34:45Z]   Harness home：$BETA_ROOT/dsh-home
-[2026-11-04T10:34:45Z] 
-[2026-11-04T10:34:45Z] Node.js 26.9.0 检查通过；准备安装 HyperAI Harness 0.2.0-beta.1。
-[2026-11-04T10:34:45Z] 安装 dsh@0.2.0-rc.2 与 pnpm@10.28.1 到 $BETA_ROOT/home/.hyperai/runtime（不会改动系统全局环境）……
+[2026-11-04T14:23:46Z] HyperAI Harness 内测版安装程序
+[2026-11-04T14:23:46Z]   安装包：$BETA_ROOT/hyperai-harness-0.2.0-beta.1
+[2026-11-04T14:23:46Z]   HyperAI 目录：$BETA_ROOT/home/.hyperai
+[2026-11-04T14:23:46Z]   Harness home：$BETA_ROOT/dsh-home
+[2026-11-04T14:23:46Z] 
+[2026-11-04T14:23:46Z] Node.js 26.9.0 检查通过；准备安装 HyperAI Harness 0.2.0-beta.1。
+[2026-11-04T14:23:46Z] 安装 dsh@0.2.0-rc.2 与 pnpm@10.28.1 到 $BETA_ROOT/home/.hyperai/runtime（不会改动系统全局环境）……
 
 added 541 packages in 2m
 npm notice
@@ -12,14 +12,12 @@ npm notice New major version of npm available! 11.19.1 -> 12.2.1
 npm notice Changelog: https://github.com/npm/cli/releases/tag/v12.2.1
 npm notice To update run: npm install -g npm@12.2.1
 npm notice
-[2026-11-04T10:36:20Z] 安装 hyperai profile……
+[2026-11-04T14:25:39Z] 安装 hyperai profile……
 Progress: resolved 0, reused 0, downloaded 1, added 0
-Progress: resolved 24, reused 0, downloaded 1, added 0
+Progress: resolved 22, reused 0, downloaded 1, added 0
 Progress: resolved 32, reused 0, downloaded 1, added 0
-Progress: resolved 73, reused 0, downloaded 1, added 0
-Progress: resolved 91, reused 0, downloaded 1, added 0
+Progress: resolved 44, reused 0, downloaded 1, added 0
 Progress: resolved 102, reused 0, downloaded 1, added 0
-Progress: resolved 103, reused 0, downloaded 1, added 0
  WARN  Issues with peer dependencies found
 .
 └─┬ @hyperai/hyperai-tui 0.2.0-beta.1
@@ -46,15 +44,10 @@ Peer dependencies that should be installed:
 
 Packages: +80
 ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-Progress: resolved 104, reused 0, downloaded 2, added 0
-Progress: resolved 104, reused 0, downloaded 30, added 23
-Progress: resolved 104, reused 0, downloaded 63, added 60
-Progress: resolved 104, reused 0, downloaded 67, added 65
-Progress: resolved 104, reused 0, downloaded 76, added 77
-Progress: resolved 104, reused 0, downloaded 77, added 79
-Progress: resolved 104, reused 0, downloaded 78, added 79
+Progress: resolved 104, reused 0, downloaded 1, added 0
+Progress: resolved 104, reused 0, downloaded 73, added 72
 Progress: resolved 104, reused 0, downloaded 78, added 80, done
-Done in 15.5s using pnpm v10.28.1
+Done in 7.6s using pnpm v10.28.1
 
 hyperai-tui: profile "hyperai" at $BETA_ROOT/dsh-home/profiles/hyperai
   create    package.json
@@ -70,19 +63,19 @@ next steps:
   dsh --profile hyperai
   then configure a provider with /provider and pick a model with /model
   (DSH-native flow; this profile presets no provider, endpoint or model)
-[2026-11-04T10:36:37Z] 
-[2026-11-04T10:36:37Z] 安装完成。
-[2026-11-04T10:36:37Z] 
-[2026-11-04T10:36:37Z] 启动：
-[2026-11-04T10:36:37Z]   $BETA_ROOT/home/.hyperai/bin/hyperai
-[2026-11-04T10:36:37Z] 
-[2026-11-04T10:36:37Z] 如果希望直接输入 hyperai 启动，把下面一行加进 shell 配置（~/.zshrc 或 ~/.bashrc）：
-[2026-11-04T10:36:37Z]   export PATH="$BETA_ROOT/home/.hyperai/bin:$PATH"
-[2026-11-04T10:36:37Z] 
-[2026-11-04T10:36:37Z] 首次使用：进入 TUI 后用 /provider 添加模型服务，再用 /model 选择模型。
-[2026-11-04T10:36:37Z] API key 由 DSH 保存在 $BETA_ROOT/dsh-home/.credentials.yaml（权限 0600），不会写进安装包。
-[2026-11-04T10:36:37Z] 
-[2026-11-04T10:36:37Z] 注意：ppt-generation 技能需要 Python 3 和 python-pptx，本脚本不会自动安装：
-[2026-11-04T10:36:37Z]   python3 -m pip install python-pptx
-[2026-11-04T10:36:37Z] 
-[2026-11-04T10:36:37Z] 卸载：见安装包里的 README.md（使用 profile/scripts/manage.mjs uninstall）。
+[2026-11-04T14:25:47Z] 
+[2026-11-04T14:25:47Z] 安装完成。
+[2026-11-04T14:25:47Z] 
+[2026-11-04T14:25:47Z] 启动：
+[2026-11-04T14:25:47Z]   $BETA_ROOT/home/.hyperai/bin/hyperai
+[2026-11-04T14:25:47Z] 
+[2026-11-04T14:25:47Z] 如果希望直接输入 hyperai 启动，把下面一行加进 shell 配置（~/.zshrc 或 ~/.bashrc）：
+[2026-11-04T14:25:47Z]   export PATH="$BETA_ROOT/home/.hyperai/bin:$PATH"
+[2026-11-04T14:25:47Z] 
+[2026-11-04T14:25:47Z] 首次使用：进入 TUI 后用 /provider 添加模型服务，再用 /model 选择模型。
+[2026-11-04T14:25:47Z] API key 由 DSH 保存在 $BETA_ROOT/dsh-home/.credentials.yaml（权限 0600），不会写进安装包。
+[2026-11-04T14:25:47Z] 
+[2026-11-04T14:25:47Z] 注意：ppt-generation 技能需要 Python 3 和 python-pptx，本脚本不会自动安装：
+[2026-11-04T14:25:47Z]   python3 -m pip install python-pptx
+[2026-11-04T14:25:47Z] 
+[2026-11-04T14:25:47Z] 卸载：见安装包里的 README.md（使用 profile/scripts/manage.mjs uninstall）。

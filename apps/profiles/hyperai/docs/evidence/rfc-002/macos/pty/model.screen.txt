@@ -27,7 +27,7 @@
                                       Sessions & workspaces    Settings    Kernel · DSH    Help
 
 
-                           ● Tips: Type / for every command; /setup re-runs the guide anytime
+                       ● Tips: Ctrl+V pastes; Esc clears the draft, then Esc again opens sessions
 
 
 

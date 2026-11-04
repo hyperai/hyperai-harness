@@ -14,7 +14,7 @@
   ██  ██  ██  ██  ██  ██  ██  ██  ██▄▄▄▄  ██▄▄▄▀  ██▄▄▄▀
   deepseek-flash · Max effort
   $BETA_ROOT/dsh-home/profiles/hyperai
-  提示：多题问卷用 ←/→ 换题，不提交；输入行要先把光标移到行首或行尾 · /tips 更多技巧
+  提示：/settings 里 thinkingFold：preview 折叠 / full 全展开 · /tips 更多技巧
 
     HyperAI Harness
 

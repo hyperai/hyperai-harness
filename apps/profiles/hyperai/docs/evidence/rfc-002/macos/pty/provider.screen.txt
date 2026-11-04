@@ -14,7 +14,7 @@
   ██  ██  ██  ██  ██  ██  ██  ██  ██▄▄▄▄  ██▄▄▄▀  ██▄▄▄▀
   deepseek-flash · Max effort
   $HOME/orca/projects/xuexidsh
-  Tip: Footer compact on = one merged line; off = metrics left, location right · /tips more tips
+  Tip: /theme status shows which palette auto resolved to · /tips more tips
 
     HyperAI Harness
 

@@ -1,8 +1,8 @@
 # 验证运行摘要（原样记录）
 
-两个平台都从解压后的安装包目录运行，使用隔离的 HOME / DSH_HOME。
+两个平台都从解压后的安装包目录运行，使用隔离的 HOME / DSH_HOME。这是**验收反馈修复后**的安装包（sha256 `39e6e0c3…9b74`）。
 
-## macOS（macOS 26.1 arm64，Node v26.9.0）
+## macOS（macOS 26.1 arm64，Node v26.9.0，npm 官方源）
 
 ```
 ### E2 checksum
@@ -20,21 +20,20 @@ hyperai-harness-0.2.0-beta.1.tar.gz: OK
   exit=0 repo-present=no
 ### E10 other dsh
   exit=0 unchanged=yes
-### E9 uninstall
+### upgrade from old patch flow
+  old install exit=0
+  new install exit=0 patch=removed legacy-provider=1 bundles=@deepseek-ai/dsh-base,@hyperai/hyperai-tui
+### E9 uninstall (without HYPERAI_DIST_ROOT, tests bundle-root inference)
   exit=0 launcher=removed
 ### DONE
 ```
-
-补充（E9）：`uninstall --yes` 归档到
-`$BETA_ROOT/dsh-home/profiles/.hyperai-uninstall-backups/hyperai-<UTC 时间戳>/`，
-`launcher` 字段指向被删除的 `$HOME/.hyperai/bin/hyperai`，`kept` 为
-`.hyperai-skills`、`.hyperai-uninstall.json`、`cordis.yml`、`pnpm-lock.yaml`、`skills`。
 
 ## Ubuntu（Ubuntu 20.04.6 LTS x86_64）
 
 ```
 ### E2 checksum
 hyperai-harness-0.2.0-beta.1.tar.gz: OK
+### registry: https://registry.npmmirror.com
 ### E1 system node 18
   exit=1 wrote=no
 ### E2 install with node22
@@ -48,13 +47,13 @@ hyperai-harness-0.2.0-beta.1.tar.gz: OK
   exit=0
 ### E10 other dsh
   exit=0 unchanged=yes
-### E9 uninstall
+### E9 uninstall (without HYPERAI_DIST_ROOT, tests bundle-root inference)
   exit=0 launcher=removed
 ### DONE
 ```
 
 E1 使用系统 Node v18.20.4（`env -i PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin`），
-E2 起使用 `$HOME/node/bin/node`（v22.23.4）。
+E2 起使用 `$HOME/node/bin/node`（v22.23.4）。官方 npm 源在该服务器上 45 分钟没有进展，改用镜像后完成。
 
 ## 证据一致性检查（两个平台相同）
 

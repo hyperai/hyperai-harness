@@ -17,11 +17,11 @@ E1 在 macOS 上用 shim 模拟 Node 18，真实 Node 18 的 E1 在 Ubuntu 上�
 | 项 | 值 |
 |---|---|
 | 安装包 | `hyperai-harness-0.2.0-beta.1.tar.gz` |
-| 大小 | 18 459 942 字节 |
-| sha256 | `60fd3d7e4d654d4c266febd01d53b48b293515025de1363b097a04edd9a4513f` |
+| 大小 | 18 460 863 字节 |
+| sha256 | `39e6e0c36c4bc9117c2555ddee7d6fd0ae846adaba1edd6ba54ba0b2e7339b74` |
 | 构建命令 | `cd apps/profiles/hyperai && node scripts/build-beta.mjs` |
-| 构建 commit | `8cee5aeb92fbe4a44062627687a608c6f560539a` |
-| TUI 成品包 | `@hyperai/hyperai-tui@0.2.0-beta.1`，sha256 `ae43b7f50ce9e54cd5e7e17544d2c807f71a26c980a4214d29f6290e3562ad68`，3296 个文件 |
+| 构建 commit | `1ef6237a741d969840bcc1383b5ca6a16cb7a402` |
+| TUI 成品包 | `@hyperai/hyperai-tui@0.2.0-beta.1`，sha256 `01cfb379faac473c2edd5e70b140c63fdcadb90372454e321dd92ed6f5da9b3c`，3296 个文件 |
 | Skills 快照 | `hyperai-skills@34f0a1be0cb3ae9905aecebba13efae6a8657be1`（`feat/ppt-generation-upstream`，2 个 Skill，27 个文件） |
 | 同事使用说明 | 安装包内 `README.md`，源文件 `apps/profiles/hyperai/docs/beta-install.md` |
 | Draft PR | <https://github.com/hyperai/hyperai-harness/pull/2>（`feat/hyperai-internal-beta` → `master`，Draft，不合并） |
@@ -102,23 +102,25 @@ if (packageJson.name === PACKAGE_NAME && typeof version === 'string' && valid(ve
 | E6 `/update` 禁用提示；`/provider`、`/model` 可打开 | 通过 | 通过 | `*/pty/update.screen.txt`、`provider`、`model` |
 | E7 Skills 已安装、Agent 能发现、启动不自动检查 | 通过（`/skills` 列出 `ppt-generation`、`example-verified-skill`；启动画面无 Skills 提示） | 通过 | `*/pty/skills.screen.txt`、`ubuntu/session-files.txt` |
 | E8 第二次安装成功且用户数据保留 | 通过（假 provider 行、`lang=en` 偏好、会话索引前后一致） | 通过（假 provider 行、`lang=en` 偏好、会话文件仍存在） | `*/install-e8.log`、`*/cordis.after.yml`、`*/settings.after.json`、`macos/session-index.*.json`、`ubuntu/session-files.txt` |
-| E9 卸载清理受管文件、归档用户数据 | 通过 | 通过 | `*/uninstall.json` |
+| E9 卸载清理受管文件、归档用户数据 | 通过（按说明直接执行，未设 `HYPERAI_DIST_ROOT`） | 通过（同左） | `*/uninstall.json` |
 | E10 不影响已安装的其它 dsh | 通过（哈希不变） | 通过（哈希不变） | `*/install-e10.log` |
 | E11 真实模型轮次 + 用 `ppt-generation` 生成 pptx | 通过（验收 agent 实测：3 页中文 PPT，44 751 B） | 通过（验收 agent 实测：3 页中文 PPT，42 700 B） | 验收报告第 98 行；开发侧无 key，未独立复测 |
 
 补充说明：
 
+- Ubuntu 的 E2 使用 `HYPERAI_NPM_REGISTRY=https://registry.npmmirror.com`：执行时官方源在该测试服务器上极慢（单个 tarball 90–150 秒，`npm install` 45 分钟无进展），换镜像后 2 分钟内完成。这是安装器支持的镜像路径（RFC 5.3.7），也是本次环境事实；macOS 仍用官方源。
 - E2 的“不访问 GitHub”不是断网测试：dsh/pnpm 需要访问 npm registry，所以用 `HTTPS_PROXY`/`HTTP_PROXY` 指向 `127.0.0.1:9`，只把 `registry.npmjs.org` 放进 `NO_PROXY`。安装成功说明 GitHub 没有被访问。
 - E8 的“会话数据保留”在 macOS 上是 `session-index.json` 前后条目一致（1 → 1，同一 session id）；Ubuntu 上证据是 `dsh-home/storages/session_projcache/sessions/` 里的会话文件仍在（`session-files.txt`）。
 - E7 的“启动不自动检查”由启动器导出的 `HYPERAI_SKILLS_TUI_AUTO=0` 保证（该变量由 TUI 的 `hyperaiSkills.js` 读取），并实测启动画面没有 Skills 更新提示。
+- 修复轮在 macOS 上复跑了“从旧版（补丁方式）覆盖升级”：旧 profile 用基线安装器创建，再加假 provider，用新安装包覆盖后 `patches/hyperai-tui.patch` 被删除、provider 保留、`bundles` 变成 `@deepseek-ai/dsh-base,@hyperai/hyperai-tui`（证据 `macos/upgrade-*.log`、`macos/upgrade-cordis.after.yml`）。
 - 验收 agent 额外验证了“从旧版（补丁方式）覆盖升级”与“手动 `/skills-update` 的失败提示”（Ubuntu 上弹一次 `HyperAI skill check failed` 对话框，不刷屏）；本报告后续的修复轮也覆盖了升级清理。
 
 ## 可复现构建
 
 | 项 | 结果 |
 |---|---|
-| 同一 commit 构建两次，安装包 sha256 相同 | 通过：两次都是 `60fd3d7e…a4513f` |
-| TUI 成品包两次构建 sha256 相同 | 通过：`ae43b7f5…62ad68`（`build-beta.mjs` 内部构建两次并比对，不一致直接失败） |
+| 同一 commit 构建两次，安装包 sha256 相同 | 通过：两次都是 `39e6e0c3…9b74` |
+| TUI 成品包两次构建 sha256 相同 | 通过：`01cfb379…9b3c`（`build-beta.mjs` 内部构建两次并比对，不一致直接失败） |
 | 输入按 size、sha256、integrity 校验 | 通过：`apps/tui/upstream.json` 固定 `18 473 587` 字节 / `2144b317…336e` / `sha512-xk8Nvi…hbg==`，不符即退出 |
 | 豁免文件逐字节不变 | 通过：`LICENSE`、`README.md`、`guide/**`、所有非运行时代码文件与“打完补丁的树”逐字节相同；每个被改名文件里的 `Copyright` 行逐字节相同。`licenses/` 的 5 份是**本仓库 `apps/tui/docs/licenses/` 的副本**（上游原包里没有这个目录），与仓库副本逐字节相同 |
 | 上游仓库/作者 URL 未被改写 | 通过：构建前后收集所有含 `ccch1mneyyy` 的 URL 集合，完全一致；`package.json` 的 `author` 字段保留上游署名 |
@@ -126,7 +128,7 @@ if (packageJson.name === PACKAGE_NAME && typeof version === 'string' && valid(ve
 
 构建报告（`dist/build-report.json`）记录了上述所有哈希与断言结果。
 
-安装包是在 commit `8cee5aeb92` 上构建的。该 commit 之后的提交只增加证据和本报告（以及 PR 链接），不改变任何构建输入（`apps/tui/`、`apps/profiles/hyperai/scripts/`、`docs/beta-install.md`）；manifest 里的 `commit` 字段是构建时记录的，所以在本分支最新 tip 上重新构建会得到不同的哈希，这是预期行为。
+安装包是在 commit `1ef6237a` 上构建的。该 commit 之后的提交只增加证据和本报告（以及 PR 链接），不改变任何构建输入（`apps/tui/`、`apps/profiles/hyperai/scripts/`、`docs/beta-install.md`）；manifest 里的 `commit` 字段是构建时记录的，所以在本分支最新 tip 上重新构建会得到不同的哈希，这是预期行为。
 
 ## 验收反馈修复（RFC-002 验收报告）
 
@@ -138,7 +140,7 @@ if (packageJson.name === PACKAGE_NAME && typeof version === 'string' && valid(ve
 | 说明里的卸载命令跑不通（缺 `HYPERAI_DIST_ROOT`） | 让 `distribution.mjs` 从脚本自身位置推导安装包根目录（`<bundle>/profile/scripts/` → 上两级），文档不再需要环境变量；新增单元测试 | `scripts/distribution.mjs`、`tests/beta.test.mjs`、`docs/beta-install.md` §7 |
 | 像素统计 21 699 与实测 40 176 不符 | 确实是口径问题：21 699 只统计了顶部 splash 区域。证据改成同时记录整帧 40 176 与 splash 区域 21 699，并写明区域与方法 | `docs/evidence/rfc-002/brand-pixel-check.json`、本报告 E3 行 |
 | 说明缺排障 / `doctor` / 磁盘说明 | 第 8 节增加“排障”小节：`status`/`doctor --dsh-bin` 用法、常见报错对照表、磁盘占用；第 5 节补 `--user`/venv 装 `python-pptx`；第 6 节补“从旧版覆盖升级” | `docs/beta-install.md` |
-| 升级后旧补丁残留 | 安装器在安装包模式下删除不再使用的 `<profile>/patches/hyperai-tui.patch`（空目录一并清理），并在计划里记录 `remove` | `scripts/install.mjs` |
+| 升级后旧补丁残留 | 安装器在安装包模式下删除不再使用的 `<profile>/patches/hyperai-tui.patch`（空目录一并清理），并在计划里记录 `remove`；macOS 上用旧补丁方式装一遍再覆盖升级，实测 `patch=removed`、`legacy-provider=1`、bundle 变成新名 | `scripts/install.mjs`、`docs/evidence/rfc-002/macos/upgrade-*.log` |
 
 ## 已知问题与限制
 

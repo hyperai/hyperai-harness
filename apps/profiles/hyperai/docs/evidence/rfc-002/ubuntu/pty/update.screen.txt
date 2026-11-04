@@ -14,7 +14,7 @@
   ██  ██  ██  ██  ██  ██  ██  ██  ██▄▄▄▄  ██▄▄▄▀  ██▄▄▄▀
   deepseek-flash · Max effort
   $BETA_ROOT/dsh-home/profiles/hyperai
-  提示：@src/a.ts#L12-14 精确引用文件行区间 · /tips 更多技巧
+  提示：流式输出默认平滑打出（约 30fps）；嫌慢可在 /settings 关 · /tips 更多技巧
 
     HyperAI Harness
 
