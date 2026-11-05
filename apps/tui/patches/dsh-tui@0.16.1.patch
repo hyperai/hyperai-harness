@@ -1261,7 +1261,7 @@ index d7db9d3..ae0cba4 100644
      'onboarding-conn-models': { zh: '{{count}} 个可用模型', en: '{{count}} models available' },
      'onboarding-conn-balance': { zh: '余额 {{amount}}', en: 'Balance {{amount}}' },
 diff --git a/lib/types/screens/Chat.js b/lib/types/screens/Chat.js
-index 050c07c..290a97b 100644
+index 050c07c..5a706f6 100644
 --- a/lib/types/screens/Chat.js
 +++ b/lib/types/screens/Chat.js
 @@ -24,6 +24,8 @@ import { execFileNoThrow } from '../utils/execFileNoThrow.js';
@@ -1301,9 +1301,9 @@ index 050c07c..290a97b 100644
 +                setHelpOpen(false);
 +                setLaunchpadOpen(false);
 +                const openbayesParts = rawInput.trim().split(/\s+/).filter(Boolean);
-+                if (openbayesParts[1] === 'login') void openbayes.login();
-+                else if (openbayesParts[1] === 'status') void openbayes.status();
-+                else if (openbayesParts[1] === 'logout') void openbayes.logout();
++                if (openbayesParts[0] === 'login') void openbayes.login();
++                else if (openbayesParts[0] === 'status') void openbayes.status();
++                else if (openbayesParts[0] === 'logout') void openbayes.logout();
 +                else void openbayes.help();
 +                return true;
 +            }

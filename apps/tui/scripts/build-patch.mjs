@@ -747,9 +747,9 @@ import { useOpenbayes } from '../hyperaiOpenbayes.js';`,
                 setHelpOpen(false);
                 setLaunchpadOpen(false);
                 const openbayesParts = rawInput.trim().split(/\\s+/).filter(Boolean);
-                if (openbayesParts[1] === 'login') void openbayes.login();
-                else if (openbayesParts[1] === 'status') void openbayes.status();
-                else if (openbayesParts[1] === 'logout') void openbayes.logout();
+                if (openbayesParts[0] === 'login') void openbayes.login();
+                else if (openbayesParts[0] === 'status') void openbayes.status();
+                else if (openbayesParts[0] === 'logout') void openbayes.logout();
                 else void openbayes.help();
                 return true;
             }
