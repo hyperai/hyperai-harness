@@ -23,7 +23,7 @@
  */
 import { createHash } from 'node:crypto'
 import { execFileSync } from 'node:child_process'
-import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from 'node:fs'
+import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync, realpathSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { basename, dirname, join, relative, resolve, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -292,7 +292,26 @@ export function buildBeta(args = parseArgs([])) {
   return report
 }
 
-if (process.argv[1] === fileURLToPath(import.meta.url)) {
+/**
+ * Whether this module is the process entry point.
+ *
+ * Comparing `process.argv[1]` with `fileURLToPath(import.meta.url)` as strings
+ * fails when the script is reached through a symlinked directory (macOS `/tmp`
+ * is `/private/tmp`, for example): Node resolves the module URL to the real
+ * path while argv keeps the logical one, so the main flow is skipped and the
+ * process still exits 0. Resolve both sides before comparing.
+ * @returns {boolean} True when run directly (not imported).
+ */
+function invokedDirectly() {
+  if (process.argv[1] === undefined) return false
+  try {
+    return realpathSync(process.argv[1]) === realpathSync(fileURLToPath(import.meta.url))
+  } catch {
+    return false
+  }
+}
+
+if (invokedDirectly()) {
   const report = buildBeta(parseArgs(process.argv.slice(2)))
   process.stdout.write(`${JSON.stringify(report, undefined, 2)}\n`)
 }

@@ -69,7 +69,9 @@ test('doctor reports an interrupted install and dsh-bin mismatch (R2-04/R2-05)',
     writeFileSync(join(fixture.profileDir, '.hyperai-install.json'), JSON.stringify({
       schema: 1, status: 'installing', pid: 999_999, runtime: { dshBin: '/tmp/other-dsh' }, phase: 'dependencies',
     }))
-    const diagnosis = diagnoseProfile({ ...optionsFor(fixture), dshBin: 'dsh' })
+    // RFC-003: without an explicit flag doctor uses the recorded runtime, so a
+    // mismatch warning only makes sense when the caller overrides it.
+    const diagnosis = diagnoseProfile({ ...optionsFor(fixture), dshBin: '/tmp/explicit-dsh', dshBinExplicit: true })
     assert.equal(diagnosis.ok, false)
     assert.ok(diagnosis.issues.some(issue => /interrupted install/u.test(issue)))
     assert.ok(diagnosis.warnings.some(warning => /doctor checked.*other-dsh/u.test(warning)))

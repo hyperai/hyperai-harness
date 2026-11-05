@@ -12,7 +12,7 @@
  * (including user skills/state) before removing installer-owned runtime files;
  * default leaves the archived user data in place, --purge removes the profile.
  */
-import { cpSync, existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs'
+import { cpSync, existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync, realpathSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { dirname, join, resolve, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -37,6 +37,9 @@ function parseArgs(argv) {
     profile: BRAND.profileName,
     dshBin: process.env.HYPERAI_DSH_BIN ?? 'dsh',
     pnpmBin: process.env.PNPM_BIN ?? 'pnpm',
+    // Explicit flags/env win over the runtime recorded by the last install.
+    dshBinExplicit: process.env.HYPERAI_DSH_BIN !== undefined,
+    pnpmBinExplicit: process.env.PNPM_BIN !== undefined,
     json: false,
     yes: false,
     purge: false,
@@ -48,8 +51,8 @@ function parseArgs(argv) {
     if (['status', 'doctor', 'repair', 'uninstall'].includes(arg)) options.command = arg
     else if (arg === '--dsh-home') options.dshHome = argv[++i]
     else if (arg === '--profile') options.profile = argv[++i]
-    else if (arg === '--dsh-bin') options.dshBin = argv[++i]
-    else if (arg === '--pnpm-bin') options.pnpmBin = argv[++i]
+    else if (arg === '--dsh-bin') { options.dshBin = argv[++i]; options.dshBinExplicit = true }
+    else if (arg === '--pnpm-bin') { options.pnpmBin = argv[++i]; options.pnpmBinExplicit = true }
     else if (arg === '--json') options.json = true
     else if (arg === '--yes' || arg === '-y') options.yes = true
     else if (arg === '--purge') options.purge = true
@@ -113,6 +116,35 @@ export function statusProfile(options) {
 }
 
 /** Read-only diagnostics; returns { ok, issues, warnings, status }. */
+/** Product package whose `file:` dependency marks an installation-package layout. */
+const PRODUCT_PACKAGE = '@hyperai/hyperai-tui'
+
+/**
+ * Whether the profile installs the pre-built product tarball.
+ *
+ * The patch-as-dependency layout only exists for source-checkout installs; the
+ * installation package ships a `file:packages/…tgz` dependency instead and has
+ * no `patches/hyperai-tui.patch` to check.
+ */
+export function usesProductTarball(profileDir) {
+  const dependency = readJson(join(profileDir, 'package.json'))?.dependencies?.[PRODUCT_PACKAGE]
+  return typeof dependency === 'string' && dependency.startsWith('file:')
+}
+
+/**
+ * Resolve the dsh/pnpm binaries the last install used.
+ *
+ * A colleague following the README has not put `~/.hyperai/runtime` on PATH, so
+ * `doctor` must not depend on that: the install state records the exact
+ * binaries. Explicit flags (or their env vars) still override.
+ */
+export function resolveRuntimeBins(options, status) {
+  const recorded = status.installState?.runtime
+  const dshBin = options.dshBinExplicit === true || typeof recorded?.dshBin !== 'string' ? options.dshBin : recorded.dshBin
+  const pnpmBin = options.pnpmBinExplicit === true || typeof recorded?.pnpmBin !== 'string' ? options.pnpmBin : recorded.pnpmBin
+  return { dshBin, pnpmBin }
+}
+
 export function diagnoseProfile(options) {
   const issues = []
   const warnings = []
@@ -121,8 +153,9 @@ export function diagnoseProfile(options) {
     issues.push(`unsupported Node.js ${process.versions.node}; requires ^22.19 || >=24`)
   }
   let environment
+  const { dshBin, pnpmBin } = resolveRuntimeBins(options, status)
   try {
-    environment = inspectEnvironment({ dshBin: options.dshBin, pnpmBin: options.pnpmBin })
+    environment = inspectEnvironment({ dshBin, pnpmBin })
     if (!coreVersionSupported(environment.dshVersion, BRAND.core.validated)) {
       issues.push(`DSH Core ${environment.dshVersion} is outside the validated set: ${BRAND.core.validated.join(', ')}`)
     }
@@ -141,10 +174,12 @@ export function diagnoseProfile(options) {
     else issues.push(`interrupted install: state is installing but process ${pid || '?'} is not alive; run repair --yes`)
   }
   const installedDshBin = status.installState?.runtime?.dshBin
-  if (installedDshBin !== undefined && installedDshBin !== options.dshBin) {
-    warnings.push(`doctor checked ${options.dshBin}, while the last install recorded ${installedDshBin}; pass the same --dsh-bin or reinstall`)
+  if (installedDshBin !== undefined && installedDshBin !== dshBin) {
+    warnings.push(`doctor checked ${dshBin}, while the last install recorded ${installedDshBin}; reinstall or pass the same --dsh-bin`)
   }
-  if (!status.copiedPatch) warnings.push('copied branding patch is missing; run repair')
+  if (!usesProductTarball(options.profileDir) && !status.copiedPatch) {
+    warnings.push('copied branding patch is missing; run repair')
+  }
   if (status.skillsError !== undefined) issues.push(`skills manifest: ${status.skillsError}`)
   const pending = join(options.profileDir, '.hyperai-skills', 'pending')
   if (existsSync(pending) && readdirSync(pending).length > 0) warnings.push('an interrupted skills transaction has a pending journal; run catalog/update or repair')
@@ -297,4 +332,23 @@ async function main() {
   }
 }
 
-if (process.argv[1] === fileURLToPath(import.meta.url)) await main()
+/**
+ * Whether this module is the process entry point.
+ *
+ * Comparing `process.argv[1]` with `fileURLToPath(import.meta.url)` as strings
+ * fails when the script is reached through a symlinked directory (macOS `/tmp`
+ * is `/private/tmp`, for example): Node resolves the module URL to the real
+ * path while argv keeps the logical one, so the main flow is skipped and the
+ * process still exits 0. Resolve both sides before comparing.
+ * @returns {boolean} True when run directly (not imported).
+ */
+function invokedDirectly() {
+  if (process.argv[1] === undefined) return false
+  try {
+    return realpathSync(process.argv[1]) === realpathSync(fileURLToPath(import.meta.url))
+  } catch {
+    return false
+  }
+}
+
+if (invokedDirectly()) await main()

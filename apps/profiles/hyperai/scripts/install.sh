@@ -103,7 +103,25 @@ if ! env \
   fail "profile 安装失败。请把上面的错误信息发给负责人。"
 fi
 
-# ── 4. 启动命令 ─────────────────────────────────────────────────────────────
+# ── 4. 确认安装真的成功 ─────────────────────────────────────────────────────
+# Silent no-ops are worse than failures: a skipped installer used to print
+# "安装完成" while no profile existed. Only a completed install may get a launcher.
+PROFILE_DIR="$DSH_HOME/profiles/hyperai"
+INSTALL_STATE="$PROFILE_DIR/.hyperai-install.json"
+case " $* " in
+  *" --dry-run "*)
+    say "dry-run：跳过安装结果检查。"
+    ;;
+  *)
+    [ -d "$PROFILE_DIR" ] || fail "安装没有生成 profile 目录：$PROFILE_DIR。请把上面的输出发给负责人。"
+    [ -f "$INSTALL_STATE" ] || fail "安装没有写入状态文件：$INSTALL_STATE。请把上面的输出发给负责人。"
+    if ! node -e 'const s = require(process.argv[1]); process.exit(s.status === "completed" ? 0 : 1)' "$INSTALL_STATE" 2>/dev/null; then
+      fail "安装未完成（状态不是 completed）：$INSTALL_STATE。请把上面的输出发给负责人。"
+    fi
+    ;;
+esac
+
+# ── 5. 启动命令 ─────────────────────────────────────────────────────────────
 LAUNCHER="$BIN_DIR/hyperai"
 cat > "$LAUNCHER" <<EOF
 #!/bin/sh
