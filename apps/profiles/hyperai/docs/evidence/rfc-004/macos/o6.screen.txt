@@ -1,0 +1,38 @@
+
+
+  ✦ hyperai-tui  v0.2.0-beta.3
+  ██  ██  ██  ██  ██▀▀▄▄  ██▀▀▀▀  ██▀▀▄▄   ▄▀▀▄   ▀▀██▀▀
+  ██  ██  ██  ██  ██  ██  ██      ██  ██  ██  ██    ██
+  ██▀▀██  ▀▀██▀▀  ██▄▄▀▀  ██▀▀▀   ██▄▄▀▀  ██▀▀██    ██
+  ██  ██    ██    ██      ██      ██ ██   ██  ██    ██
+  ██  ██    ██    ██      ██▄▄▄▄  ██  ██  ██  ██  ▄▄██▄▄
+
+  ██  ██   ▄▀▀▄   ██▀▀▄▄  ██  ██  ██▀▀▀▀  ██▀▀▀▀  ██▀▀▀▀
+  ██  ██  ██  ██  ██  ██  ███ ██  ██      ██      ██
+  ██▀▀██  ██▀▀██  ██▄▄▀▀  ██ ███  ██▀▀▀    ▀▀▀▀▄   ▀▀▀▀▄
+  ██  ██  ██  ██  ██ ██   ██  ██  ██          ██      ██
+  ██  ██  ██  ██  ██  ██  ██  ██  ██▄▄▄▄  ██▄▄▄▀  ██▄▄▄▀
+  deepseek-flash · Max effort
+  $HOME/orca/projects/xuexidsh
+  Tip: ```mermaid fences in replies are drawn as character diagrams; toggle in /settings · /tips more tips
+
+    HyperAI Harness
+
+
+   ▶ （Ctrl+P to expand） Context loaded · System prompt 17 sections · Runtime context 2 items · Skills 3 · Tools 26
+
+
+
+
+
+
+
+
+
+  ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+    OpenBayes statusNot signed in to OpenBayes. Run /openbayes login.
+
+    ❯ OK
+      Close
+    Enter to select · Esc to exit
+   deepseek-flash · max · xuexidsh

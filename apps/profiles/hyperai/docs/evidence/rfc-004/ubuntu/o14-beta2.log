@@ -1,0 +1,94 @@
+[2026-11-05T08:17:39Z] HyperAI Harness 内测版安装程序
+[2026-11-05T08:17:39Z]   安装包：$BETA_ROOT/u/hyperai-harness-0.2.0-beta.2
+[2026-11-05T08:17:39Z]   HyperAI 目录：$BETA_ROOT/u/home/.hyperai
+[2026-11-05T08:17:39Z]   Harness home：$BETA_ROOT/u/dsh-home
+[2026-11-05T08:17:39Z] 
+[2026-11-05T08:17:39Z] Node.js 22.23.4 检查通过；准备安装 HyperAI Harness 0.2.0-beta.2。
+[2026-11-05T08:17:39Z] 安装 dsh@0.2.0-rc.2 与 pnpm@10.28.1 到 $BETA_ROOT/u/home/.hyperai/runtime（不会改动系统全局环境）……
+
+added 543 packages in 2m
+npm notice
+npm notice New major version of npm available! 10.9.9 -> 12.2.2
+npm notice Changelog: https://github.com/npm/cli/releases/tag/v12.2.2
+npm notice To update run: npm install -g npm@12.2.2
+npm notice
+[2026-11-05T08:20:07Z] 安装 hyperai profile……
+Progress: resolved 0, reused 0, downloaded 1, added 0
+Progress: resolved 30, reused 0, downloaded 1, added 0
+Progress: resolved 31, reused 0, downloaded 1, added 0
+Progress: resolved 32, reused 0, downloaded 1, added 0
+Progress: resolved 100, reused 0, downloaded 1, added 0
+Progress: resolved 104, reused 0, downloaded 1, added 0
+ WARN  Issues with peer dependencies found
+.
+└─┬ @hyperai/hyperai-tui 0.2.0-beta.2
+  ├── ✕ missing peer @deepseek-ai/cordis@"^4.0.1 || 4.0.5-alpha.2"
+  ├── ✕ missing peer @deepseek-ai/dsh-agent@"^0.1.0-rc.6 || ^0.1.1-rc.1 || 0.1.2-alpha.3 || 0.1.2-alpha.4 || 0.1.2-alpha.5 || 0.1.2-rc.1 || 0.1.3-alpha.2 || 0.1.5-alpha.1 || 0.1.5-alpha.2 || 0.1.5-rc.1 || 0.1.7-rc.1 || 0.1.7-rc.2 || 0.2.0-rc.1 || 0.2.0-rc.2 || 0.2.1-rc.2"
+  ├── ✕ missing peer @deepseek-ai/dsh-session@"^0.1.0-rc.6 || ^0.1.1-rc.1 || 0.1.2-alpha.3 || 0.1.2-alpha.4 || 0.1.2-alpha.5 || 0.1.2-rc.1 || 0.1.3-alpha.2 || 0.1.5-alpha.1 || 0.1.5-alpha.2 || 0.1.5-rc.1 || 0.1.7-rc.1 || 0.1.7-rc.2 || 0.2.0-rc.1 || 0.2.0-rc.2 || 0.2.1-rc.2"
+  ├── ✕ missing peer @deepseek-ai/schemastery@"^3.18.1 || 3.18.5-alpha.2"
+  ├── ✕ missing peer @deepseek-ai/dsh-system-prompt@"^0.1.0-rc.6 || ^0.1.1-rc.1 || 0.1.2-alpha.3 || 0.1.2-alpha.4 || 0.1.2-alpha.5 || 0.1.2-rc.1 || 0.1.3-alpha.2 || 0.1.5-alpha.1 || 0.1.5-alpha.2 || 0.1.5-rc.1 || 0.1.7-rc.1 || 0.1.7-rc.2 || 0.2.0-rc.1 || 0.2.0-rc.2 || 0.2.1-rc.2"
+  └─┬ dsh-working-activity 0.5.1
+    ├── ✕ missing peer @deepseek-ai/cordis@^4.0.1
+    ├── ✕ missing peer @deepseek-ai/dsh-agent@"^0.1.0-rc.6 || ^0.1.1-rc.1 || ^0.1.2-alpha.2 || ^0.1.7-rc.2"
+    ├── ✕ missing peer @deepseek-ai/dsh-session@"^0.1.0-rc.6 || ^0.1.1-rc.1 || ^0.1.2-alpha.2 || ^0.1.7-rc.2"
+    ├── ✕ missing peer @deepseek-ai/schemastery@^3.18.1
+    ├── ✕ missing peer @deepseek-ai/dsh-invariants@"^0.1.0-rc.6 || ^0.1.1-rc.1 || ^0.1.2-alpha.2 || ^0.1.7-rc.2"
+    ├── ✕ missing peer @deepseek-ai/dsh-system-prompt@"^0.1.0-rc.6 || ^0.1.1-rc.1 || ^0.1.2-alpha.2 || ^0.1.7-rc.2"
+    └── ✕ unmet peer react@^18.2.0: found 19.3.1 in @hyperai/hyperai-tui
+Peer dependencies that should be installed:
+  @deepseek-ai/cordis@">=4.0.1 <5.0.0-0"
+  @deepseek-ai/dsh-agent@">=0.1.0-rc.6 <0.2.0-0 || >=0.1.1-rc.1 <0.2.0-0"
+  @deepseek-ai/dsh-invariants@"^0.1.0-rc.6 || ^0.1.1-rc.1 || ^0.1.2-alpha.2 || ^0.1.7-rc.2"
+  @deepseek-ai/dsh-session@">=0.1.0-rc.6 <0.2.0-0 || >=0.1.1-rc.1 <0.2.0-0"
+  @deepseek-ai/dsh-system-prompt@">=0.1.0-rc.6 <0.2.0-0 || >=0.1.1-rc.1 <0.2.0-0"
+  @deepseek-ai/schemastery@">=3.18.1 <4.0.0-0"
+
+Packages: +79
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+Progress: resolved 104, reused 0, downloaded 11, added 11
+Progress: resolved 104, reused 0, downloaded 18, added 16
+Progress: resolved 104, reused 0, downloaded 25, added 25
+Progress: resolved 104, reused 0, downloaded 31, added 32
+Progress: resolved 104, reused 0, downloaded 35, added 36
+Progress: resolved 104, reused 0, downloaded 44, added 44
+Progress: resolved 104, reused 0, downloaded 47, added 47
+Progress: resolved 104, reused 0, downloaded 50, added 50
+Progress: resolved 104, reused 0, downloaded 56, added 56
+Progress: resolved 104, reused 0, downloaded 60, added 61
+Progress: resolved 104, reused 0, downloaded 62, added 63
+Progress: resolved 104, reused 0, downloaded 68, added 69
+Progress: resolved 104, reused 0, downloaded 72, added 73
+Progress: resolved 104, reused 0, downloaded 75, added 76
+Progress: resolved 104, reused 0, downloaded 78, added 79, done
+Done in 28.1s using pnpm v10.28.1
+
+hyperai-tui: profile "hyperai" at $BETA_ROOT/u/dsh-home/profiles/hyperai
+  create    package.json
+  create    LICENSE
+  create    cordis.patch.yml
+  create    pnpm-workspace.yaml
+  create    packages/hyperai-tui-0.2.0-beta.2.tgz
+  create    scripts/skills-lib.mjs
+  create    scripts/skills-update.mjs
+  skills: 2 installed, 0 unchanged, 0 skipped
+
+next steps:
+  dsh --profile hyperai
+  then configure a provider with /provider and pick a model with /model
+  (DSH-native flow; this profile presets no provider, endpoint or model)
+[2026-11-05T08:20:38Z] 
+[2026-11-05T08:20:38Z] 安装完成。
+[2026-11-05T08:20:38Z] 
+[2026-11-05T08:20:38Z] 启动：
+[2026-11-05T08:20:38Z]   $BETA_ROOT/u/home/.hyperai/bin/hyperai
+[2026-11-05T08:20:38Z] 
+[2026-11-05T08:20:38Z] 如果希望直接输入 hyperai 启动，把下面一行加进 shell 配置（~/.zshrc 或 ~/.bashrc）：
+[2026-11-05T08:20:38Z]   export PATH="$BETA_ROOT/u/home/.hyperai/bin:$PATH"
+[2026-11-05T08:20:38Z] 
+[2026-11-05T08:20:38Z] 首次使用：进入 TUI 后用 /provider 添加模型服务，再用 /model 选择模型。
+[2026-11-05T08:20:38Z] API key 由 DSH 保存在 $BETA_ROOT/u/dsh-home/.credentials.yaml（权限 0600），不会写进安装包。
+[2026-11-05T08:20:38Z] 
+[2026-11-05T08:20:38Z] 注意：ppt-generation 技能需要 Python 3 和 python-pptx，本脚本不会自动安装：
+[2026-11-05T08:20:38Z]   python3 -m pip install python-pptx
+[2026-11-05T08:20:38Z] 
+[2026-11-05T08:20:38Z] 卸载：见安装包里的 README.md（使用 profile/scripts/manage.mjs uninstall）。
