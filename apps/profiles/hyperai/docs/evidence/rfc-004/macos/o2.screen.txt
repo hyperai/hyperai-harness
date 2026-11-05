@@ -25,11 +25,11 @@
     技能
 
     ❯ /example-verified-skill
-      自定义 · Use when 需要一个可被 Hermes tap 安装的规范 skill 示例. 展示标准结构。
+      自定义 · <描述已移除：内部仓库内容>
       /openbayes-user
       用户 · OpenBayes/HyperAI personal/个人 resources. Trigger when: OpenBayes token/token值/.env.*(只作 --env-fil…
       /ppt-generation
-      自定义 · Use when 用户要生成/做一份 PPT、幻灯片、演示文稿、汇报材料（从零产出 .pptx）。模型只写内容 JSON，脚…
+      自定义 · <描述已移除：内部仓库内容>
     Enter 填入命令 · Esc 退出
 
   ╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮

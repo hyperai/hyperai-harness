@@ -107,3 +107,17 @@ TUI 的输码路径（确认 → 输入框 → 错误码提示）用 O10 单独�
 ## 需要负责人处理
 
 **请到 <https://openbayes.com/console/settings/account/personalAccessToken> 吊销本次测试签发的令牌**，名字是 `CLI · <设备名>`（有效期 1 天，到期时间 2026-11-06）。本地 session 已经在 O11 里删除，但服务端令牌仍然有效。
+
+## fix-1：证据清理（RFC-004-fix-1）
+
+只改证据文件和本节，没有改代码，也没有重新构建安装包；安装包仍是 `cc219d5d…1574d`。
+
+- `macos/o2.screen.txt`：`/skills` 列表里 `example-verified-skill`、`ppt-generation` 的 description 行（2 行）替换成 `<描述已移除：内部仓库内容>`，技能名保留；`openbayes-user` 的公开描述保留。
+- `ubuntu/o2.screen.txt`：同一份列表的线性屏幕文本，按同样的规则打码 2 段内部描述，技能名保留。
+- `ubuntu/o10.screen.txt`：授权链接 `device=` 里的测试服务器主机名替换成 `$HOST`，与 macOS 证据一致。
+
+自查在分支最新版本上执行（主机名与用户名按 RFC 要求不写进报告，用占位符表示）：
+
+1. `git grep -nI "Use when" -- apps/ | grep -v openbayes-user` → 16 行。逐条确认：2 行在 `apps/cli/tests/dsh-badge.expected.e2e.ts`，是上游公开的 dsh-badge 官方描述；14 行在 `apps/profiles/hyperai/tests/`，是 `Use when testing` 之类的测试假数据。**没有内部 Skill 描述**；`apps/profiles/hyperai/docs/` 下 0 行。
+2. `git grep -nI -e "<服务器主机名>" -e "/Users/<用户名>" -- apps/` → 0 行。
+3. 补充检查：`eyJ…` 形态的令牌 0 行；本次测试的一次性码 0 行。
