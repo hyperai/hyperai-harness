@@ -16,7 +16,7 @@ import { cpSync, existsSync, mkdirSync, readFileSync, readdirSync, rmSync, write
 import { homedir } from 'node:os'
 import { dirname, join, resolve, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { install, parseArgs as parseInstallerArgs, readInstallState } from './install.mjs'
+import { install, openbayesSkillDir, parseArgs as parseInstallerArgs, readInstallState } from './install.mjs'
 import { inspectEnvironment, nodeVersionSupported, coreVersionSupported, parseNodeVersion } from './preflight.mjs'
 import { listBackups, readManifest } from './skills-lib.mjs'
 import { brand, tuiPackage } from './distribution.mjs'
@@ -246,19 +246,28 @@ export async function repairProfile(options) {
 }
 
 /** Safe uninstall: archive user data, remove managed runtime files. */
+/** `~/.agents/skills/openbayes-user` when it is installed (kept on uninstall). */
+function retainedOpenbayesSkill() {
+  const dir = openbayesSkillDir()
+  return existsSync(dir) ? dir : undefined
+}
+
 export function uninstallProfile(options) {
   requireManaged(options)
   if (!options.yes) throw new Error('uninstall requires --yes')
   const archive = archiveProfile(options)
   const launcher = removeLauncher()
+  // Another agent may share this skill, and it lives outside the profile:
+  // uninstall never deletes it, it only says where it is.
+  const openbayes = retainedOpenbayesSkill()
   if (options.purge) {
     rmSync(options.profileDir, { recursive: true, force: true })
-    return { profileDir: options.profileDir, archive, purge: true, kept: [], launcher }
+    return { profileDir: options.profileDir, archive, purge: true, kept: [], launcher, openbayes }
   }
   const kept = removeManagedRuntime(options)
   mkdirSync(options.profileDir, { recursive: true })
   writeFileSync(join(options.profileDir, UNINSTALL_MARKER), `${JSON.stringify({ status: 'uninstalled', profile: options.profile, archive, at: new Date().toISOString() }, undefined, 2)}\n`)
-  return { profileDir: options.profileDir, archive, purge: false, kept: [...kept, UNINSTALL_MARKER].sort(), launcher }
+  return { profileDir: options.profileDir, archive, purge: false, kept: [...kept, UNINSTALL_MARKER].sort(), launcher, openbayes }
 }
 
 /**
@@ -325,7 +334,13 @@ async function main() {
     }
     const result = uninstallProfile(options)
     if (options.json) process.stdout.write(`${JSON.stringify(result, undefined, 2)}\n`)
-    else process.stdout.write(`uninstalled ${options.profileDir}\narchive: ${result.archive}\n${options.purge ? 'profile removed' : `kept: ${result.kept.join(', ') || '-'}`}\n`)
+    else {
+      process.stdout.write(`uninstalled ${options.profileDir}\narchive: ${result.archive}\n${options.purge ? 'profile removed' : `kept: ${result.kept.join(', ') || '-'}`}\n`)
+      if (result.openbayes !== undefined) {
+        process.stdout.write(`openbayes-user: 保留 ${result.openbayes}（其他 Agent 可能也在使用）\n`)
+        process.stdout.write(`  如确认不再需要，手动删除：rm -rf ${result.openbayes}\n`)
+      }
+    }
   } catch (error) {
     process.stderr.write(`hyperai-manage: ${error instanceof Error ? error.message : String(error)}\n`)
     process.exitCode = 1

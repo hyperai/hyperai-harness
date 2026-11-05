@@ -14,6 +14,7 @@
  *   --profile <name>     Profile name (default: hyperai)
  *   --dsh-bin <path>     dsh executable (default: $HYPERAI_DSH_BIN or `dsh` on PATH)
  *   --no-skills          Skip the hyperai-skills install step
+ *   --no-openbayes       Skip installing the openbayes-user skill
  *   --include-unverified Install inbox candidates too; default is verified only
  *   --frozen-lockfile    Use the profile's existing pnpm lockfile (reproducible reinstall)
  *   --skills-ref <sha>   Override the pinned hyperai-skills commit
@@ -34,9 +35,11 @@
  * no absolute paths or references back to the checkout.
  */
 import { execFileSync, spawnSync } from 'node:child_process'
-import { cpSync, existsSync, mkdirSync, readFileSync, readdirSync, renameSync, rmSync, writeFileSync, realpathSync } from 'node:fs'
-import { homedir } from 'node:os'
+import { createWriteStream, cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, renameSync, rmSync, writeFileSync, realpathSync } from 'node:fs'
+import { homedir, tmpdir } from 'node:os'
 import { basename, dirname, join, resolve } from 'node:path'
+import { get as httpGet } from 'node:http'
+import { get as httpsGet } from 'node:https'
 import { preflight as runPreflight } from './preflight.mjs'
 import { brand, isBundled, profileTemplateDir, skillsLockPath, skillsSnapshotDir, tuiPackage, tuiTarballPath } from './distribution.mjs'
 import { fileURLToPath } from 'node:url'
@@ -53,6 +56,144 @@ const MANAGED_MARKER = 'hyperaiTuiManaged'
 const PATCH_MARKER = '# hyperai profile patch layer'
 const WORKSPACE_MARKER = '# hyperai profile pnpm workspace:'
 const INSTALL_STATE = '.hyperai-install.json'
+
+/**
+ * OpenBayes user skill: downloaded at install time into the official discovery
+ * directory (`~/.agents/skills/`), never bundled into the installer and never
+ * modified. An existing copy always wins; a failed download never fails the
+ * HyperAI install.
+ */
+const OPENBAYES_DEFAULT_URL = 'https://openbayes.com/skills/openbayes-user/latest.tar.gz'
+const OPENBAYES_MANUAL = 'npx skills add https://openbayes.com/skills/openbayes-user'
+const OPENBAYES_MAX_BYTES = 20 * 1024 * 1024
+
+/** Official location used by `npx skills add` and by DSH's default skill roots. */
+export function openbayesSkillDir(home = process.env.HOME ?? homedir()) {
+  return join(home, '.agents', 'skills', 'openbayes-user')
+}
+
+/** Read `<dir>/VERSION` when present. */
+export function openbayesVersion(dir) {
+  try {
+    return readFileSync(join(dir, 'VERSION'), 'utf8').trim() || undefined
+  } catch {
+    return undefined
+  }
+}
+
+/**
+ * Reject an archive that could escape the target directory or smuggle links.
+ * `modes` holds the first character of each `tar -tvzf` line, aligned with names.
+ */
+export function validateOpenbayesArchive(names, modes = []) {
+  if (!Array.isArray(names) || names.length === 0) throw new Error('压缩包为空')
+  for (const name of names) {
+    const clean = String(name).replace(/\/+$/u, '')
+    if (clean === '') throw new Error('压缩包包含空路径')
+    if (clean.startsWith('/') || clean.includes('\\')) throw new Error(`压缩包包含非法路径：${name}`)
+    if (clean.split('/').includes('..')) throw new Error(`压缩包包含上级目录：${name}`)
+    if (clean !== 'openbayes-user' && !clean.startsWith('openbayes-user/')) {
+      throw new Error(`压缩包根目录必须只有 openbayes-user/：${name}`)
+    }
+  }
+  if (!names.some(name => String(name).replace(/\/+$/u, '') === 'openbayes-user/SKILL.md')) {
+    throw new Error('压缩包缺少 openbayes-user/SKILL.md')
+  }
+  if (modes.some(mode => mode === 'l' || mode === 'h')) throw new Error('压缩包包含符号链接或硬链接')
+  return true
+}
+
+/** Download with redirects, a timeout and a size cap. */
+function downloadOpenbayes(url, target, redirects = 5) {
+  return new Promise((resolvePromise, reject) => {
+    const client = url.startsWith('https:') ? httpsGet : httpGet
+    const request = client(url, { headers: { 'user-agent': `hyperai-harness/${TUI_PACKAGE.version}` } }, response => {
+      const status = response.statusCode ?? 0
+      if ([301, 302, 303, 307, 308].includes(status) && typeof response.headers.location === 'string') {
+        response.resume()
+        if (redirects <= 0) reject(new Error('重定向次数过多'))
+        else resolvePromise(downloadOpenbayes(new URL(response.headers.location, url).toString(), target, redirects - 1))
+        return
+      }
+      if (status !== 200) {
+        response.resume()
+        reject(new Error(`下载失败（HTTP ${status}）`))
+        return
+      }
+      let bytes = 0
+      const output = createWriteStream(target)
+      response.on('data', chunk => {
+        bytes += chunk.length
+        if (bytes > OPENBAYES_MAX_BYTES) {
+          request.destroy(new Error('下载内容超过大小上限'))
+          output.destroy()
+        }
+      })
+      response.pipe(output)
+      output.on('finish', () => output.close(() => resolvePromise(bytes)))
+      output.on('error', reject)
+    })
+    request.setTimeout(60_000, () => request.destroy(new Error('下载超时')))
+    request.on('error', reject)
+  })
+}
+
+/** List archive names and mode characters; throws when tar cannot read it. */
+function inspectOpenbayesArchive(file) {
+  const names = spawnSync('tar', ['-tzf', file], { encoding: 'utf8' })
+  if (names.status !== 0) throw new Error('压缩包无法读取')
+  const verbose = spawnSync('tar', ['-tvzf', file], { encoding: 'utf8' })
+  if (verbose.status !== 0) throw new Error('压缩包无法读取')
+  return {
+    names: names.stdout.split('\n').filter(line => line !== ''),
+    modes: verbose.stdout.split('\n').filter(line => line !== '').map(line => line.trimStart()[0]),
+  }
+}
+
+/**
+ * Install `openbayes-user` into `~/.agents/skills/` unless it already exists.
+ * Returns a status object; failures are reported, never thrown.
+ */
+export async function installOpenbayesSkill(options = {}) {
+  const home = options.home ?? process.env.HOME ?? homedir()
+  const target = openbayesSkillDir(home)
+  const url = options.url ?? OPENBAYES_DEFAULT_URL
+  const log = options.log ?? (line => process.stdout.write(`${line}\n`))
+  if (existsSync(target)) {
+    const version = openbayesVersion(target)
+    log(`openbayes-user: 已有${version === undefined ? '' : ` ${version}`}，保留不动（${target}）`)
+    return { status: 'kept', version, dir: target }
+  }
+  if (options.dryRun === true) {
+    log(`openbayes-user: 将安装到 ${target}（dry-run，未下载）`)
+    return { status: 'planned', dir: target }
+  }
+  const work = mkdtempSync(join(tmpdir(), 'hyperai-openbayes-'))
+  try {
+    const archive = join(work, 'latest.tar.gz')
+    await downloadOpenbayes(url, archive)
+    const { names, modes } = inspectOpenbayesArchive(archive)
+    validateOpenbayesArchive(names, modes)
+    const unpacked = join(work, 'unpacked')
+    mkdirSync(unpacked)
+    const extracted = spawnSync('tar', ['-xzf', archive, '-C', unpacked], { encoding: 'utf8' })
+    if (extracted.status !== 0) throw new Error('压缩包解压失败')
+    const source = join(unpacked, 'openbayes-user')
+    if (!existsSync(join(source, 'SKILL.md'))) throw new Error('解压后没有 openbayes-user/SKILL.md')
+    mkdirSync(dirname(target), { recursive: true })
+    cpSync(source, target, { recursive: true })
+    const version = openbayesVersion(target)
+    log(`openbayes-user: 已安装${version === undefined ? '' : ` ${version}`} → ${target}`)
+    return { status: 'installed', version, dir: target }
+  } catch (error) {
+    const reason = error instanceof Error ? error.message : String(error)
+    log(`警告：openbayes-user 安装失败（${reason}）。HyperAI 其余部分已安装完成。`)
+    log(`  手动安装：${OPENBAYES_MANUAL}`)
+    return { status: 'failed', reason, dir: target, manual: OPENBAYES_MANUAL }
+  } finally {
+    rmSync(work, { recursive: true, force: true })
+  }
+}
 
 /** Parse CLI arguments into an options object. */
 export function parseArgs(argv) {
@@ -79,6 +220,7 @@ export function parseArgs(argv) {
     else if (arg === '--dsh-bin') options.dshBin = argv[++index]
     else if (arg === '--pnpm-bin') options.pnpmBin = argv[++index]
     else if (arg === '--no-skills') options.skills = false
+    else if (arg === '--no-openbayes') options.openbayes = false
     else if (arg === '--verified-only') options.verifiedOnly = true
     else if (arg === '--include-unverified') options.verifiedOnly = false
     else if (arg === '--frozen-lockfile') options.frozenLockfile = true
@@ -544,6 +686,7 @@ export async function install(options = parseArgs([])) {
   }
   if (options.dryRun) {
     result.skills = { skipped: options.skills ? 'dry-run' : true }
+    result.openbayes = options.openbayes ? { status: 'planned', dir: openbayesSkillDir() } : { status: 'skipped' }
     return result
   }
   phase = 'dependencies'
@@ -581,6 +724,15 @@ export async function install(options = parseArgs([])) {
       localSnapshot: isBundled(),
       verifiedOnly: options.verifiedOnly,
       dshBin: options.dshBin,
+    })
+  }
+  if (options.openbayes) {
+    // Never fatal: the skill is an optional add-on and the profile is already usable.
+    phase = 'openbayes'
+    writeInstallState(options, { status: 'installing', phase, startedAt, error: null })
+    result.openbayes = await installOpenbayesSkill({
+      url: options.openbayesUrl,
+      log: options.json === true ? () => {} : line => process.stdout.write(`${line}\n`),
     })
   }
   writeInstallState(options, { status: 'completed', phase: 'done', error: null, completedAt: new Date().toISOString() })
