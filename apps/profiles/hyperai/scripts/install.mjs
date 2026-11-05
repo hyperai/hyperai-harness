@@ -209,6 +209,8 @@ export function parseArgs(argv) {
     skillsRef: undefined,
     skillsSource: undefined,
     skillsLock: undefined,
+    openbayes: true,
+    openbayesUrl: process.env.HYPERAI_OPENBAYES_URL,
     dryRun: false,
     force: false,
     json: false,

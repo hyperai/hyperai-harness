@@ -11,7 +11,7 @@ import { spawnSync } from 'node:child_process'
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { installOpenbayesSkill, openbayesSkillDir, openbayesVersion, validateOpenbayesArchive } from '../scripts/install.mjs'
+import { installOpenbayesSkill, openbayesSkillDir, openbayesVersion, parseArgs, validateOpenbayesArchive } from '../scripts/install.mjs'
 
 /** Build `openbayes-user/…` and pack it with the system tar. */
 function makeArchive({ skill = '# OpenBayes User\n', version = 'v9.9.9', extra = undefined, omitSkill = false } = {}) {
@@ -188,4 +188,9 @@ test('openbayesVersion tolerates a missing VERSION file', () => {
   } finally {
     rmSync(home, { recursive: true, force: true })
   }
+})
+
+test('the installer installs the skill by default and can opt out', () => {
+  assert.equal(parseArgs([]).openbayes, true)
+  assert.equal(parseArgs(['--no-openbayes']).openbayes, false)
 })
