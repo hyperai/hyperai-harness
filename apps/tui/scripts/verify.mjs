@@ -239,7 +239,7 @@ check('the patch carries the HyperAI Skills update bridge without a second scann
 check('the /openbayes bridge runs locally and never forwards the code', () => {
   const bridge = readFileSync(join(PKG, 'src', 'hyperaiOpenbayes.js'), 'utf8')
   const core = readFileSync(join(PKG, 'src', 'hyperaiOpenbayesCore.js'), 'utf8')
-  for (const marker of ["'--login'", "'--code'", "'--identity'", "'--logout'", 'dialogs.input', 'normalizeCode', 'redact']) {
+  for (const marker of ["'--login'", "'--code'", "'--identity'", "'--logout'", 'kind: \'input\'', 'kind: \'confirm\'', 'normalizeCode', 'redact']) {
     if (!bridge.includes(marker)) throw new Error(`hyperaiOpenbayes.js is missing ${JSON.stringify(marker)}`)
   }
   for (const marker of ['normalizeCode', 'redact', 'classifyFailure', 'statusText']) {

@@ -88,7 +88,8 @@ export function useOpenbayes({ channel, dialogs, vendor = VENDORS.openbayes }) {
   /** Persistent result dialog; a manual action must stay visible until dismissed. */
   const showInfo = React.useCallback(async (title, message) => {
     try {
-      await dialogs.confirm({
+      await dialogs.ask({
+        kind: 'confirm',
         title,
         message,
         confirmLabel: lang() === 'zh' ? '确定' : 'OK',
@@ -127,7 +128,8 @@ export function useOpenbayes({ channel, dialogs, vendor = VENDORS.openbayes }) {
         errorText('unknown', firstDiagnostic(started), lang()))
       return
     }
-    const proceed = await dialogs.confirm({
+    const proceed = await dialogs.ask({
+      kind: 'confirm',
       title: heading(vendor, lang() === 'zh' ? ' 登录' : ' sign-in', lang()),
       message: loginPromptText(prompt, lang()),
       confirmLabel: lang() === 'zh' ? '已确认，输入一次性码' : 'Confirmed, enter code',
@@ -136,7 +138,8 @@ export function useOpenbayes({ channel, dialogs, vendor = VENDORS.openbayes }) {
     if (proceed !== true) return
 
     // The answer is used immediately and never echoed into the chat or logs.
-    const answer = await dialogs.input({
+    const answer = await dialogs.ask({
+      kind: 'input',
       title: lang() === 'zh' ? '输入一次性码（5 分钟内有效）' : 'Enter the one-time code (valid for 5 minutes)',
       placeholder: lang() === 'zh' ? '粘贴一次性码' : 'Paste the one-time code',
     }, undefined, DIALOG_TIMEOUT_MS)
@@ -198,7 +201,8 @@ export function useOpenbayes({ channel, dialogs, vendor = VENDORS.openbayes }) {
       await showInfo(heading(vendor, undefined, lang()), missingSkillText(vendor, lang()))
       return
     }
-    const confirmed = await dialogs.confirm({
+    const confirmed = await dialogs.ask({
+      kind: 'confirm',
       title: lang() === 'zh' ? '退出 OpenBayes 登录？' : 'Sign out of OpenBayes?',
       message: logoutConfirmText(lang()),
       confirmLabel: lang() === 'zh' ? '退出登录' : 'Sign out',
