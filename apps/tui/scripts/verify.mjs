@@ -109,6 +109,8 @@ check('patch touches only the documented upstream files', () => {
     'lib/types/screens/Chat.js',
     'lib/types/hyperaiSkills.js',
     'lib/types/hyperaiSkillsCore.js',
+    'lib/types/hyperaiOpenbayes.js',
+    'lib/types/hyperaiOpenbayesCore.js',
   ]
   const unexpected = changed.filter(file => !expected.includes(file))
   const missing = expected.filter(file => !changed.includes(file))
@@ -232,6 +234,25 @@ check('the patch carries the HyperAI Skills update bridge without a second scann
     if (chat.includes(banned) || core.includes(banned)) throw new Error(`TUI bridge duplicates profile logic: ${banned}`)
   }
   return 'CLI bridge only; scanning/install stays in apps/profiles/hyperai'
+})
+
+check('the /openbayes bridge runs locally and never forwards the code', () => {
+  const bridge = readFileSync(join(PKG, 'src', 'hyperaiOpenbayes.js'), 'utf8')
+  const core = readFileSync(join(PKG, 'src', 'hyperaiOpenbayesCore.js'), 'utf8')
+  for (const marker of ["'--login'", "'--code'", "'--identity'", "'--logout'", 'dialogs.input', 'normalizeCode', 'redact']) {
+    if (!bridge.includes(marker)) throw new Error(`hyperaiOpenbayes.js is missing ${JSON.stringify(marker)}`)
+  }
+  for (const marker of ['normalizeCode', 'redact', 'classifyFailure', 'statusText']) {
+    if (!core.includes(marker)) throw new Error(`hyperaiOpenbayesCore.js is missing ${marker}`)
+  }
+  // The code and the session stay in the TUI process: no model/chat hand-off.
+  for (const banned of ['channel.send', 'channel.submit', 'submitPrompt', 'sendMessage']) {
+    if (bridge.includes(banned)) throw new Error(`OpenBayes bridge forwards to the model: ${banned}`)
+  }
+  for (const marker of ["name: 'openbayes'", 'useOpenbayes', "case 'openbayes'"]) {
+    if (!patch.includes(marker)) throw new Error(`patch is missing ${JSON.stringify(marker)}`)
+  }
+  return 'local spawn + managed dialogs; the one-time code never reaches the model'
 })
 
 check('narrow-width PTY evidence keeps the product version readable', () => {

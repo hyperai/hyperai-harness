@@ -53,14 +53,15 @@ index e20c590..bfb6f7b 100644
      { value: 'codex', label: 'Codex (lavender)', descriptions: { zh: 'Codex（薰衣草紫）' } },
  ];
 diff --git a/lib/types/commands.js b/lib/types/commands.js
-index 0806732..7973530 100644
+index 0806732..c4bd188 100644
 --- a/lib/types/commands.js
 +++ b/lib/types/commands.js
-@@ -84,8 +84,9 @@ export const LOCAL_COMMANDS = [
+@@ -84,8 +84,10 @@ export const LOCAL_COMMANDS = [
      { name: 'hooks', description: 'Show hooks status' },
      { name: 'mcp', description: 'Show MCP status' },
      { name: 'skills', description: 'List available skills' },
 +    { name: 'skills-update', description: 'Check for HyperAI Skills updates and install them' },
++    { name: 'openbayes', description: 'OpenBayes: sign in, show status, sign out' },
      { name: 'plugin', description: 'Show plugin diagnostics, and the plugins this profile added' },
 -    { name: 'update', description: 'Update dsh-tui and restart' },
 +    { name: 'update', description: 'HyperAI: updates are managed by the profile installer' },
@@ -68,7 +69,7 @@ index 0806732..7973530 100644
      // A local entry of the same name would win the collision filter.
      // Misc / not applicable on this leaf
 diff --git a/lib/types/components/LogoV2.js b/lib/types/components/LogoV2.js
-index ed2f7f3..51d0cab 100644
+index ed2f7f3..a398c6b 100644
 --- a/lib/types/components/LogoV2.js
 +++ b/lib/types/components/LogoV2.js
 @@ -8,7 +8,7 @@ import { dirname, join } from 'node:path';
@@ -177,7 +178,7 @@ index ed2f7f3..51d0cab 100644
                                  setHeartKey(k => k + 1);
                              }
 -                        }, children: _jsx(Box, { width: WHALE_BOX_WIDTH, flexDirection: "column", alignItems: "center", children: brand === 'deepseek' && mascotSkin !== undefined ? (_jsx(SplashMascot, { skin: mascotSkin, active: !whaleFrozen && whaleIdle, imageBox: imageBox })) : portraitMode ? (_jsx(Box, { width: WHALE_BOX_WIDTH, height: textColumnRows, flexDirection: "row", justifyContent: "center", alignItems: "center", children: maidImageActive ? (_jsx(MaidPortrait, { source: maidHappy ? (portraits?.happy ?? maidSource) : maidSource, maxColumns: WHALE_BOX_WIDTH, maxRows: textColumnRows, presentation: "transcript" })) : (claudeArt ? _jsx(ClaudeGirlArt, { width: WHALE_BOX_WIDTH }) : _jsx(WhaleGirlArt, { width: WHALE_BOX_WIDTH })) })) : (_jsx(WhaleArt, { frameIndex: frameIndex, pose: settled && whaleIdle && !whaleFrozen ? (idlePose ?? RESTING_POSE) : undefined, width: WHALE_BOX_WIDTH })) }) })), (showBigTitle || showPlainTitle) && (_jsxs(Box, { flexDirection: "column", flexShrink: 1, children: [chrome !== 'minimal' && (_jsxs(Text, { wrap: "truncate-end", children: [sweep('✦ dsh-TUI', t, wordmarkRGB, wordmarkShimmerRGB, 60), _jsx(Text, { dimColor: true, children: '  v' + VERSION })] })), showBigTitle ? (_jsxs(_Fragment, { children: [bigDeepSeek.map((row, index) => (_jsx(Text, { wrap: "truncate-end", children: row.replace(/\s+$/u, '') }, `ds-${index}`))), _jsx(Box, { height: 1 }), bigHarness.map((row, index) => (_jsx(Text, { wrap: "truncate-end", children: row.replace(/\s+$/u, '') }, `h-${index}`)))] })) : (showPlainTitle && (_jsx(Text, { color: "accent", bold: true, wrap: "truncate-end", children: words.plain }))), chrome !== 'minimal' && (_jsxs(_Fragment, { children: [_jsxs(Text, { wrap: "truncate-end", children: [model, effort !== undefined && _jsx(Text, { dimColor: true, children: ' · ' + capitalize(effort) + ' effort' })] }), _jsx(Text, { dimColor: true, wrap: "truncate-end", children: cwd }), _jsxs(Text, { wrap: "truncate-end", children: [_jsx(Text, { dimColor: true, children: tr('logo-tip-prefix') }), getLang() === 'zh' ? randomTip.zh : randomTip.en, _jsx(Text, { dimColor: true, children: ' · /tips ' + tr('logo-tip-more') })] })] })), chrome !== 'minimal' && driftLine != null && (_jsxs(Text, { color: "warning", wrap: "wrap", children: ["\u26A0", ' ', tOr(`logo-drift-${driftLine.kind}`, `The dsh engine (${driftLine.versions.join(' / ')}) does not match the validated ${UPSTREAM_VALIDATED_VERSION}; reinstall via npm i -g @deepseek-ai/dsh@${UPSTREAM_VALIDATED_VERSION}.`, {
-+                        }, children: _jsx(Box, { width: WHALE_BOX_WIDTH, flexDirection: "column", alignItems: "center", children: brand === 'deepseek' && mascotSkin !== undefined ? (_jsx(SplashMascot, { skin: mascotSkin, active: !whaleFrozen && whaleIdle, imageBox: imageBox })) : portraitMode ? (_jsx(Box, { width: WHALE_BOX_WIDTH, height: textColumnRows, flexDirection: "row", justifyContent: "center", alignItems: "center", children: maidImageActive ? (_jsx(MaidPortrait, { source: maidHappy ? (portraits?.happy ?? maidSource) : maidSource, maxColumns: WHALE_BOX_WIDTH, maxRows: textColumnRows, presentation: "transcript" })) : (claudeArt ? _jsx(ClaudeGirlArt, { width: WHALE_BOX_WIDTH }) : _jsx(WhaleGirlArt, { width: WHALE_BOX_WIDTH })) })) : (_jsx(WhaleArt, { frameIndex: frameIndex, pose: settled && whaleIdle && !whaleFrozen ? (idlePose ?? RESTING_POSE) : undefined, width: WHALE_BOX_WIDTH })) }) })), (showBigTitle || showPlainTitle) && (_jsxs(Box, { flexDirection: "column", flexShrink: 1, children: [chrome !== 'minimal' && (_jsxs(Text, { wrap: "truncate-end", children: [sweep('✦ hyperai-tui', t, wordmarkRGB, wordmarkShimmerRGB, 60), _jsx(Text, { dimColor: true, children: '  v0.2.0-beta.2' })] })), showBigTitle ? (_jsxs(_Fragment, { children: [bigDeepSeek.map((row, index) => (_jsx(Text, { wrap: "truncate-end", children: row.replace(/\s+$/u, '') }, `ds-${index}`))), _jsx(Box, { height: 1 }), bigHarness.map((row, index) => (_jsx(Text, { wrap: "truncate-end", children: row.replace(/\s+$/u, '') }, `h-${index}`)))] })) : (showPlainTitle && (_jsx(Text, { bold: true, wrap: "truncate-end", children: sweep(words.plain, t, HYPERAI_PALETTE.accent, HYPERAI_PALETTE.accent, 60) }))), chrome !== 'minimal' && (_jsxs(_Fragment, { children: [_jsxs(Text, { wrap: "truncate-end", children: [model, effort !== undefined && _jsx(Text, { dimColor: true, children: ' · ' + capitalize(effort) + ' effort' })] }), _jsx(Text, { dimColor: true, wrap: "truncate-end", children: cwd }), _jsxs(Text, { wrap: "truncate-end", children: [_jsx(Text, { dimColor: true, children: tr('logo-tip-prefix') }), getLang() === 'zh' ? randomTip.zh : randomTip.en, _jsx(Text, { dimColor: true, children: ' · /tips ' + tr('logo-tip-more') })] })] })), chrome !== 'minimal' && driftLine != null && (_jsxs(Text, { color: "warning", wrap: "wrap", children: ["\u26A0", ' ', tOr(`logo-drift-${driftLine.kind}`, `The dsh engine (${driftLine.versions.join(' / ')}) does not match the validated ${UPSTREAM_VALIDATED_VERSION}; reinstall via npm i -g @deepseek-ai/dsh@${UPSTREAM_VALIDATED_VERSION}.`, {
++                        }, children: _jsx(Box, { width: WHALE_BOX_WIDTH, flexDirection: "column", alignItems: "center", children: brand === 'deepseek' && mascotSkin !== undefined ? (_jsx(SplashMascot, { skin: mascotSkin, active: !whaleFrozen && whaleIdle, imageBox: imageBox })) : portraitMode ? (_jsx(Box, { width: WHALE_BOX_WIDTH, height: textColumnRows, flexDirection: "row", justifyContent: "center", alignItems: "center", children: maidImageActive ? (_jsx(MaidPortrait, { source: maidHappy ? (portraits?.happy ?? maidSource) : maidSource, maxColumns: WHALE_BOX_WIDTH, maxRows: textColumnRows, presentation: "transcript" })) : (claudeArt ? _jsx(ClaudeGirlArt, { width: WHALE_BOX_WIDTH }) : _jsx(WhaleGirlArt, { width: WHALE_BOX_WIDTH })) })) : (_jsx(WhaleArt, { frameIndex: frameIndex, pose: settled && whaleIdle && !whaleFrozen ? (idlePose ?? RESTING_POSE) : undefined, width: WHALE_BOX_WIDTH })) }) })), (showBigTitle || showPlainTitle) && (_jsxs(Box, { flexDirection: "column", flexShrink: 1, children: [chrome !== 'minimal' && (_jsxs(Text, { wrap: "truncate-end", children: [sweep('✦ hyperai-tui', t, wordmarkRGB, wordmarkShimmerRGB, 60), _jsx(Text, { dimColor: true, children: '  v0.2.0-beta.3' })] })), showBigTitle ? (_jsxs(_Fragment, { children: [bigDeepSeek.map((row, index) => (_jsx(Text, { wrap: "truncate-end", children: row.replace(/\s+$/u, '') }, `ds-${index}`))), _jsx(Box, { height: 1 }), bigHarness.map((row, index) => (_jsx(Text, { wrap: "truncate-end", children: row.replace(/\s+$/u, '') }, `h-${index}`)))] })) : (showPlainTitle && (_jsx(Text, { bold: true, wrap: "truncate-end", children: sweep(words.plain, t, HYPERAI_PALETTE.accent, HYPERAI_PALETTE.accent, 60) }))), chrome !== 'minimal' && (_jsxs(_Fragment, { children: [_jsxs(Text, { wrap: "truncate-end", children: [model, effort !== undefined && _jsx(Text, { dimColor: true, children: ' · ' + capitalize(effort) + ' effort' })] }), _jsx(Text, { dimColor: true, wrap: "truncate-end", children: cwd }), _jsxs(Text, { wrap: "truncate-end", children: [_jsx(Text, { dimColor: true, children: tr('logo-tip-prefix') }), getLang() === 'zh' ? randomTip.zh : randomTip.en, _jsx(Text, { dimColor: true, children: ' · /tips ' + tr('logo-tip-more') })] })] })), chrome !== 'minimal' && driftLine != null && (_jsxs(Text, { color: "warning", wrap: "wrap", children: ["\u26A0", ' ', tOr(`logo-drift-${driftLine.kind}`, `The dsh engine (${driftLine.versions.join(' / ')}) does not match the validated ${UPSTREAM_VALIDATED_VERSION}; reinstall via npm i -g @deepseek-ai/dsh@${UPSTREAM_VALIDATED_VERSION}.`, {
                                          installed: driftLine.versions.join(' / '),
                                          validated: UPSTREAM_VALIDATED_VERSION,
                                          primary: UPSTREAM_VALIDATED_VERSION,
@@ -250,6 +251,442 @@ index 71e32df..4f233d0 100644
      // 品牌镜像初值（branding.ts）：首帧渲染前铺好，避免 Claude 后端先画一屏
      // 蓝再变橙。Chat 里的 effect 会在品牌解析变化时跟进更新这个镜像。
      setActiveBrand(resolveBrand(config.brand, backendChoice));
+diff --git a/lib/types/hyperaiOpenbayes.js b/lib/types/hyperaiOpenbayes.js
+new file mode 100644
+index 0000000..76d919e
+--- /dev/null
++++ b/lib/types/hyperaiOpenbayes.js
+@@ -0,0 +1,223 @@
++/**
++ * `/openbayes` command bridge for the TUI.
++ *
++ * Runs the skill's own `scripts/run_graphql.sh` locally: the authorize URL, the
++ * one-time code and the token never go through the model, the chat transcript
++ * or the session log. The dialogs belong to the TUI chrome; the input answer is
++ * handed straight back to the child process.
++ *
++ * The skill is installed by the profile installer into `~/.agents/skills/`; it
++ * is never modified here. `hyperaiOpenbayesCore.js` holds the formatting and
++ * validation so it can be tested without React or a terminal.
++ */
++import React from 'react'
++import { spawn } from 'node:child_process'
++import { existsSync } from 'node:fs'
++import { homedir, hostname } from 'node:os'
++import { join } from 'node:path'
++import { getLang } from './i18n.js'
++import {
++  VENDORS, classifyFailure, errorText, firstDiagnostic, loginPromptText, loginSuccessText, logoutConfirmText,
++  logoutDoneText, missingSkillText, normalizeCode, parseAuthorize, parseIdentity, parseLoginSuccess, redact,
++  statusText, usageText,
++} from './hyperaiOpenbayesCore.js'
++
++const LOGIN_TIMEOUT_MS = 60_000
++const CODE_TIMEOUT_MS = 120_000
++const IDENTITY_TIMEOUT_MS = 30_000
++const LOGOUT_TIMEOUT_MS = 30_000
++const DIALOG_TIMEOUT_MS = 300_000
++
++/** Current UI language (`zh` / `en`). Resolved at call time, so `/lang` works. */
++function lang() {
++  return getLang() === 'zh' ? 'zh' : 'en'
++}
++
++/** Dialog title for a vendor and a phase. */
++function heading(vendor, suffix, langCode) {
++  return `${vendor.label}${suffix === undefined ? '' : suffix}`
++}
++
++/**
++ * Resolve the skill location for a vendor. `HOME` is read at call time so a
++ * test can point it at a temporary directory.
++ * @param {NodeJS.ProcessEnv} env
++ * @param {{ name: string, label: string, consoleTokens: string }} vendor
++ */
++export function resolveOpenbayesContext(env = process.env, vendor = VENDORS.openbayes) {
++  const home = env.HOME || homedir()
++  const dir = join(home, '.agents', 'skills', `${vendor.name}-user`)
++  const script = join(dir, 'scripts', 'run_graphql.sh')
++  return { vendor, home, dir, script, available: existsSync(script) }
++}
++
++/** Run the skill CLI with a bounded lifetime; never throws. */
++function run(context, args, timeoutMs) {
++  return new Promise(resolve => {
++    let stdout = ''
++    let stderr = ''
++    let timedOut = false
++    let settled = false
++    const settle = value => {
++      if (settled) return
++      settled = true
++      clearTimeout(timer)
++      resolve(value)
++    }
++    const child = spawn('bash', [context.script, ...args], { stdio: ['ignore', 'pipe', 'pipe'] })
++    const timer = setTimeout(() => {
++      timedOut = true
++      child.kill('SIGKILL')
++    }, timeoutMs)
++    child.stdout.on('data', chunk => { stdout += String(chunk) })
++    child.stderr.on('data', chunk => { stderr += String(chunk) })
++    child.on('error', error => settle({ code: -1, stdout, stderr: `${stderr}\n${error.message}`, timedOut }))
++    child.on('close', code => settle({ code, stdout, stderr, timedOut }))
++  })
++}
++
++/**
++ * @param {{ channel: any, dialogs: any, vendor?: any }} options
++ * @returns {{ login: () => Promise<void>, status: () => Promise<void>, logout: () => Promise<void>, help: () => Promise<void> }}
++ */
++export function useOpenbayes({ channel, dialogs, vendor = VENDORS.openbayes }) {
++  const notify = React.useCallback(message => {
++    try { channel.notify(message, { color: 'warning', timeoutMs: 10_000 }) } catch { /* the notification surface is best-effort */ }
++  }, [channel])
++
++  /** Persistent result dialog; a manual action must stay visible until dismissed. */
++  const showInfo = React.useCallback(async (title, message) => {
++    try {
++      await dialogs.confirm({
++        title,
++        message,
++        confirmLabel: lang() === 'zh' ? '确定' : 'OK',
++        cancelLabel: lang() === 'zh' ? '关闭' : 'Close',
++      }, undefined, DIALOG_TIMEOUT_MS)
++    } catch {
++      notify(message)
++    }
++  }, [dialogs, notify])
++
++  const readIdentity = React.useCallback(async context => {
++    const result = await run(context, ['--vendor', vendor.name, '--identity', '--pretty'], IDENTITY_TIMEOUT_MS)
++    if (result.code !== 0) return { error: result }
++    try {
++      return { identity: parseIdentity(result.stdout) }
++    } catch {
++      return { error: result }
++    }
++  }, [vendor])
++
++  const login = React.useCallback(async () => {
++    const context = resolveOpenbayesContext(process.env, vendor)
++    if (!context.available) {
++      await showInfo(heading(vendor, undefined, lang()), missingSkillText(vendor, lang()))
++      return
++    }
++    const started = await run(context, ['--login', '--vendor', vendor.name], LOGIN_TIMEOUT_MS)
++    if (started.code !== 0) {
++      await showInfo(heading(vendor, lang() === 'zh' ? ' 登录' : ' sign-in', lang()),
++        errorText(classifyFailure(started), firstDiagnostic(started), lang()))
++      return
++    }
++    const prompt = parseAuthorize(started.stdout)
++    if (prompt.url === undefined) {
++      await showInfo(heading(vendor, lang() === 'zh' ? ' 登录' : ' sign-in', lang()),
++        errorText('unknown', firstDiagnostic(started), lang()))
++      return
++    }
++    const proceed = await dialogs.confirm({
++      title: heading(vendor, lang() === 'zh' ? ' 登录' : ' sign-in', lang()),
++      message: loginPromptText(prompt, lang()),
++      confirmLabel: lang() === 'zh' ? '已确认，输入一次性码' : 'Confirmed, enter code',
++      cancelLabel: lang() === 'zh' ? '取消' : 'Cancel',
++    }, undefined, DIALOG_TIMEOUT_MS)
++    if (proceed !== true) return
++
++    // The answer is used immediately and never echoed into the chat or logs.
++    const answer = await dialogs.input({
++      title: lang() === 'zh' ? '输入一次性码（5 分钟内有效）' : 'Enter the one-time code (valid for 5 minutes)',
++      placeholder: lang() === 'zh' ? '粘贴一次性码' : 'Paste the one-time code',
++    }, undefined, DIALOG_TIMEOUT_MS)
++    const checked = normalizeCode(answer)
++    if (!checked.ok) {
++      if (checked.reason !== 'cancelled') {
++        await showInfo(heading(vendor, lang() === 'zh' ? ' 登录' : ' sign-in', lang()),
++          errorText('code', redact(firstDiagnostic(started), String(answer ?? '')), lang()))
++      }
++      return
++    }
++
++    const exchanged = await run(context, ['--login', '--vendor', vendor.name, '--code', checked.code], CODE_TIMEOUT_MS)
++    const detail = redact(firstDiagnostic(exchanged), checked.code)
++    if (exchanged.code !== 0) {
++      await showInfo(heading(vendor, lang() === 'zh' ? ' 登录' : ' sign-in', lang()),
++        errorText(classifyFailure(exchanged), detail, lang()))
++      return
++    }
++    const { identity, error } = await readIdentity(context)
++    if (identity === undefined) {
++      // The exchange already reported success; fall back to its own summary when
++      // `--identity` cannot be read (still no token, still no code).
++      const success = parseLoginSuccess(exchanged.stdout)
++      if (success.expiresAt !== undefined) {
++        await showInfo(heading(vendor, lang() === 'zh' ? ' 登录' : ' sign-in', lang()),
++          loginSuccessText({ expiresAt: success.expiresAt }, lang()))
++        return
++      }
++      await showInfo(heading(vendor, lang() === 'zh' ? ' 登录' : ' sign-in', lang()),
++        errorText(classifyFailure(error), redact(firstDiagnostic(error), checked.code), lang()))
++      return
++    }
++    await showInfo(heading(vendor, lang() === 'zh' ? ' 登录' : ' sign-in', lang()), loginSuccessText(identity, lang()))
++  }, [dialogs, readIdentity, showInfo, vendor])
++
++  const status = React.useCallback(async () => {
++    const context = resolveOpenbayesContext(process.env, vendor)
++    if (!context.available) {
++      await showInfo(heading(vendor, undefined, lang()), missingSkillText(vendor, lang()))
++      return
++    }
++    const { identity, error } = await readIdentity(context)
++    if (identity !== undefined) {
++      await showInfo(heading(vendor, lang() === 'zh' ? ' 状态' : ' status', lang()), statusText(identity, lang()))
++      return
++    }
++    const kind = classifyFailure(error)
++    if (kind === 'not-logged-in') {
++      await showInfo(heading(vendor, lang() === 'zh' ? ' 状态' : ' status', lang()), statusText(undefined, lang()))
++      return
++    }
++    await showInfo(heading(vendor, lang() === 'zh' ? ' 状态' : ' status', lang()), errorText(kind, firstDiagnostic(error), lang()))
++  }, [readIdentity, showInfo, vendor])
++
++  const logout = React.useCallback(async () => {
++    const context = resolveOpenbayesContext(process.env, vendor)
++    if (!context.available) {
++      await showInfo(heading(vendor, undefined, lang()), missingSkillText(vendor, lang()))
++      return
++    }
++    const confirmed = await dialogs.confirm({
++      title: lang() === 'zh' ? '退出 OpenBayes 登录？' : 'Sign out of OpenBayes?',
++      message: logoutConfirmText(lang()),
++      confirmLabel: lang() === 'zh' ? '退出登录' : 'Sign out',
++      cancelLabel: lang() === 'zh' ? '取消' : 'Cancel',
++    }, undefined, DIALOG_TIMEOUT_MS)
++    if (confirmed !== true) return
++    const result = await run(context, ['--logout', '--vendor', vendor.name], LOGOUT_TIMEOUT_MS)
++    if (result.code !== 0) {
++      await showInfo(heading(vendor, lang() === 'zh' ? ' 退出' : ' sign-out', lang()),
++        errorText(classifyFailure(result), firstDiagnostic(result), lang()))
++      return
++    }
++    await showInfo(heading(vendor, lang() === 'zh' ? ' 退出' : ' sign-out', lang()),
++      logoutDoneText(vendor, hostname(), lang()))
++  }, [dialogs, showInfo, vendor])
++
++  const help = React.useCallback(async () => {
++    await showInfo(heading(vendor, undefined, lang()), usageText(lang()))
++  }, [showInfo, vendor])
++
++  return { login, status, logout, help }
++}
+diff --git a/lib/types/hyperaiOpenbayesCore.js b/lib/types/hyperaiOpenbayesCore.js
+new file mode 100644
+index 0000000..42ec852
+--- /dev/null
++++ b/lib/types/hyperaiOpenbayesCore.js
+@@ -0,0 +1,201 @@
++/**
++ * Pure formatting/validation for the OpenBayes TUI bridge.
++ *
++ * Kept dependency-free (no React, no child_process) so the login prompt, the
++ * identity parsing, the error copy and the code hygiene can be unit-tested
++ * offline. `hyperaiOpenbayes.js` is the thin React/spawn layer on top.
++ *
++ * The vendor is a parameter, not a constant in the logic: adding `/hyperai`
++ * later should only register another command with a different descriptor.
++ */
++
++/** Console pages used in the copy; a future vendor only supplies its own. */
++export const VENDORS = Object.freeze({
++  openbayes: Object.freeze({
++    name: 'openbayes',
++    label: 'OpenBayes',
++    consoleTokens: 'https://openbayes.com/console/settings/account/personalAccessToken',
++  }),
++})
++
++/** Longest one-time code we accept; the real ones are far shorter. */
++const MAX_CODE_LENGTH = 512
++
++/** Translation pair helper; `lang` is `zh` or anything else for English. */
++function pick(lang, zh, en) {
++  return lang === 'zh' ? zh : en
++}
++
++/**
++ * Reject empty/oversized/control-character codes before they become argv.
++ * @param {string | undefined} raw Answer from the dialog.
++ * @returns {{ ok: boolean, code?: string, reason?: string }}
++ */
++export function normalizeCode(raw) {
++  if (typeof raw !== 'string') return { ok: false, reason: 'cancelled' }
++  const code = raw.trim()
++  if (code === '') return { ok: false, reason: 'empty' }
++  if (code.length > MAX_CODE_LENGTH) return { ok: false, reason: 'too-long' }
++  if (/[\u0000-\u001f\u007f]/u.test(code)) return { ok: false, reason: 'control' }
++  return { ok: true, code }
++}
++
++/** Remove a secret from any text that might be shown or logged. */
++export function redact(text, secret) {
++  if (typeof text !== 'string' || typeof secret !== 'string' || secret === '') return text
++  return text.split(secret).join('***')
++}
++
++/**
++ * Parse the first stage of `--login`: the authorize URL, endpoint and device.
++ * @param {string} stdout
++ */
++export function parseAuthorize(stdout) {
++  const text = typeof stdout === 'string' ? stdout : ''
++  const url = text.match(/https?:\/\/\S+?authorize\S*/u)?.[0] ?? text.match(/https?:\/\/\S+/u)?.[0]
++  const device = text.match(/^Device:\s*(.+)$/mu)?.[1]?.trim()
++  const endpoint = text.match(/^Endpoint:\s*(.+)$/mu)?.[1]?.trim()
++  return { url, device, endpoint }
++}
++
++/**
++ * Parse `--identity` (JSON) into the small view the dialogs need.
++ * @param {string} stdout
++ */
++export function parseIdentity(stdout) {
++  const value = JSON.parse(stdout)
++  if (value === null || typeof value !== 'object') throw new Error('identity returned no object')
++  const username = typeof value.sub === 'string' && value.sub !== '' ? value.sub : undefined
++  return {
++    vendor: typeof value.vendor === 'string' ? value.vendor : undefined,
++    username,
++    expiresAt: typeof value.expires_at === 'string' ? value.expires_at : undefined,
++    expired: value.expired === true,
++    endpoint: typeof value.endpoint === 'string' ? value.endpoint : undefined,
++  }
++}
++
++/**
++ * Parse the second stage confirmation line
++ * (`Logged in as vendor "openbayes" (token name: …, expires: …).`).
++ * @param {string} stdout
++ */
++export function parseLoginSuccess(stdout) {
++  const text = typeof stdout === 'string' ? stdout : ''
++  const tokenName = text.match(/token name:\s*([^,)]+)/u)?.[1]?.trim()
++  const expiresAt = text.match(/expires:\s*([^)]+)\)/u)?.[1]?.trim()
++  return { tokenName, expiresAt }
++}
++
++/**
++ * Classify a failed command into the error kinds the copy distinguishes.
++ * @param {{ code?: number, stdout?: string, stderr?: string, timedOut?: boolean }} result
++ */
++export function classifyFailure(result = {}) {
++  if (result.timedOut === true) return 'timeout'
++  const text = `${result.stdout ?? ''}\n${result.stderr ?? ''}`
++  if (/MISSING_TOKEN/u.test(text)) return 'not-logged-in'
++  if (/LOGIN_EXCHANGE_FAILED|LOGIN_PENDING_EXPIRED|NO_PENDING_LOGIN|授权码无效|已过期|invalid|expired/iu.test(text)) return 'code'
++  if (/'node' not found|Node\.js 18\+|node: command not found/iu.test(text)) return 'node'
++  if (/ENOTFOUND|ECONNREFUSED|ECONNRESET|ETIMEDOUT|EAI_AGAIN|fetch failed|network|timeout|timed out|网络/iu.test(text)) return 'network'
++  return 'unknown'
++}
++
++/** First non-empty diagnostic line, for the generic error copy. */
++export function firstDiagnostic(result = {}) {
++  const text = `${result.stderr ?? ''}\n${result.stdout ?? ''}`
++  const line = text.split('\n').map(item => item.trim()).find(item => item !== '')
++  return line ?? ''
++}
++
++/** `status` copy: logged in with name/expiry, or the not-logged-in hint. */
++export function statusText(identity, lang = 'zh') {
++  if (identity === undefined) {
++    return pick(lang,
++      '未登录 OpenBayes。执行 /openbayes login 登录。',
++      'Not signed in to OpenBayes. Run /openbayes login.')
++  }
++  const name = identity.username ?? '（未知用户）'
++  const expiry = identity.expiresAt ?? '（未知）'
++  const state = identity.expired
++    ? pick(lang, '已过期，请重新登录', 'expired; sign in again')
++    : pick(lang, '有效', 'valid')
++  return pick(lang,
++    `已登录 OpenBayes\n用户名：${name}\n到期：${expiry}\n状态：${state}`,
++    `Signed in to OpenBayes\nUser: ${name}\nExpires: ${expiry}\nState: ${state}`)
++}
++
++/** Login dialog copy; the URL is shown before the code is requested. */
++export function loginPromptText({ url, device }, lang = 'zh') {
++  return pick(lang,
++    `用已经登录 OpenBayes 的浏览器打开下面的链接，确认后把一次性码粘贴到下一步的输入框：\n\n${url}\n\n` +
++      `令牌有效期按需选择（日常建议 7 天或 30 天）。${device === undefined ? '' : `\n设备名：${device}`}`,
++    `Open this URL in a browser already signed in to OpenBayes, confirm, then paste the one-time code in the next dialog:\n\n${url}\n\n` +
++      `Pick the token lifetime you need (7 or 30 days for daily use).${device === undefined ? '' : `\nDevice: ${device}`}`)
++}
++
++/** Success copy after the code exchange. */
++export function loginSuccessText(identity, lang = 'zh') {
++  const name = identity?.username ?? '（未知用户）'
++  const expiry = identity?.expiresAt ?? '（未知）'
++  return pick(lang,
++    `登录成功。用户名：${name}\n令牌到期：${expiry}`,
++    `Signed in. User: ${name}\nToken expires: ${expiry}`)
++}
++
++/** Logout confirmation, then the message that explains server-side revocation. */
++export function logoutConfirmText(lang = 'zh') {
++  return pick(lang,
++    '退出后这台机器上的登录会被删除。服务端的令牌仍然有效，需要到控制台手动吊销。',
++    'Signing out removes the local session only. The server-side token stays valid until you revoke it in the console.')
++}
++
++export function logoutDoneText(vendor, device, lang = 'zh') {
++  const suffix = device === undefined ? '' : ` · ${device}`
++  return pick(lang,
++    `本地登录已删除。服务端的令牌仍然有效，如需彻底撤销，请到 ${vendor.consoleTokens} 吊销名为 'CLI${suffix}' 的令牌。`,
++    `Local session deleted. The server-side token is still valid; revoke 'CLI${suffix}' at ${vendor.consoleTokens}).`)
++}
++
++/** Missing-skill copy with the manual install command. */
++export function missingSkillText(vendor, lang = 'zh') {
++  return pick(lang,
++    `没有找到 ${vendor.name}-user。请重新运行安装包，或手动安装：\n\nnpx skills add https://openbayes.com/skills/${vendor.name}-user`,
++    `${vendor.name}-user was not found. Re-run the installer, or install it manually:\n\nnpx skills add https://openbayes.com/skills/${vendor.name}-user`)
++}
++
++/** Error copy keyed by {@link classifyFailure}. */
++export function errorText(kind, detail, lang = 'zh') {
++  const tail = detail === undefined || detail === '' ? '' : `\n${detail}`
++  switch (kind) {
++    case 'not-logged-in':
++      return pick(lang,
++        '未登录 OpenBayes。执行 /openbayes login 登录。',
++        'Not signed in to OpenBayes. Run /openbayes login.')
++    case 'code':
++      return pick(lang,
++        '一次性码无效或已过期。请重新执行 /openbayes login。',
++        'The one-time code is invalid or expired. Run /openbayes login again.')
++    case 'node':
++      return pick(lang,
++        '找不到 Node.js（openbayes-user 需要 18 及以上）。请先安装 Node.js，再重新登录。',
++        'Node.js 18+ was not found (required by openbayes-user). Install it and try again.')
++    case 'network':
++      return pick(lang,
++        '网络请求失败，请检查网络后重试。',
++        'The network request failed. Check connectivity and try again.')
++    case 'timeout':
++      return pick(lang,
++        '操作超时。请检查网络后重试。',
++        'The operation timed out. Check connectivity and try again.')
++    default:
++      return pick(lang, `OpenBayes 操作失败。${tail}`, `OpenBayes failed.${tail}`)
++  }
++}
++
++/** `/openbayes` usage when no (or an unknown) subcommand is given. */
++export function usageText(lang = 'zh') {
++  return pick(lang,
++    '用法：\n/openbayes login   登录 OpenBayes\n/openbayes status  查看登录状态\n/openbayes logout  退出登录（只删除本地 session）',
++    'Usage:\n/openbayes login   sign in\n/openbayes status  show sign-in status\n/openbayes logout  sign out (local session only)')
++}
 diff --git a/lib/types/hyperaiSkills.js b/lib/types/hyperaiSkills.js
 new file mode 100644
 index 0000000..e452bf7
@@ -820,27 +1257,30 @@ index d7db9d3..ae0cba4 100644
      'onboarding-conn-models': { zh: '{{count}} 个可用模型', en: '{{count}} models available' },
      'onboarding-conn-balance': { zh: '余额 {{amount}}', en: 'Balance {{amount}}' },
 diff --git a/lib/types/screens/Chat.js b/lib/types/screens/Chat.js
-index 050c07c..a48e9f6 100644
+index 050c07c..290a97b 100644
 --- a/lib/types/screens/Chat.js
 +++ b/lib/types/screens/Chat.js
-@@ -24,6 +24,7 @@ import { execFileNoThrow } from '../utils/execFileNoThrow.js';
+@@ -24,6 +24,8 @@ import { execFileNoThrow } from '../utils/execFileNoThrow.js';
  import { cleanBlockLines, cleanRenderText, cleanScalarText } from '../dsh-adapter/sanitize.js';
  import { readModelRecents, recordModelUse } from '../modelRecents.js';
  import { WORKING_GATE_NOTICES } from '../commands.js';
 +import { useSkillsUpdate } from '../hyperaiSkills.js';
++import { useOpenbayes } from '../hyperaiOpenbayes.js';
  import { TuiDialogStore } from '../dsh-adapter/dialogs.js';
  import { TuiStatusStore } from '../dsh-adapter/status.js';
  import { ActivityStore, useActivity } from '../dsh-adapter/activity-store.js';
-@@ -361,6 +362,8 @@ export function Chat({ channel, questionStore, approvalStore, extensionDialogs,
+@@ -361,6 +363,10 @@ export function Chat({ channel, questionStore, approvalStore, extensionDialogs,
      // extensions row share one inert store that never holds a dialog.
      const dialogs = extensionDialogs ?? (fallbackDialogStore ??= new TuiDialogStore());
      const dialogSnapshot = React.useSyncExternalStore(listener => dialogs.subscribe(listener), () => dialogs.getSnapshot());
 +    // hyperai-tui: asynchronous HyperAI Skills update hint + explicit install flow.
 +    const skillsUpdate = useSkillsUpdate({ channel, dialogs });
++    // hyperai-tui: local /openbayes login, status and logout (never model-bound).
++    const openbayes = useOpenbayes({ channel, dialogs });
      const coupon = React.useSyncExternalStore(bonusNotices?.subscribe ?? noCouponSubscription, bonusNotices?.getSnapshot ?? noCouponSnapshot);
      // Plugin status contributions: text keys join into one line; bounded rich
      // views keep their own rows immediately above the prompt.
-@@ -2117,7 +2120,7 @@ export function Chat({ channel, questionStore, approvalStore, extensionDialogs,
+@@ -2117,7 +2123,7 @@ export function Chat({ channel, questionStore, approvalStore, extensionDialogs,
      const titlePrefix = channel.working
          ? (TITLE_SPINNER_FRAMES[titleFrame] ?? '✦')
          : '✦';
@@ -849,10 +1289,20 @@ index 050c07c..a48e9f6 100644
      const handleWorkspaceResult = (result) => {
          workspaceFlowAbortRef.current = null;
          if (result.kind === 'target') {
-@@ -2918,6 +2921,12 @@ export function Chat({ channel, questionStore, approvalStore, extensionDialogs,
+@@ -2918,6 +2924,22 @@ export function Chat({ channel, questionStore, approvalStore, extensionDialogs,
                      });
                  return true;
              }
++            case 'openbayes': {
++                setHelpOpen(false);
++                setLaunchpadOpen(false);
++                const openbayesParts = rawInput.trim().split(/\s+/).filter(Boolean);
++                if (openbayesParts[1] === 'login') void openbayes.login();
++                else if (openbayesParts[1] === 'status') void openbayes.status();
++                else if (openbayesParts[1] === 'logout') void openbayes.logout();
++                else void openbayes.help();
++                return true;
++            }
 +            case 'skills-update': {
 +                setHelpOpen(false);
 +                setLaunchpadOpen(false);
@@ -862,7 +1312,7 @@ index 050c07c..a48e9f6 100644
              case 'skills': {
                  // issue #204: 列出当前 agent 的完整技能目录（名称 + 来源 + 简述），
                  // Enter 把可直调技能以 `/name ` 填回输入行（completion-only 分发的
-@@ -3727,16 +3736,11 @@ export function Chat({ channel, questionStore, approvalStore, extensionDialogs,
+@@ -3727,16 +3749,11 @@ export function Chat({ channel, questionStore, approvalStore, extensionDialogs,
              }
              case 'update':
                  setHelpOpen(false);
@@ -884,7 +1334,7 @@ index 050c07c..a48e9f6 100644
                  return true;
              case 'reload': {
                  // pi-style soft reload: re-read the persisted preference files
-@@ -6285,7 +6289,8 @@ export function Chat({ channel, questionStore, approvalStore, extensionDialogs,
+@@ -6285,7 +6302,8 @@ export function Chat({ channel, questionStore, approvalStore, extensionDialogs,
                                          // inflating the reading next to a real upload number). An
                                          // automatic compaction mid-turn badges THIS line too — it is
                                          // the spinner slot whenever real activity data exists.
@@ -895,7 +1345,7 @@ index 050c07c..a48e9f6 100644
                                              ui: STATUS_VIEW_UI,
                                          }) }) }) }, `${view.key}:${view.registrationId}`))), _jsxs(Box, { flexDirection: "column", flexShrink: 0, children: [approvalPanelNode !== null ? (approvalPanelNode) : dialogSnapshot !== null ? (_jsx(ExtensionDialog, { dialog: dialogSnapshot, onDecide: value => dialogs.decide(dialogSnapshot.key, value), onCancel: () => dialogs.cancel(dialogSnapshot.key) }, dialogSnapshot.key)) : overlay.kind === 'tips' ? (_jsx(Box, { flexDirection: "column", marginTop: 1, children: _jsx(TipsPanel, { onClose: () => dispatchOverlay({ type: 'close-if', kind: 'tips' }) }) })) : recap !== null && (!recap.auto || recap.expanded) ? (_jsx(Box, { flexDirection: "column", marginTop: 1, children: _jsx(RecapPanel, { summary: recap.summary, title: recap.title, error: recap.error, streaming: !recap.done, titleApplied: recap.titleApplied, onClose: () => {
 diff --git a/lib/types/screens/Launchpad.js b/lib/types/screens/Launchpad.js
-index d8a8835..018f22d 100644
+index d8a8835..e732fc3 100644
 --- a/lib/types/screens/Launchpad.js
 +++ b/lib/types/screens/Launchpad.js
 @@ -479,7 +479,11 @@ onKernelPick, cwd, branch, tuiVersion, onFocusChange, onAction, onQueryChange, o
@@ -907,7 +1357,7 @@ index d8a8835..018f22d 100644
 +    // product+upstream pair is used only when there is room for it.
 +    const tuiPart = tuiVersion === undefined || tuiVersion === ''
 +        ? undefined
-+        : (columns < 72 ? `hyperai v0.2.0-beta.2` : `hyperai-tui v0.2.0-beta.2 · dsh-tui v${tuiVersion}`);
++        : (columns < 72 ? `hyperai v0.2.0-beta.3` : `hyperai-tui v0.2.0-beta.3 · dsh-tui v${tuiVersion}`);
      // 名字用**短品牌名**（option.shortLabel，来自 manifest：DSH / Claude，与启动页
      // 「内核 · DSH」那个 chip 同源）：这一格与左下角的 `工作目录:分支` 共用底边，
      // 全名（DeepSeek Harness · … = 40 列）在窄终端里会把左边的目录铭牌挤掉。
@@ -1064,7 +1514,7 @@ index f6d3e1c..fa86ce0 100644
          id: 'disp-smooth',
          group: 'display',
 diff --git a/lib/types/update.js b/lib/types/update.js
-index 8efb701..b2a0109 100644
+index 8efb701..72e47af 100644
 --- a/lib/types/update.js
 +++ b/lib/types/update.js
 @@ -219,6 +219,16 @@ export function installedTuiVersion() {
@@ -1072,7 +1522,7 @@ index 8efb701..b2a0109 100644
                  const packageJson = parsed;
                  const version = packageJson.version;
 +                // hyperai-tui: package.json.version is the HyperAI release
-+                // (0.2.0-beta.2); the dsh-tui version is recorded in
++                // (0.2.0-beta.3); the dsh-tui version is recorded in
 +                // hyperai.upstreamVersion. Every caller of this function means
 +                // the upstream TUI package — the dsh-tui half of the version
 +                // plate, the version-drift warning and /update target checks —

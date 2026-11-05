@@ -446,7 +446,7 @@ export const DATA_DIR = join(homeDir(), dataDirName());`,
                     return version;
                 }`,
       replace: `                // hyperai-tui: package.json.version is the HyperAI release
-                // (0.2.0-beta.2); the dsh-tui version is recorded in
+                // (0.2.0-beta.3); the dsh-tui version is recorded in
                 // hyperai.upstreamVersion. Every caller of this function means
                 // the upstream TUI package — the dsh-tui half of the version
                 // plate, the version-drift warning and /update target checks —
@@ -724,6 +724,44 @@ import { useSkillsUpdate } from '../hyperaiSkills.js';`,
             }
             case 'skills': {`,
     },
+    {
+      file: 'lib/types/screens/Chat.js',
+      why: 'import the OpenBayes sign-in command bridge',
+      find: "import { useSkillsUpdate } from '../hyperaiSkills.js';",
+      replace: `import { useSkillsUpdate } from '../hyperaiSkills.js';
+import { useOpenbayes } from '../hyperaiOpenbayes.js';`,
+    },
+    {
+      file: 'lib/types/screens/Chat.js',
+      why: 'mount the OpenBayes command bridge hook',
+      find: '    const skillsUpdate = useSkillsUpdate({ channel, dialogs });',
+      replace: `    const skillsUpdate = useSkillsUpdate({ channel, dialogs });
+    // hyperai-tui: local /openbayes login, status and logout (never model-bound).
+    const openbayes = useOpenbayes({ channel, dialogs });`,
+    },
+    {
+      file: 'lib/types/screens/Chat.js',
+      why: 'dispatch /openbayes login|status|logout',
+      find: "            case 'skills-update': {",
+      replace: `            case 'openbayes': {
+                setHelpOpen(false);
+                setLaunchpadOpen(false);
+                const openbayesParts = rawInput.trim().split(/\\s+/).filter(Boolean);
+                if (openbayesParts[1] === 'login') void openbayes.login();
+                else if (openbayesParts[1] === 'status') void openbayes.status();
+                else if (openbayesParts[1] === 'logout') void openbayes.logout();
+                else void openbayes.help();
+                return true;
+            }
+            case 'skills-update': {`,
+    },
+    {
+      file: 'lib/types/commands.js',
+      why: 'list /openbayes in help and completion',
+      find: "    { name: 'skills-update', description: 'Check for HyperAI Skills updates and install them' },",
+      replace: `    { name: 'skills-update', description: 'Check for HyperAI Skills updates and install them' },
+    { name: 'openbayes', description: 'OpenBayes: sign in, show status, sign out' },`,
+    },
   ]
 }
 
@@ -731,6 +769,8 @@ import { useSkillsUpdate } from '../hyperaiSkills.js';`,
 const EXTRA_FILES = [
   ['hyperaiSkillsCore.js', 'lib/types/hyperaiSkillsCore.js'],
   ['hyperaiSkills.js', 'lib/types/hyperaiSkills.js'],
+  ['hyperaiOpenbayesCore.js', 'lib/types/hyperaiOpenbayesCore.js'],
+  ['hyperaiOpenbayes.js', 'lib/types/hyperaiOpenbayes.js'],
 ]
 
 /** Copy the HyperAI-owned UI modules into the patched package source. */
@@ -758,6 +798,8 @@ const EXPECTED_FILES = [
   'lib/types/screens/Chat.js',
   'lib/types/hyperaiSkills.js',
   'lib/types/hyperaiSkillsCore.js',
+  'lib/types/hyperaiOpenbayes.js',
+  'lib/types/hyperaiOpenbayesCore.js',
 ]
 
 /** Build the patch text from the pinned upstream package. */
