@@ -1,4 +1,4 @@
-# HyperAI Harness 内测版使用说明（v0.2.0-beta.1）
+# HyperAI Harness 内测版使用说明（v0.2.0-beta.2）
 
 这份说明写给第一次接触 HyperAI Harness 的同事。照着做就能装好，不需要 GitHub 权限，也不需要 clone 任何源码仓库。
 
@@ -44,19 +44,19 @@ HYPERAI_NPM_REGISTRY=https://registry.npmmirror.com ./install.sh
 
 ### 2.1 获取安装包
 
-从分发人处获取安装包和 `.sha256` 文件：`hyperai-harness-0.2.0-beta.1.tar.gz` 与 `hyperai-harness-0.2.0-beta.1.tar.gz.sha256`。
+从分发人处获取安装包和 `.sha256` 文件：`hyperai-harness-0.2.0-beta.2.tar.gz` 与 `hyperai-harness-0.2.0-beta.2.tar.gz.sha256`。
 
 ### 2.2 校验并解压
 
 ```sh
 # 校验（macOS）
-shasum -a 256 -c hyperai-harness-0.2.0-beta.1.tar.gz.sha256
+shasum -a 256 -c hyperai-harness-0.2.0-beta.2.tar.gz.sha256
 # 校验（Ubuntu）
-sha256sum -c hyperai-harness-0.2.0-beta.1.tar.gz.sha256
+sha256sum -c hyperai-harness-0.2.0-beta.2.tar.gz.sha256
 
 # 解压
-tar xzf hyperai-harness-0.2.0-beta.1.tar.gz
-cd hyperai-harness-0.2.0-beta.1
+tar xzf hyperai-harness-0.2.0-beta.2.tar.gz
+cd hyperai-harness-0.2.0-beta.2
 ```
 
 ### 2.3 安装
@@ -105,7 +105,7 @@ HYPERAI_NPM_REGISTRY=https://registry.npmmirror.com ./install.sh
 export PATH="$HOME/.hyperai/bin:$PATH"
 ```
 
-进去以后看到粉色 `HYPERAI HARNESS` 像素字、右下角铭牌 `hyperai-tui v0.2.0-beta.1 · dsh-tui v0.16.1` 就说明装好了。
+进去以后看到粉色 `HYPERAI HARNESS` 像素字、右下角铭牌 `hyperai-tui v0.2.0-beta.2 · dsh-tui v0.16.1` 就说明装好了。
 
 ---
 
@@ -206,20 +206,20 @@ rm -rf ~/.hyperai
 
 ```sh
 node profile/scripts/manage.mjs status
-# doctor 默认用 PATH 上的 dsh；想检查安装包自带的那份，显式传 --dsh-bin：
-node profile/scripts/manage.mjs doctor --dsh-bin ~/.hyperai/runtime/node_modules/.bin/dsh
+node profile/scripts/manage.mjs doctor
 ```
+
+`doctor` 会自动使用本次安装记录的 dsh/pnpm（不需要先把 `~/.hyperai/runtime` 加进 `PATH`，也不需要传 `--dsh-bin`）。只有想检查另一份 dsh 时，才需要显式 `--dsh-bin <路径>`。
 
 | 现象 | 处理 |
 |---|---|
 | `install.sh` 提示 Node 版本不满足 | 按第 1 节装 Node 24；脚本不会自动改系统 Node |
 | 下载 dsh/pnpm 失败（`ETIMEDOUT`/`EAI_AGAIN`） | 换镜像：`HYPERAI_NPM_REGISTRY=https://registry.npmmirror.com ./install.sh` |
-| `dsh plugin install` 失败 | 先 `node profile/scripts/manage.mjs doctor --dsh-bin …`，再把错误信息按第 9 节反馈 |
+| `dsh plugin install` 失败 | 先 `node profile/scripts/manage.mjs doctor`，再把错误信息按第 9 节反馈 |
 | 启动后发消息报 `no API key` | 正常：先用 `/provider` 配服务、`/model` 选模型 |
 | 生成 PPT 时报 `python-pptx` 缺失 | `python3 -m pip install --user python-pptx` |
 | 手动 `/skills-update` 失败 | 内测版默认关闭自动检查；手动检查需要内部 Skills 仓库权限，失败只提示一次，不影响对话 |
 | 解压后 `./install.sh` 提示 Permission denied | `chmod +x install.sh` 后重试（部分解压工具会丢可执行位） |
-| 升级后 `doctor` 报 dsh 版本 warning | 说明 `doctor` 用了 PATH 上的 dsh；加 `--dsh-bin ~/.hyperai/runtime/node_modules/.bin/dsh` |
 
 磁盘占用：安装包约 18 MB，解压后约 18 MB，`~/.hyperai/runtime` 约 500 MB（dsh 依赖），profile（含自带的 TUI tarball 与 Skills）约 30 MB。确认够用再装。
 
