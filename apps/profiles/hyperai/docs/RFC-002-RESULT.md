@@ -17,11 +17,11 @@ E1 在 macOS 上用 shim 模拟 Node 18，真实 Node 18 的 E1 在 Ubuntu 上�
 | 项 | 值 |
 |---|---|
 | 安装包 | `hyperai-harness-0.2.0-beta.1.tar.gz` |
-| 大小 | 18 460 863 字节 |
-| sha256 | `39e6e0c36c4bc9117c2555ddee7d6fd0ae846adaba1edd6ba54ba0b2e7339b74` |
+| 大小 | 18 461 159 字节（修复轮 fix-1 重建；见文末） |
+| sha256 | `a75065818a285e00c469ae7b9988854ca0a9c11a7bb3dd2ccc04fd41215394ae` |
 | 构建命令 | `cd apps/profiles/hyperai && node scripts/build-beta.mjs` |
-| 构建 commit | `1ef6237a741d969840bcc1383b5ca6a16cb7a402` |
-| TUI 成品包 | `@hyperai/hyperai-tui@0.2.0-beta.1`，sha256 `01cfb379faac473c2edd5e70b140c63fdcadb90372454e321dd92ed6f5da9b3c`，3296 个文件 |
+| 构建 commit | `aae051d8e1901e5608db37dd6b96d262e04dde53`（修复轮 fix-1） |
+| TUI 成品包 | `@hyperai/hyperai-tui@0.2.0-beta.1`，sha256 `d93aac7ca19e9e4710b52b1c113bf593c2ebebbf060d91221a801e624213422ea9`，3296 个文件 |
 | Skills 快照 | `hyperai-skills@34f0a1be0cb3ae9905aecebba13efae6a8657be1`（`feat/ppt-generation-upstream`，2 个 Skill，27 个文件） |
 | 同事使用说明 | 安装包内 `README.md`，源文件 `apps/profiles/hyperai/docs/beta-install.md` |
 | Draft PR | <https://github.com/hyperai/hyperai-harness/pull/2>（`feat/hyperai-internal-beta` → `master`，Draft，不合并） |
@@ -119,8 +119,8 @@ if (packageJson.name === PACKAGE_NAME && typeof version === 'string' && valid(ve
 
 | 项 | 结果 |
 |---|---|
-| 同一 commit 构建两次，安装包 sha256 相同 | 通过：两次都是 `39e6e0c3…9b74` |
-| TUI 成品包两次构建 sha256 相同 | 通过：`01cfb379…9b3c`（`build-beta.mjs` 内部构建两次并比对，不一致直接失败） |
+| 同一 commit 构建两次，安装包 sha256 相同 | 通过：两次都是 `a7506581…94ae`（修复轮 fix-1） |
+| TUI 成品包两次构建 sha256 相同 | 通过：`d93aac7c…2ea9`（`build-beta.mjs` 内部构建两次并比对，不一致直接失败） |
 | 输入按 size、sha256、integrity 校验 | 通过：`apps/tui/upstream.json` 固定 `18 473 587` 字节 / `2144b317…336e` / `sha512-xk8Nvi…hbg==`，不符即退出 |
 | 豁免文件逐字节不变 | 通过：`LICENSE`、`README.md`、`guide/**`、所有非运行时代码文件与“打完补丁的树”逐字节相同；每个被改名文件里的 `Copyright` 行逐字节相同。`licenses/` 的 5 份是**本仓库 `apps/tui/docs/licenses/` 的副本**（上游原包里没有这个目录），与仓库副本逐字节相同 |
 | 上游仓库/作者 URL 未被改写 | 通过：构建前后收集所有含 `ccch1mneyyy` 的 URL 集合，完全一致；`package.json` 的 `author` 字段保留上游署名 |
@@ -128,7 +128,7 @@ if (packageJson.name === PACKAGE_NAME && typeof version === 'string' && valid(ve
 
 构建报告（`dist/build-report.json`）记录了上述所有哈希与断言结果。
 
-安装包是在 commit `1ef6237a` 上构建的。该 commit 之后的提交只增加证据和本报告（以及 PR 链接），不改变任何构建输入（`apps/tui/`、`apps/profiles/hyperai/scripts/`、`docs/beta-install.md`）；manifest 里的 `commit` 字段是构建时记录的，所以在本分支最新 tip 上重新构建会得到不同的哈希，这是预期行为。
+安装包是在 commit `aae051d8e1`（修复轮 fix-1）上构建的。该 commit 之后的提交只增加证据和本报告（以及 PR 链接），不改变任何构建输入（`apps/tui/`、`apps/profiles/hyperai/scripts/`、`docs/beta-install.md`）；manifest 里的 `commit` 字段是构建时记录的，所以在本分支最新 tip 上重新构建会得到不同的哈希，这是预期行为。
 
 ## 验收反馈修复（RFC-002 验收报告）
 
@@ -168,3 +168,50 @@ if (packageJson.name === PACKAGE_NAME && typeof version === 'string' && valid(ve
 7. **P2 / P3 未实现**：RFC 只要求 P1，按 RFC 执行。
 8. **PR 的 base 分支**：RFC 写的是 `feat/hyperai-internal-beta` → `main`，但这个仓库没有 `main` 分支，默认分支是 `master`。Draft PR #2 因此开到 `master`；分支内容与 RFC 要求一致。
 9. **证据里的 Skills 描述已打码**：`/skills` 屏幕文本原本带内部仓库的 description 原文，提交前替换成 `<描述已移除：内部仓库内容>`；技能名保留。
+
+## 修复轮 fix-1（RFC-002-fix-1 第二部分）
+
+本轮只改文档，没有改代码（`install.sh` 的默认 registry 仍是官方源）。
+
+### 改了什么
+
+- **安装步骤**（`beta-install.md` §2）：拆成「获取安装包 → 校验并解压 → 安装」，安装给出两种方式：
+  - 方式 A（默认）：`./install.sh`，用 npm 官方源；
+  - 方式 B（国内/官方源慢）：`HYPERAI_NPM_REGISTRY=https://registry.npmmirror.com ./install.sh`。
+  写明怎么选、`install.sh` 默认**不会**自动切换、首次要下载约 500 MB / 500 多个包、正常几分钟、慢时十几分钟甚至更久，卡住可换镜像重跑（脚本幂等）。排障表里的镜像写法与安装步骤保持一致。
+- **待定项**（`beta-install.md` §2.1、§9）：下载步骤改为「从分发人处获取安装包和 `.sha256` 文件」；反馈改为「内测期间请直接联系分发安装包给你的同事。」；文档里不再有 `<待负责人填写>` 之类的占位符。
+
+### 新安装包
+
+| 项 | 值 |
+|---|---|
+| 文件 | `hyperai-harness-0.2.0-beta.1.tar.gz` |
+| 大小 | 18 461 159 字节 |
+| sha256 | `a75065818a285e00c469ae7b9988854ca0a9c11a7bb3dd2ccc04fd41215394ae` |
+| 构建 commit | `aae051d8e1901e5608db37dd6b96d262e04dde53` |
+| TUI 成品包 | sha256 `d93aac7ca19e9e4710b52b1c113bf593c2ebebbf060d91221a801e624213422ea9`，3296 个文件 |
+| 构建 | `cd apps/profiles/hyperai && node scripts/build-beta.mjs`，同 commit 构建两次 sha256 一致 |
+
+包内 `README.md` 与仓库 `apps/profiles/hyperai/docs/beta-install.md` 的 sha256 相同（`4699f3c64bfcda3e0282857315b20c592b88988d2b451792ba7cad7a5bfaa73f`）。
+
+### 自检结果（本轮）
+
+| 检查 | 结果 |
+|---|---|
+| 两次构建 sha256 一致 | 通过：两次都是 `a7506581…94ae` |
+| 包内 README 与仓库说明一致 | 通过：两边都是 `4699f3c6…73f` |
+| `apps/tui` verify / tests | 14/14、20/20 |
+| `apps/profiles/hyperai` verify / tests | 12/12、72/72 |
+| macOS 全新临时 HOME 安装并启动 | 通过：安装 exit 0、profile 与 Skills 生成、启动画面铭牌 `hyperai-tui v0.2.0-beta.1 · dsh-tui v0.16.1`、`--dump-config` 611 行 / stderr 0 字节 |
+| 服务器上安装包 | 已覆盖 `/home/hyperai-beta/hyperai-harness-0.2.0-beta.1.tar.gz`，大小 18 461 159 字节，`sha256sum -c` 通过 |
+
+两个平台的完整回归按 RFC 由验收 agent 执行，本轮没有重跑。
+
+### 本轮发现、但按约束没有改代码的问题
+
+**在符号链接路径下解压时，`install.sh` 会「假安装成功」。**
+
+- 复现：把安装包解压到 `/tmp/...`（macOS 的 `/tmp` 是符号链接），运行 `./install.sh` → exit 0、打印「安装完成」、生成启动器，但 `<DSH_HOME>/profiles/hyperai` 没有生成；启动器指向不存在的 profile。换成 `/private/tmp/...`（真实路径）后安装正常。
+- 根因：`install.mjs` 等脚本用 `process.argv[1] === fileURLToPath(import.meta.url)` 判断「是不是被直接执行」。Node 会把入口的 `import.meta.url` 解析成真实路径（`/private/tmp/...`），而 `process.argv[1]` 保留传入的逻辑路径（`/tmp/...`），两者不相等，`main()` 不执行、进程以 0 退出。
+- 影响：解压到 `/tmp`、`/var`（macOS 上也是符号链接）或任何符号链接目录的用户会遇到「安装完成但没有 profile」。解压到普通目录（如 `~/Downloads`、`/private/tmp/...`）不受影响；本轮快速验证因此改用真实路径完成。
+- 建议修法（需要单独修复轮，本轮按 RFC「不要改代码」未实施）：`install.sh` 用 `cd -P` 解析 `HERE`，或把入口判断改成比较 `realpath`；同样的 guard 也存在于 `manage.mjs` / `build-package.mjs`，一并处理更稳妥。
