@@ -1,0 +1,18 @@
+[2026-11-05T06:07:29Z] HyperAI Harness 内测版安装程序
+[2026-11-05T06:07:29Z]   安装包：$T3_ROOT/hyperai-harness-0.2.0-beta.2
+[2026-11-05T06:07:29Z]   HyperAI 目录：$BETA_ROOT/t4/home/.hyperai
+[2026-11-05T06:07:29Z]   Harness home：$BETA_ROOT/t4/dsh-home
+[2026-11-05T06:07:29Z] 
+[2026-11-05T06:07:29Z] Node.js 26.9.0 检查通过；准备安装 HyperAI Harness 0.2.0-beta.2。
+[2026-11-05T06:07:29Z] 安装 dsh@0.2.0-rc.2 与 pnpm@10.28.1 到 $BETA_ROOT/t4/home/.hyperai/runtime（不会改动系统全局环境）……
+
+added 541 packages in 2m
+npm notice
+npm notice New major version of npm available! 11.19.1 -> 12.2.2
+npm notice Changelog: https://github.com/npm/cli/releases/tag/v12.2.2
+npm notice To update run: npm install -g npm@12.2.2
+npm notice
+[2026-11-05T06:09:58Z] 安装 hyperai profile……
+hyperai-tui: refusing to touch $BETA_ROOT/t4/dsh-home/profiles/hyperai: it exists but was not created by this installer. Use --force to back it up and replace the managed files.
+[2026-11-05T06:09:59Z] 
+[2026-11-05T06:09:59Z] 安装失败：profile 安装失败。请把上面的错误信息发给负责人。

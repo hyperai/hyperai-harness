@@ -1,0 +1,13 @@
+## T1 tests at 7dc323d35a7824b1ba715248cfd654559553a881
+--- apps/tui verify
+hyperai-tui verify: 14/14 checks passed
+--- apps/tui tests
+ℹ tests 22
+ℹ pass 22
+ℹ fail 0
+--- profile verify
+hyperai profile verify: 12/12 checks passed
+--- profile tests
+ℹ tests 80
+ℹ pass 80
+ℹ fail 0
