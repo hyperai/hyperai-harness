@@ -1,4 +1,4 @@
-# HyperAI Harness 内测版使用说明（v0.2.0-beta.2）
+# HyperAI Harness 内测版使用说明（v0.2.0-beta.3）
 
 这份说明写给第一次接触 HyperAI Harness 的同事。照着做就能装好，不需要 GitHub 权限，也不需要 clone 任何源码仓库。
 
@@ -44,19 +44,19 @@ HYPERAI_NPM_REGISTRY=https://registry.npmmirror.com ./install.sh
 
 ### 2.1 获取安装包
 
-从分发人处获取安装包和 `.sha256` 文件：`hyperai-harness-0.2.0-beta.2.tar.gz` 与 `hyperai-harness-0.2.0-beta.2.tar.gz.sha256`。
+从分发人处获取安装包和 `.sha256` 文件：`hyperai-harness-0.2.0-beta.3.tar.gz` 与 `hyperai-harness-0.2.0-beta.3.tar.gz.sha256`。
 
 ### 2.2 校验并解压
 
 ```sh
 # 校验（macOS）
-shasum -a 256 -c hyperai-harness-0.2.0-beta.2.tar.gz.sha256
+shasum -a 256 -c hyperai-harness-0.2.0-beta.3.tar.gz.sha256
 # 校验（Ubuntu）
-sha256sum -c hyperai-harness-0.2.0-beta.2.tar.gz.sha256
+sha256sum -c hyperai-harness-0.2.0-beta.3.tar.gz.sha256
 
 # 解压
-tar xzf hyperai-harness-0.2.0-beta.2.tar.gz
-cd hyperai-harness-0.2.0-beta.2
+tar xzf hyperai-harness-0.2.0-beta.3.tar.gz
+cd hyperai-harness-0.2.0-beta.3
 ```
 
 ### 2.3 安装
@@ -105,7 +105,7 @@ HYPERAI_NPM_REGISTRY=https://registry.npmmirror.com ./install.sh
 export PATH="$HOME/.hyperai/bin:$PATH"
 ```
 
-进去以后看到粉色 `HYPERAI HARNESS` 像素字、右下角铭牌 `hyperai-tui v0.2.0-beta.2 · dsh-tui v0.16.1` 就说明装好了。
+进去以后看到粉色 `HYPERAI HARNESS` 像素字、右下角铭牌 `hyperai-tui v0.2.0-beta.3 · dsh-tui v0.16.1` 就说明装好了。
 
 ---
 
@@ -122,7 +122,7 @@ API key 由 DSH 保存在 `~/.dsh/.credentials.yaml`（权限 0600），不会�
 
 ## 5. 确认 Skills 已加载
 
-内测版自带两个官方 Skills：`ppt-generation`、`example-verified-skill`。
+内测版自带两个官方 Skills：`ppt-generation`、`example-verified-skill`；安装器还会装上 OpenBayes 官方 Skill `openbayes-user`（见第 6 节）。
 
 三种确认方式，任选其一：
 
@@ -132,6 +132,7 @@ API key 由 DSH 保存在 `~/.dsh/.credentials.yaml`（权限 0600），不会�
 
 ```sh
 ls ~/.dsh/profiles/hyperai/skills/
+ls ~/.agents/skills/openbayes-user/
 cat ~/.dsh/profiles/hyperai/.hyperai-skills/manifest.json
 ```
 
@@ -146,7 +147,52 @@ python3 -m venv ~/hyperai-ppt && ~/hyperai-ppt/bin/pip install python-pptx
 
 ---
 
-## 6. 升级
+## 6. 使用 OpenBayes（openbayes-user）
+
+安装 HyperAI 时会顺带装好 OpenBayes 官方 Skill `openbayes-user`（位置 `~/.agents/skills/openbayes-user/`，装的是当时的最新版）。装好后可以直接用自然语言操作自己的 OpenBayes 资源，例如：
+
+- 「看看我正在运行的容器」
+- 「我的余额还有多少」
+- 「列一下我最近的训练任务」
+- 「帮我找几个公开的模型或数据集」
+
+### 6.1 登录
+
+在 TUI 里执行：
+
+```text
+/openbayes login
+```
+
+TUI 会显示一个授权页链接。用已经登录 OpenBayes 的浏览器打开它，确认后选择令牌有效期，页面会给一个 **5 分钟内有效的一次性码**，把码粘贴回 TUI 的输入框即可。
+
+- 令牌有效期按需要选：日常使用建议 **7 天或 30 天**；只在临时机器上用可以选 1 天。
+- 一次性码在 TUI 的输入框里输入，不会进入对话，也不会写进会话记录。
+- 也可以在聊天里让 Agent 帮你登录，同样能成功，但一次性码会经过模型；**推荐用 `/openbayes login`**。
+
+### 6.2 查看状态与退出
+
+```text
+/openbayes status    # 是否已登录、用户名、到期时间、是否过期
+/openbayes logout    # 先确认，再删除本地登录
+```
+
+`/openbayes logout` **只删除本机的 session，不会吊销服务端的令牌**。要彻底撤销，请到 <https://openbayes.com/console/settings/account/personalAccessToken> 吊销名为 `CLI · <设备名>` 的令牌。
+
+### 6.3 安全提醒
+
+- 令牌等同于账号密码。不要发给别人，也不要贴进聊天、截图或日志。
+- 涉及计费的操作（创建容器、启动 Serving 等）Agent 会先向你确认，请看清楚再同意；不确定时选取消。
+- 未登录时执行 `/openbayes status` 会提示先执行 `/openbayes login`；如果找不到 skill，按提示手动安装：`npx skills add https://openbayes.com/skills/openbayes-user`。
+
+### 6.4 更新与遥测
+
+- skill 会自动检查更新，按它给出的提示重新运行安装命令即可升级。安装器不会覆盖你已有的 `openbayes-user` 目录。
+- skill 每天会发一次只包含版本号和安装 ID 的心跳；设置环境变量 `OPENBAYES_NO_TELEMETRY=1` 可以关闭。
+
+---
+
+## 7. 升级
 
 拿到新安装包后重复第 2 节（校验、解压、`./install.sh`）。安装器是幂等的：
 
@@ -158,7 +204,7 @@ python3 -m venv ~/hyperai-ppt && ~/hyperai-ppt/bin/pip install python-pptx
 
 ---
 
-## 7. 卸载
+## 8. 卸载
 
 用安装包里自带的 `manage.mjs`（需要保留解压后的安装包目录）。在解压目录里直接执行即可，脚本会自己找到安装包根目录：
 
@@ -189,7 +235,7 @@ rm -rf ~/.hyperai
 
 ---
 
-## 8. 已知问题与限制
+## 9. 已知问题与限制
 
 - **平台**：只在 macOS（arm64）和 Ubuntu 20.04（x86_64）上验证过，其他平台未测。
 - **Node 版本**：只支持 `^22.19 || >=24`；系统自带的 Node 18 会被拒绝（这是有意的）。
@@ -215,7 +261,7 @@ node profile/scripts/manage.mjs doctor
 |---|---|
 | `install.sh` 提示 Node 版本不满足 | 按第 1 节装 Node 24；脚本不会自动改系统 Node |
 | 下载 dsh/pnpm 失败（`ETIMEDOUT`/`EAI_AGAIN`） | 换镜像：`HYPERAI_NPM_REGISTRY=https://registry.npmmirror.com ./install.sh` |
-| `dsh plugin install` 失败 | 先 `node profile/scripts/manage.mjs doctor`，再把错误信息按第 9 节反馈 |
+| `dsh plugin install` 失败 | 先 `node profile/scripts/manage.mjs doctor`，再把错误信息按第 10 节反馈 |
 | 启动后发消息报 `no API key` | 正常：先用 `/provider` 配服务、`/model` 选模型 |
 | 生成 PPT 时报 `python-pptx` 缺失 | `python3 -m pip install --user python-pptx` |
 | 手动 `/skills-update` 失败 | 内测版默认关闭自动检查；手动检查需要内部 Skills 仓库权限，失败只提示一次，不影响对话 |
@@ -225,7 +271,7 @@ node profile/scripts/manage.mjs doctor
 
 ---
 
-## 9. 反馈
+## 10. 反馈
 
 内测期间请直接联系分发安装包给你的同事。
 
