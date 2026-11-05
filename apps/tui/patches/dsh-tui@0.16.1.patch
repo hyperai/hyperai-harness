@@ -253,10 +253,10 @@ index 71e32df..4f233d0 100644
      setActiveBrand(resolveBrand(config.brand, backendChoice));
 diff --git a/lib/types/hyperaiOpenbayes.js b/lib/types/hyperaiOpenbayes.js
 new file mode 100644
-index 0000000..86a192b
+index 0000000..b05bcd7
 --- /dev/null
 +++ b/lib/types/hyperaiOpenbayes.js
-@@ -0,0 +1,227 @@
+@@ -0,0 +1,229 @@
 +/**
 + * `/openbayes` command bridge for the TUI.
 + *
@@ -401,6 +401,8 @@ index 0000000..86a192b
 +      kind: 'input',
 +      title: lang() === 'zh' ? '输入一次性码（5 分钟内有效）' : 'Enter the one-time code (valid for 5 minutes)',
 +      placeholder: lang() === 'zh' ? '粘贴一次性码' : 'Paste the one-time code',
++      // Upstream InputDialog spreads `initial`; omitting it crashes the panel.
++      initial: '',
 +    }, undefined, DIALOG_TIMEOUT_MS)
 +    const checked = normalizeCode(answer)
 +    if (!checked.ok) {
