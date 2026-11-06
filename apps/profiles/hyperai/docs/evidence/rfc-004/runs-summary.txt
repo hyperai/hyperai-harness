@@ -1,0 +1,72 @@
+# RFC-004 验证运行摘要（原样记录）
+
+安装包：hyperai-harness-0.2.0-beta.3.tar.gz
+sha256：cc219d5d96b455def35fbd291b3851069401b30b09542870fbec44a174f1574d
+构建 commit：283cd7f7007ebc0e3d5a942bbd025a236573f572
+
+## macOS（macOS 26.1 arm64，Node v26.9.0）
+
+```
+### O1 install
+install exit=0  version=v0.38.1  log line=openbayes-user: 已安装 v0.38.1
+### O2 /skills
+openbayes-user=1  ppt-generation=1
+### O3 existing copy
+exit=0  kept=已有 v0.38.1，保留不动
+### O4 download failure
+exit=0  warning=警告：openbayes-user 安装失败（connect ECONNREFUSED 127.0.0.1:9）
+        manual=npx skills add https://openbayes.com/skills/openbayes-user
+        profile=present
+### O5 missing skill
+没有找到 openbayes-user + npx skills add 提示
+### O6 status signed out
+未登录 OpenBayes。执行 /openbayes login 登录。
+### O7 real login
+TUI 显示授权链接（见 o7-login-url.txt）；负责人在浏览器确认（令牌 1 天）后提供一次性码；
+兑换 exit=0（token name: CLI · $HOST, expires 次日）
+### O8 status signed in
+已登录 OpenBayes / 用户名：<负责人账号> / 到期：2026-11-06T07:56:14.000Z / 状态：有效
+### O10 wrong code
+一次性码无效或已过期。请重新执行 /openbayes login。
+### O11 logout
+本地登录已删除。服务端的令牌仍然有效，如需彻底撤销，请到
+https://openbayes.com/console/settings/account/personalAccessToken 吊销名为 'CLI · $HOST' 的令牌。
+session 文件已不存在
+### O13 uninstall
+exit=0  openbayes-user: 保留 $HOME/.agents/skills/openbayes-user（其他 Agent 可能也在使用）
+skill 目录仍在：yes
+### O14 upgrade from beta.2
+beta2 exit=0 → 加假 provider + lang=zh → beta3 exit=0
+provider=1  lang=zh  version=0.2.0-beta.3  skill=yes
+铭牌：hyperai-tui v0.2.0-beta.3 · dsh-tui v0.16.1
+```
+
+## Ubuntu（Ubuntu 20.04.6 LTS x86_64，Node v22.23.4，npmmirror）
+
+```
+### O1 install
+exit=0  version=v0.38.1  安装日志有 openbayes-user: 已安装
+### O2 /skills
+openbayes-user=1  ppt-generation=1
+### O3 existing copy
+exit=0  保留不动
+### O4 download failure
+exit=0  warning=1  manual=1  profile=present
+### O5 missing skill
+提示 1 次，手动安装命令 1 次
+### O6 status signed out
+未登录 1 次
+### O10 wrong code
+一次性码无效或已过期 1 次
+### O13 uninstall
+exit=0  skill 保留  note=1
+### O14 upgrade from beta.2
+beta2 exit=0 → beta3 exit=0
+provider=1  lang=zh  version=0.2.0-beta.3  skill=yes
+铭牌：hyperai-tui v0.2.0-beta.3 · dsh-tui v0.16.1
+```
+
+## 未测
+
+- O7 / O8 / O11 在 Ubuntu 上没有做：真实登录需要负责人在浏览器里再确认一次，为减少签发的令牌数量，只在 macOS 上完成。
+- O9（让 Agent 查容器）没有做：本机与测试机上都没有可用的模型 provider，无法发起真实对话。

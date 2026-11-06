@@ -1,0 +1,38 @@
+
+
+  ✦ hyperai-tui  v0.2.0-beta.1
+  ██  ██  ██  ██  ██▀▀▄▄  ██▀▀▀▀  ██▀▀▄▄   ▄▀▀▄   ▀▀██▀▀
+  ██  ██  ██  ██  ██  ██  ██      ██  ██  ██  ██    ██
+  ██▀▀██  ▀▀██▀▀  ██▄▄▀▀  ██▀▀▀   ██▄▄▀▀  ██▀▀██    ██
+  ██  ██    ██    ██      ██      ██ ██   ██  ██    ██
+  ██  ██    ██    ██      ██▄▄▄▄  ██  ██  ██  ██  ▄▄██▄▄
+
+  ██  ██   ▄▀▀▄   ██▀▀▄▄  ██  ██  ██▀▀▀▀  ██▀▀▀▀  ██▀▀▀▀
+  ██  ██  ██  ██  ██  ██  ███ ██  ██      ██      ██
+  ██▀▀██  ██▀▀██  ██▄▄▀▀  ██ ███  ██▀▀▀    ▀▀▀▀▄   ▀▀▀▀▄
+  ██  ██  ██  ██  ██ ██   ██  ██  ██          ██      ██
+  ██  ██  ██  ██  ██  ██  ██  ██  ██▄▄▄▄  ██▄▄▄▀  ██▄▄▄▀
+  deepseek-flash · Max effort
+  $HOME/orca/projects/xuexidsh
+  Tip: /theme status shows which palette auto resolved to · /tips more tips
+
+    HyperAI Harness
+
+
+   ▶ （Ctrl+P to expand） Context loaded · System prompt 17 sections · Runtime context 2 items · Skills 2 · Tools 26
+
+
+
+    ─────────────────────────────────────────────▾  📋 Question 1/1   ──────────────────────────────────────────────
+
+    ◈ /provider
+    What do you want to do?
+
+
+    ❯● Add a new provider
+       Built-in catalog or a custom API endpoint
+     ○ Edit an existing provider
+       Change the key, endpoint, protocol, or models — or delete the provider
+
+    ↑/↓ select · Enter submit · Esc cancel · Ctrl+K to fold / click the header
+   deepseek-flash · max · xuexidsh

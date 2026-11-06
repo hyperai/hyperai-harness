@@ -7,6 +7,11 @@ packages:
   - native/system/packages/*
   # Product assemblies over the package tier; apps/cli owns the `dsh` bin.
   - apps/*
+  # The HyperAI TUI is a self-contained distribution (no workspace deps, no
+  # TypeScript build graph); keep it out of the root workspace so the DSH
+  # lockfile and build graph are unchanged. Its profile package
+  # (apps/profiles/hyperai) is two levels deep and is not a workspace project.
+  - '!apps/tui'
   # Private package owning repository-level benchmark dependencies.
   - benchmarks
   - website

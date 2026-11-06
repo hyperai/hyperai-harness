@@ -1,0 +1,54 @@
+# RFC-003 验证运行摘要（原样记录）
+
+被验证安装包：hyperai-harness-0.2.0-beta.2.tar.gz
+sha256：5e393a5020c471724e36783f56cfc4e46d8933114e4afc0aaef8ae0ccf762ada
+构建 commit：7dc323d35a7824b1ba715248cfd654559553a881
+
+## macOS（macOS 26.1 arm64，Node v26.9.0，官方 npm 源）
+
+```
+### T3 symlink install (/tmp path)
+hyperai-harness-0.2.0-beta.2.tar.gz: OK
+  bundle path: $T3_ROOT/hyperai-harness-0.2.0-beta.2
+  install exit=0 profile=present completed=completed
+  dump exit=0 lines=611 stderr=0
+  plate: hyperai-tui v0.2.0-beta.2 · dsh-tui v0.16.1
+### T4 install failure is loud
+  exit=1 printed_done=0 error=1
+### T5 doctor on clean env
+  exit=0 result=OK  $T3_ROOT/dsh-home/profiles/hyperai patch_warning=0
+### T6 upgrade from beta.1
+  beta1 exit=0
+  beta2 exit=0 provider=1 lang=en version=0.2.0-beta.2
+  plate: hyperai-tui v0.2.0-beta.2 · dsh-tui v0.16.1
+```
+
+T4 的完整报错：
+```
+hyperai-tui: refusing to touch $BETA_ROOT/t4/dsh-home/profiles/hyperai: it exists but was not created by this installer. …
+[2026-11-05T06:09:59Z] 安装失败：profile 安装失败。请把上面的错误信息发给负责人。
+```
+
+## Ubuntu（Ubuntu 20.04.6 LTS x86_64，Node v22.23.4，npmmirror）
+
+```
+### registry: https://registry.npmmirror.com
+### T3 symlink path install
+hyperai-harness-0.2.0-beta.2.tar.gz: OK
+  bundle path via symlink: $BETA_ROOT/link/pkg/hyperai-harness-0.2.0-beta.2
+  install exit=0 profile=present completed=completed
+  dump exit=0 lines=611 stderr=0
+  plate: hyperai-tui v0.2.0-beta.2 · dsh-tui v0.16.1
+### T5 doctor on clean env
+  exit=0 result=OK  $BETA_ROOT/t3-dsh/profiles/hyperai patch_warning=0
+### T6 upgrade from beta.1
+  beta1 exit=0
+  beta2 exit=0 provider=1 lang=en version=0.2.0-beta.2
+  plate: hyperai-tui v0.2.0-beta.2 · dsh-tui v0.16.1
+```
+
+## 补充
+
+- T2 见 `t2-builds.txt`。
+- T1 见 `macos/t1-tests.log`。
+- 两个平台的升级测试都先安装 beta.1（sha256 a7506581…394ae），再加一个假 provider 和 `lang=en`，然后用 beta.2 覆盖安装。

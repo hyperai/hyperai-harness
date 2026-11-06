@@ -1,0 +1,3 @@
+# RFC-002 internal-beta build output. It contains a Skills snapshot from the
+# company-internal repository and a pre-built TUI tarball; never commit it.
+dist/

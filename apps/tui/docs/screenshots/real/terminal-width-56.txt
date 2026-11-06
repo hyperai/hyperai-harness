@@ -1,0 +1,30 @@
+                                                        
+                                                        
+                                                        
+                                                        
+                                                        
+                                                        
+                                                        
+                     HyperAI Harness                    
+                                                        
+                                                        
+    ╭──────────────────────────────────────────────╮    
+    │ ❯ Say something, or type / for commands…     │    
+    ╰──────────────────────────────────────────────╯    
+      deepseek-flash  ·  Max  ·  standard               
+                                                        
+                  Sessions & workspaces    Settings     
+                                                        
+                                                        
+  ●     Ctrl+V pastes; Esc clears the draft, then Esc   
+  Tips: again opens sessions                            
+                                                        
+                                                        
+                                                        
+                                                        
+  <home>/Downloads…:feat/hyperai-tui-profile  
+  hyperai v0.2.0                                        
+                          ▸ DSH · dsh-core v0.2.0-rc.2  
+             Claude · Not installed · Enter to install  
+                            Codex · codex-cli v0.164.0  
+                                                        

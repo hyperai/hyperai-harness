@@ -1,0 +1,73 @@
+# 验证运行摘要（原样记录）
+
+两个平台都从解压后的安装包目录运行，使用隔离的 HOME / DSH_HOME。这是**验收反馈修复后**的安装包（sha256 `39e6e0c3…9b74`）。
+
+## macOS（macOS 26.1 arm64，Node v26.9.0，npm 官方源）
+
+```
+### E2 checksum
+hyperai-harness-0.2.0-beta.1.tar.gz: OK
+### E1 node18 (shim 模拟)
+  exit=1 wrote=no
+### E2 install
+  exit=0
+### E5 dump-config
+  exit=0 lines=     611 stderr=       0
+### E3/E4 startup
+### E6 update/provider/model
+### E7 skills
+### E2+E8 reinstall (checkout 已改名隐藏，HTTPS_PROXY 指向 127.0.0.1:9，NO_PROXY 只放行 registry.npmjs.org)
+  exit=0 repo-present=no
+### E10 other dsh
+  exit=0 unchanged=yes
+### upgrade from old patch flow
+  old install exit=0
+  new install exit=0 patch=removed legacy-provider=1 bundles=@deepseek-ai/dsh-base,@hyperai/hyperai-tui
+### E9 uninstall (without HYPERAI_DIST_ROOT, tests bundle-root inference)
+  exit=0 launcher=removed
+### DONE
+```
+
+## Ubuntu（Ubuntu 20.04.6 LTS x86_64）
+
+```
+### E2 checksum
+hyperai-harness-0.2.0-beta.1.tar.gz: OK
+### registry: https://registry.npmmirror.com
+### E1 system node 18
+  exit=1 wrote=no
+### E2 install with node22
+  exit=0
+### E5 dump-config
+  exit=0 lines=611 stderr=0
+### E3/E4 startup
+### E6
+### E7
+### E8 reinstall (GitHub blocked)
+  exit=0
+### E10 other dsh
+  exit=0 unchanged=yes
+### E9 uninstall (without HYPERAI_DIST_ROOT, tests bundle-root inference)
+  exit=0 launcher=removed
+### DONE
+```
+
+E1 使用系统 Node v18.20.4（`env -i PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin`），
+E2 起使用 `$HOME/node/bin/node`（v22.23.4）。官方 npm 源在该服务器上 45 分钟没有进展，改用镜像后完成。
+
+## 证据一致性检查（两个平台相同）
+
+```
+E3/E4 铭牌行                   1
+E3 像素字行（██）             10
+E5 bundle 头                   1
+E5 skill-filesystem 行         1
+E5 bundle 跳过                 0
+E6 /update 禁用提示            1
+E6 /provider 面板              1
+E6 /model 面板                 1
+E7 ppt-generation 出现         1
+E7 启动画面 Skills 提示        0
+E8 litellm provider 保留       1
+E8 会话索引 before/after       1 / 1
+```
