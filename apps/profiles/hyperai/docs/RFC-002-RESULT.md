@@ -38,7 +38,7 @@ E1 在 macOS 上用 shim 模拟 Node 18，真实 Node 18 的 E1 在 Ubuntu 上�
 | npm | 11.19.1 | 随 Node 22.23.4 的 npm 10 |
 | pnpm | 10.28.1（安装包运行时） | 10.28.1（安装包运行时） |
 | dsh | `@deepseek-ai/dsh@0.2.0-rc.2`（安装包运行时） | 同左 |
-| 隔离方式 | 全新临时 `HOME` + `DSH_HOME` | 普通用户 `hyperai-beta`，独立 HOME |
+| 隔离方式 | 全新临时 `HOME` + `DSH_HOME` | 普通用户（测试用户），独立 HOME |
 
 ## 设计说明
 
@@ -203,7 +203,7 @@ if (packageJson.name === PACKAGE_NAME && typeof version === 'string' && valid(ve
 | `apps/tui` verify / tests | 14/14、20/20 |
 | `apps/profiles/hyperai` verify / tests | 12/12、72/72 |
 | macOS 全新临时 HOME 安装并启动 | 通过：安装 exit 0、profile 与 Skills 生成、启动画面铭牌 `hyperai-tui v0.2.0-beta.1 · dsh-tui v0.16.1`、`--dump-config` 611 行 / stderr 0 字节 |
-| 服务器上安装包 | 已覆盖 `/home/hyperai-beta/hyperai-harness-0.2.0-beta.1.tar.gz`，大小 18 461 159 字节，`sha256sum -c` 通过 |
+| 服务器上安装包 | 已覆盖 `$HOME/hyperai-harness-0.2.0-beta.1.tar.gz`，大小 18 461 159 字节，`sha256sum -c` 通过 |
 
 两个平台的完整回归按 RFC 由验收 agent 执行，本轮没有重跑。
 

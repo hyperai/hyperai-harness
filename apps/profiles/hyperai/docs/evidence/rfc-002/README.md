@@ -16,7 +16,7 @@
 | 平台 | OS | Node | 安装方式 |
 |---|---|---|---|
 | macOS | macOS 26.1（25B78），arm64 | 系统 v26.9.0 | 全新临时 `HOME` + `DSH_HOME` |
-| Ubuntu | Ubuntu 20.04.6 LTS，x86_64 | 系统 v18.20.4（E1 用）；用户目录 v22.23.4（其余检查） | 普通用户 `hyperai-beta`，Node 22 装在 `$HOME/node` |
+| Ubuntu | Ubuntu 20.04.6 LTS，x86_64 | 系统 v18.20.4（E1 用）；用户目录 v22.23.4（其余检查） | 普通用户（测试用户），Node 22 装在 `$HOME/node` |
 
 两个平台都使用安装包自带的 dsh `0.2.0-rc.2` 与 pnpm `10.28.1`（装在 `~/.hyperai/runtime`）。
 

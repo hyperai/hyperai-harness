@@ -60,7 +60,7 @@ TUI 的输码路径（确认 → 输入框 → 错误码提示）用 O10 单独�
 | 构建 commit | `283cd7f7007ebc0e3d5a942bbd025a236573f572` |
 | 构建命令 | `cd apps/profiles/hyperai && node scripts/build-beta.mjs` |
 | TUI 成品包 | sha256 `acbac2b2d6b3e937bb3035f99c51c77b20332c6c52cd06bb55106732324d77e2`，3298 个文件（上游 3287 + 11 个新增） |
-| 服务器位置 | 测试服务器 `hyperai-beta` 用户主目录（含 beta.1 / beta.2 / beta.3） |
+| 服务器位置 | 测试服务器测试用户的主目录（含 beta.1 / beta.2 / beta.3） |
 
 ## 测试结果
 
@@ -149,7 +149,7 @@ TUI 的输码路径（确认 → 输入框 → 错误码提示）用 O10 单独�
 | 构建 commit | `3e34a9d132f11639a432e5e43f72a25c09ef4c46` |
 | 构建 | 同一 commit 两次构建，sha256 一致 |
 | 包内 README | 与 `docs/beta-install.md` 的 sha256 相同（`9ec764d8e33a30e4bca74df2d7e8c57f99540050715b243411df56043c52baf6`） |
-| 服务器 | 已覆盖 `/home/hyperai-beta/hyperai-harness-0.2.0-beta.3.tar.gz`，`sha256sum -c` 通过 |
+| 服务器 | 已覆盖 `$HOME/hyperai-harness-0.2.0-beta.3.tar.gz`，`sha256sum -c` 通过 |
 
 ### 检查
 

@@ -53,7 +53,7 @@ Skills 快照 `34f0a1be0c` 均未变。
 | 构建 commit | `7dc323d35a7824b1ba715248cfd654559553a881` |
 | 构建命令 | `cd apps/profiles/hyperai && node scripts/build-beta.mjs` |
 | TUI 成品包 | `@hyperai/hyperai-tui@0.2.0-beta.2`，sha256 `ef83574688fa34ded28a8236d000ceea3098729942a72f7fccd63312ed0c7412`，3296 个文件 |
-| 服务器位置 | 测试服务器上 `hyperai-beta` 用户的主目录（beta.1 保留在同一目录，供复验升级用；具体路径由负责人口头告知） |
+| 服务器位置 | 测试服务器上测试用户的主目录（beta.1 保留在同一目录，供复验升级用；具体路径由负责人口头告知） |
 
 ## 测试结果
 
@@ -66,7 +66,7 @@ Skills 快照 `34f0a1be0c` 均未变。
 | T5 | 干净环境照抄说明的 `doctor` | 通过：`OK`，补丁警告 0 次 | 通过：`OK`，补丁警告 0 次 | `macos/t5-doctor.log`、`ubuntu/t5-doctor.log` |
 | T6 | 从 beta.1 覆盖升级 | 通过：beta.1 安装成功 → 加假 provider + `lang=en` → beta.2 覆盖 exit 0，provider 保留、语言保留、state version `0.2.0-beta.2`、铭牌 beta.2 | 通过：同上 | `macos/t6-*`、`ubuntu/t6-*`、`runs-summary.txt` |
 
-- Ubuntu 使用 `hyperai-beta` 用户；没有触碰 `hyperai-review` 与 `/root`。
+- Ubuntu 使用测试用户；没有触碰验收测试用户与 `/root`。
 - Ubuntu 安装按说明使用国内镜像 `HYPERAI_NPM_REGISTRY=https://registry.npmmirror.com`。
 - 两个平台的 T6 都确认了覆盖后 `cordis.patch.yml` 里的假 provider 仍在、`~/.dsh-tui-hyperai/settings.json` 的 `lang=en` 仍在。
 
