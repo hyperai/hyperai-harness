@@ -68,7 +68,7 @@ before-hollow 8,700. Small window also has the solid wordmark.
 Real PTY runs (`pyte`, 30 rows) at 120/110/80/56 columns are under
 `screenshots/real/terminal-width-{120,110,80,56}.txt` (local paths redacted).
 At 110/80/56 the workspace row and version row stack instead of colliding; the
-product version remains one of `hyperai-tui v0.2.0-beta.3` / `hyperai v0.2.0-beta.3`, and the
+product version remains one of `hyperai-tui v0.2.0-beta.4` / `hyperai v0.2.0-beta.4`, and the
 120-column layout keeps the product+upstream pair on one row. This is developer
 self-test evidence, not the QA Round 3 certificate.
 

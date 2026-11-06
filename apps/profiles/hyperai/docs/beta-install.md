@@ -1,4 +1,4 @@
-# HyperAI Harness 内测版使用说明（v0.2.0-beta.3）
+# HyperAI Harness 内测版使用说明（v0.2.0-beta.4）
 
 这份说明写给第一次接触 HyperAI Harness 的同事。照着做就能装好，不需要 GitHub 权限，也不需要 clone 任何源码仓库。
 
@@ -44,19 +44,19 @@ HYPERAI_NPM_REGISTRY=https://registry.npmmirror.com ./install.sh
 
 ### 2.1 获取安装包
 
-从分发人处获取安装包和 `.sha256` 文件：`hyperai-harness-0.2.0-beta.3.tar.gz` 与 `hyperai-harness-0.2.0-beta.3.tar.gz.sha256`。
+从分发人处获取安装包和 `.sha256` 文件：`hyperai-harness-0.2.0-beta.4.tar.gz` 与 `hyperai-harness-0.2.0-beta.4.tar.gz.sha256`。
 
 ### 2.2 校验并解压
 
 ```sh
 # 校验（macOS）
-shasum -a 256 -c hyperai-harness-0.2.0-beta.3.tar.gz.sha256
+shasum -a 256 -c hyperai-harness-0.2.0-beta.4.tar.gz.sha256
 # 校验（Ubuntu）
-sha256sum -c hyperai-harness-0.2.0-beta.3.tar.gz.sha256
+sha256sum -c hyperai-harness-0.2.0-beta.4.tar.gz.sha256
 
 # 解压
-tar xzf hyperai-harness-0.2.0-beta.3.tar.gz
-cd hyperai-harness-0.2.0-beta.3
+tar xzf hyperai-harness-0.2.0-beta.4.tar.gz
+cd hyperai-harness-0.2.0-beta.4
 ```
 
 ### 2.3 安装
@@ -105,7 +105,7 @@ HYPERAI_NPM_REGISTRY=https://registry.npmmirror.com ./install.sh
 export PATH="$HOME/.hyperai/bin:$PATH"
 ```
 
-进去以后看到粉色 `HYPERAI HARNESS` 像素字、右下角铭牌 `hyperai-tui v0.2.0-beta.3 · dsh-tui v0.16.1` 就说明装好了。
+进去以后看到粉色 `HYPERAI HARNESS` 像素字、右下角铭牌 `hyperai-tui v0.2.0-beta.4 · dsh-tui v0.16.1` 就说明装好了。
 
 ---
 
