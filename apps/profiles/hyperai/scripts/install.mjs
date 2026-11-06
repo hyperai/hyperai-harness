@@ -644,8 +644,8 @@ export async function install(options = parseArgs([])) {
   const exists = existsSync(join(options.profileDir, 'package.json'))
   if (exists && !isManagedProfile(options.profileDir) && !options.force) {
     throw new Error(
-      `refusing to touch ${options.profileDir}: it exists but was not created by this installer. ` +
-        'Use --force to back it up and replace the managed files.',
+      `目标目录已存在，并且不是 HyperAI 安装器创建的：${options.profileDir}。` +
+        '请先备份该目录；确认要覆盖时，加 --force 重新运行安装。',
     )
   }
   if (!options.dryRun) mkdirSync(options.profileDir, { recursive: true })

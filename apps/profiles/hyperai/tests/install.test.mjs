@@ -148,7 +148,7 @@ test('a foreign profile is refused without --force', async () => {
     writeFileSync(join(profileDir, 'package.json'), '{"name":"someone-elses-profile"}\n')
     await assert.rejects(
       install(parseArgs(['--dsh-home', home, '--no-skills', '--dry-run'])),
-      /not created by this installer/u,
+      /不是 HyperAI 安装器创建的/u,
     )
   } finally {
     rmSync(home, { recursive: true, force: true })

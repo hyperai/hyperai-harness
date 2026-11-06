@@ -189,7 +189,7 @@ await check('the installer refuses a foreign profile and the manifest stays mana
     try {
       await install(parseArgs(['--dsh-home', home, '--no-skills', '--dry-run']))
     } catch (error) {
-      refused = /not created by this installer/u.test(String(error))
+      refused = /不是 HyperAI 安装器创建的/u.test(String(error))
     }
     if (!refused) throw new Error('a foreign profile was not refused')
     if (profileManifest().hyperaiTui?.upstream !== brand.upstream.version) throw new Error('managed marker records the wrong upstream pin')

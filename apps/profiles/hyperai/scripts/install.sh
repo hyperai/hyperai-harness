@@ -106,7 +106,14 @@ fi
 # ── 4. 确认安装真的成功 ─────────────────────────────────────────────────────
 # Silent no-ops are worse than failures: a skipped installer used to print
 # "安装完成" while no profile existed. Only a completed install may get a launcher.
-PROFILE_DIR="$DSH_HOME/profiles/hyperai"
+PROFILE_NAME=hyperai
+PREV_ARG=""
+for arg in "$@"; do
+  case $PREV_ARG in --profile) PROFILE_NAME=$arg ;; esac
+  case $arg in --profile=*) PROFILE_NAME=${arg#*=} ;; esac
+  PREV_ARG=$arg
+done
+PROFILE_DIR="$DSH_HOME/profiles/$PROFILE_NAME"
 INSTALL_STATE="$PROFILE_DIR/.hyperai-install.json"
 case " $* " in
   *" --dry-run "*)
