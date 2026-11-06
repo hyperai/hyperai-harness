@@ -142,6 +142,8 @@ export function useOpenbayes({ channel, dialogs, vendor = VENDORS.openbayes }) {
       kind: 'input',
       title: lang() === 'zh' ? '输入一次性码（5 分钟内有效）' : 'Enter the one-time code (valid for 5 minutes)',
       placeholder: lang() === 'zh' ? '粘贴一次性码' : 'Paste the one-time code',
+      // Show bullets while typing/pasting; the resolved value stays the raw code.
+      mask: true,
       // Upstream InputDialog spreads `initial`; omitting it crashes the panel.
       initial: '',
     }, undefined, DIALOG_TIMEOUT_MS)

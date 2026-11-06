@@ -40,6 +40,19 @@ export function normalizeCode(raw) {
   return { ok: true, code }
 }
 
+/** The character the TUI shows for each masked code cell. */
+export const MASK_CHAR = '•'
+
+/**
+ * What the masked input renders for a value: one bullet per code point, so the
+ * cursor offset and visible width stay aligned with the raw text.
+ * @param {string} value
+ * @returns {string}
+ */
+export function maskedInput(value) {
+  return MASK_CHAR.repeat([...String(value)].length)
+}
+
 /** Remove a secret from any text that might be shown or logged. */
 export function redact(text, secret) {
   if (typeof text !== 'string' || typeof secret !== 'string' || secret === '') return text

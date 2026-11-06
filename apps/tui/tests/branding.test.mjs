@@ -77,6 +77,7 @@ test('the patch touches only the documented upstream files and stays small', () 
     'lib/types/hyperaiSkillsCore.js',
     'lib/types/hyperaiOpenbayes.js',
     'lib/types/hyperaiOpenbayesCore.js',
+    'lib/types/components/ExtensionDialog.js',
     'lib/types/i18n.js',
     'lib/types/screens/Chat.js',
     'lib/types/screens/Launchpad.js',
@@ -84,7 +85,7 @@ test('the patch touches only the documented upstream files and stays small', () 
     'lib/types/update.js',
     'lib/types/utils/paths.js',
   ].sort())
-  assert.ok(patch.length < 96 * 1024, `patch is ${patch.length} bytes`)
+  assert.ok(patch.length < 100 * 1024, `patch is ${patch.length} bytes`)
   const longest = patch.split('\n').reduce((max, line) => Math.max(max, line.length), 0)
   assert.ok(longest < 4000, `longest patch line is ${longest} characters`)
 })
@@ -161,5 +162,5 @@ test('upstream self-update checks are disabled before any registry/GitHub fetch'
   // The visible prompt may stay upstream, but both callers must receive undefined.
   const chat = patch.slice(patch.indexOf('diff --git a/lib/types/screens/Chat.js'))
   assert.match(chat, /checkForTuiUpdate\(\)/u)
-  assert.ok(patch.length < 96 * 1024)
+  assert.ok(patch.length < 100 * 1024)
 })

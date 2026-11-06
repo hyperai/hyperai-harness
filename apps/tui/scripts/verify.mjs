@@ -111,12 +111,13 @@ check('patch touches only the documented upstream files', () => {
     'lib/types/hyperaiSkillsCore.js',
     'lib/types/hyperaiOpenbayes.js',
     'lib/types/hyperaiOpenbayesCore.js',
+    'lib/types/components/ExtensionDialog.js',
   ]
   const unexpected = changed.filter(file => !expected.includes(file))
   const missing = expected.filter(file => !changed.includes(file))
   if (unexpected.length > 0) throw new Error(`unexpected files: ${unexpected.join(', ')}`)
   if (missing.length > 0) throw new Error(`missing files: ${missing.join(', ')}`)
-  if (patch.length > 96 * 1024) throw new Error(`patch is unexpectedly large (${patch.length} bytes)`)
+  if (patch.length > 100 * 1024) throw new Error(`patch is unexpectedly large (${patch.length} bytes)`)
   return `${changed.length} files, ${patch.length} bytes`
 })
 
@@ -249,7 +250,7 @@ check('the /openbayes bridge runs locally and never forwards the code', () => {
   for (const banned of ['channel.send', 'channel.submit', 'submitPrompt', 'sendMessage']) {
     if (bridge.includes(banned)) throw new Error(`OpenBayes bridge forwards to the model: ${banned}`)
   }
-  for (const marker of ["name: 'openbayes'", 'useOpenbayes', "case 'openbayes'"]) {
+  for (const marker of ["name: 'openbayes'", 'useOpenbayes', "case 'openbayes'", 'dialog.mask === true']) {
     if (!patch.includes(marker)) throw new Error(`patch is missing ${JSON.stringify(marker)}`)
   }
   return 'local spawn + managed dialogs; the one-time code never reaches the model'

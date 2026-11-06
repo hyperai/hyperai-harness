@@ -446,7 +446,7 @@ export const DATA_DIR = join(homeDir(), dataDirName());`,
                     return version;
                 }`,
       replace: `                // hyperai-tui: package.json.version is the HyperAI release
-                // (0.2.0-beta.3); the dsh-tui version is recorded in
+                // (0.2.0-beta.4); the dsh-tui version is recorded in
                 // hyperai.upstreamVersion. Every caller of this function means
                 // the upstream TUI package — the dsh-tui half of the version
                 // plate, the version-drift warning and /update target checks —
@@ -756,6 +756,12 @@ import { useOpenbayes } from '../hyperaiOpenbayes.js';`,
             case 'skills-update': {`,
     },
     {
+      file: 'lib/types/components/ExtensionDialog.js',
+      why: 'optional masked input for one-time codes; every other input dialog stays plain',
+      find: "_jsx(SearchBox, { query: value, cursorOffset: [...value].slice(0, cursor).join('').length,",
+      replace: "_jsx(SearchBox, { query: dialog.mask === true ? '•'.repeat([...value].length) : value, cursorOffset: dialog.mask === true ? cursor : [...value].slice(0, cursor).join('').length,",
+    },
+    {
       file: 'lib/types/commands.js',
       why: 'list /openbayes in help and completion',
       find: "    { name: 'skills-update', description: 'Check for HyperAI Skills updates and install them' },",
@@ -800,6 +806,7 @@ const EXPECTED_FILES = [
   'lib/types/hyperaiSkillsCore.js',
   'lib/types/hyperaiOpenbayes.js',
   'lib/types/hyperaiOpenbayesCore.js',
+  'lib/types/components/ExtensionDialog.js',
 ]
 
 /** Build the patch text from the pinned upstream package. */

@@ -8,9 +8,9 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import {
-  VENDORS, classifyFailure, errorText, firstDiagnostic, loginPromptText, loginSuccessText, logoutConfirmText,
-  logoutDoneText, missingSkillText, normalizeCode, parseAuthorize, parseIdentity, parseLoginSuccess, redact,
-  statusText, usageText,
+  VENDORS, MASK_CHAR, classifyFailure, errorText, firstDiagnostic, loginPromptText, loginSuccessText,
+  logoutConfirmText, logoutDoneText, maskedInput, missingSkillText, normalizeCode, parseAuthorize, parseIdentity,
+  parseLoginSuccess, redact, statusText, usageText,
 } from '../src/hyperaiOpenbayesCore.js'
 
 const LOGIN_OUTPUT = `Vendor: openbayes
@@ -122,4 +122,32 @@ test('usage lists exactly the three supported subcommands', () => {
 test('firstDiagnostic prefers stderr and skips blank lines', () => {
   assert.equal(firstDiagnostic({ stderr: '\n  boom  \nrest', stdout: 'out' }), 'boom')
   assert.equal(firstDiagnostic({}), '')
+})
+
+test('the masked rendering hides every character and keeps the raw value for submission', () => {
+  const code = 'FAKE-CODE-123'
+  const masked = maskedInput(code)
+  assert.equal(masked, MASK_CHAR.repeat(code.length))
+  assert.equal(masked.includes('FAKE'), false)
+  assert.equal([...masked].length, [...code].length)
+  // The dialog resolves with the raw value; masking is display-only.
+  assert.equal(normalizeCode(code).code, code)
+})
+
+test('the mask is opt-in: only the login dialog asks for it', async () => {
+  const { readFileSync, readdirSync, statSync } = await import('node:fs')
+  const { join, dirname } = await import('node:path')
+  const { fileURLToPath } = await import('node:url')
+  const pkg = join(dirname(fileURLToPath(import.meta.url)), '..')
+  const bridge = readFileSync(join(pkg, 'src', 'hyperaiOpenbayes.js'), 'utf8')
+  assert.match(bridge, /kind: 'input'[\s\S]*?mask: true/u)
+  const patch = readFileSync(join(pkg, 'patches', 'dsh-tui@0.16.1.patch'), 'utf8')
+  assert.match(patch, /dialog\.mask === true \?/u)
+  // Every other source module must leave the option unset (default: plain text).
+  const offenders = []
+  for (const file of readdirSync(join(pkg, 'src'))) {
+    if (file === 'hyperaiOpenbayes.js' || !file.endsWith('.js')) continue
+    if (/\bmask:\s*true\b/u.test(readFileSync(join(pkg, 'src', file), 'utf8'))) offenders.push(file)
+  }
+  assert.deepEqual(offenders, [])
 })
