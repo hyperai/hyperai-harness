@@ -125,10 +125,10 @@ test('firstDiagnostic prefers stderr and skips blank lines', () => {
 })
 
 test('the masked rendering hides every character and keeps the raw value for submission', () => {
-  const code = 'FAKE-CODE-123'
+  const code = 'sample-secret-code'
   const masked = maskedInput(code)
   assert.equal(masked, MASK_CHAR.repeat(code.length))
-  assert.equal(masked.includes('FAKE'), false)
+  assert.equal(masked.includes('sample'), false)
   assert.equal([...masked].length, [...code].length)
   // The dialog resolves with the raw value; masking is display-only.
   assert.equal(normalizeCode(code).code, code)
