@@ -121,3 +121,38 @@ TUI 的输码路径（确认 → 输入框 → 错误码提示）用 O10 单独�
 1. `git grep -nI "Use when" -- apps/ | grep -v openbayes-user` → 16 行。逐条确认：2 行在 `apps/cli/tests/dsh-badge.expected.e2e.ts`，是上游公开的 dsh-badge 官方描述；14 行在 `apps/profiles/hyperai/tests/`，是 `Use when testing` 之类的测试假数据。**没有内部 Skill 描述**；`apps/profiles/hyperai/docs/` 下 0 行。
 2. `git grep -nI -e "<服务器主机名>" -e "/Users/<用户名>" -- apps/` → 0 行。
 3. 补充检查：`eyJ…` 形态的令牌 0 行；本次测试的一次性码 0 行。
+
+## fix-2：残留设备名清理与两条说明（RFC-004-fix-2）
+
+### 改了什么
+
+- `evidence/rfc-004/ubuntu/o10.screen.txt`：fix-1 只替换了授权链接里的 `device=`，对话框里的「设备名：…」还带着测试服务器主机名。这次把该值替换成 `$HOST`，两处保持一致。
+- `docs/beta-install.md` 第 6.1 节新增两条：
+  1. 授权链接本身也会过期：要在几分钟内确认并贴回一次性码；过期就重新执行 `/openbayes login`。
+  2. 如果授权链接不是以 `https://openbayes.com/` 开头，说明环境里设置了 `OPENBAYES_GRAPHQL_ENDPOINT`（通常只出现在 OpenBayes 容器里）；先 `unset OPENBAYES_GRAPHQL_ENDPOINT`，再重新登录。
+- 因为 `beta-install.md` 会打进安装包作为 `README.md`，按 RFC 要求重新构建了 beta.3（版本号不变）。
+
+### 主机名自查（分支最新版本）
+
+- 用完整的主机名片段搜索：0 行。
+- 用主机名前 10 个字符搜索：0 行。
+- 用主机名前 12 个字符搜索：0 行。
+- 报告与提交信息里没有写入主机名本身。
+
+### 新安装包
+
+| 项 | 值 |
+|---|---|
+| 文件 | `hyperai-harness-0.2.0-beta.3.tar.gz` |
+| 大小 | 18 474 684 字节 |
+| sha256 | `b05173077f728b4f9f4cca13d9b91b3cabe86c26ce55399e1a063fb6f86204cd` |
+| 构建 commit | `3e34a9d132f11639a432e5e43f72a25c09ef4c46` |
+| 构建 | 同一 commit 两次构建，sha256 一致 |
+| 包内 README | 与 `docs/beta-install.md` 的 sha256 相同（`9ec764d8e33a30e4bca74df2d7e8c57f99540050715b243411df56043c52baf6`） |
+| 服务器 | 已覆盖 `/home/hyperai-beta/hyperai-harness-0.2.0-beta.3.tar.gz`，`sha256sum -c` 通过 |
+
+### 检查
+
+- `apps/tui` verify 15/15、tests 34/34；`apps/profiles/hyperai` verify 12/12、tests 90/90。
+- macOS 全新临时 HOME 安装通过（openbayes-user v0.38.1），启动正常，铭牌 `hyperai-tui v0.2.0-beta.3 · dsh-tui v0.16.1`。
+- 本轮只改证据与文档，没有改代码；安装包内容除了 README 之外与上一版一致。
