@@ -337,6 +337,12 @@ export function useOpenbayesGate({ channel, dialogs, vendor = VENDORS.openbayes 
 
   const requireLogin = React.useCallback(async () => {
     if (skipped) return
+    // A scheduled expiry poll may be in flight; wait for it so the logout
+    // check is never skipped by the `checking` guard.
+    const deadline = Date.now() + 2_000
+    while (checking.current && Date.now() < deadline) {
+      await new Promise(resolve => setTimeout(resolve, 25))
+    }
     await evaluate({ online: true, block: true })
   }, [evaluate, skipped])
 
