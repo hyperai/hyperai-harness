@@ -135,3 +135,46 @@ provider 配置的对比使用“去掉空行、去掉行尾空白后”的规�
 2. `manage.mjs status` 本来就会显示 `hyperai-tui` 版本，本轮未改，符合 3.4.3。
 3. 识别只认可本安装器写入的 `hyperaiTui.version`；更早的非本安装器目录会按 foreign 走原拒绝逻辑。
 4. 测试用的假 provider/假 key 只存在于临时环境，没有写进仓库、证据或报告。
+
+## fix-1：升级后不再提示首次配置（RFC-007-fix-1）
+
+### 改了什么
+
+- 把安装结束时的输出集中到 `install.sh` 的 `finish_report()`：只有 **fresh** 和 **uninstalled** 场景打印「首次使用：… /provider … /model」和 API key 保存位置；`upgrade`、`upgrade-unknown`、`reinstall`、`interrupted` 以及通过 `--allow-downgrade` 的降级改为「你原来的模型配置可以直接使用。」
+- `downgrade` 增加专门总结：「已降级到 0.2.0-beta.5（降级不做保证）。」
+- 启动命令、PATH 提示、python-pptx 提示、卸载提示保持原样。
+- 新增测试 `tests/install-sh.test.mjs`：从 `install.sh` 抽出真实的 `finish_report` 函数，对 7 种场景断言「首次使用」「原来的模型配置」和各自的总结。
+
+### F1～F5
+
+| # | 检查 | macOS | Ubuntu |
+|---|---|---|---|
+| F1 | 现有 + 新增测试；同 commit 构建两次 | 通过（复跑 102/102；两次构建 sha 相同） | — |
+| F2 | 全新安装结尾有「首次使用」 | 通过 | 通过 |
+| F3 | beta.1 → beta.5 没有「首次使用」，有「原来的模型配置可以直接使用」 | 通过 | 通过 |
+| F4 | beta.4 → beta.5 同 F3 | 通过 | 通过 |
+| F5 | 重装与允许降级都没有「首次使用」；降级有专门提示 | 通过 | 通过 |
+
+证据在 `docs/evidence/rfc-007/fix1/`。
+
+### 新安装包
+
+| 项 | 值 |
+|---|---|
+| 文件 | `hyperai-harness-0.2.0-beta.5.tar.gz`（版本号不变） |
+| 大小 | 18 478 376 字节 |
+| sha256 | `9a27660b6b5ada3e7e1c14081305c68229f4c137d2c66ea3b9e228df7cd21d11` |
+| 构建 commit | `15c8c7023a512cfa783a91fe0bd32ce289f571f0` |
+| 构建 | 同一 commit 两次构建一致 |
+| 包内 README | 与仓库 `docs/beta-install.md` 一致（两者 sha256 都是 `3ea3e6073055450b5d2a5aa45403471e04390e06ce94e9bd2690749adb6b5c82`） |
+| 服务器 | 已覆盖测试服务器测试用户主目录下的 beta.5，beta.1～beta.4 保留 |
+
+### 固定自查
+
+1. `/skills` 截屏 / 内部 Skills 描述：`git grep -nI "Use when" -- apps/profiles/hyperai/docs/evidence/rfc-007` → **0**；PNG → **0**。
+2. 主机名前缀：`git grep -nI "<主机名前 10 个字符>" -- apps/` → **0**。
+3. 令牌 / 一次性码 / 假 API key / 本机路径：相应 `git grep` 均 → **0**；绝对 `/home/<测试用户>` 路径（`docs/` 范围）→ **0**。
+
+### 说明
+
+- 全量测试的第一次运行有 1 个用例偶发失败，未能复现；随后两次全量运行都是 102/102 通过。没有为此改动测试或代码。
