@@ -35,6 +35,7 @@ done
 
 if [ "$logout" = 1 ]; then
   rm -f "$STATE"
+  touch "${HOME:?}/.ob-stub-loggedout"
   echo "Logged out (stub)"
   exit 0
 fi
@@ -50,6 +51,7 @@ fi
 
 if [ "$login" = 1 ] && [ "$has" = 1 ]; then
   if [ "$code" = "GOODCODE" ]; then
+    rm -f "${HOME:?}/.ob-stub-loggedout"
     echo $((NOW + 30*86400)) > "$STATE"
     echo "Logged in as vendor \"openbayes\" (token name: CLI · stub, expires: 2099-01-01T00:00:00Z)."
     exit 0
@@ -68,7 +70,7 @@ fi
 
 if [ "$identity" = 1 ]; then
   init_state
-  if [ ! -f "$STATE" ]; then
+  if [ -f "${HOME:?}/.ob-stub-loggedout" ] || [ ! -f "$STATE" ]; then
     echo "[MISSING_TOKEN] Not logged in. Run --login --vendor openbayes" >&2
     exit 1
   fi
