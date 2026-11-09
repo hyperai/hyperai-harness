@@ -272,10 +272,10 @@ export function skippedGateText(lang = 'zh') {
 export function gateText(state, vendor, lang = 'zh') {
   const expiryHint = state.expiresAt === undefined ? '' : `\n（到期时间：${state.expiresAt}）`
   const body = pick(lang,
-    `HyperAI Harness 需要登录 OpenBayes 账号才能使用。\n\n` +
+    `你可以登录 OpenBayes（推荐），也可以跳过；跳过不影响非 OpenBayes 功能。\n\n` +
       `1. 选择下面的「登录 OpenBayes」；\n2. 用已登录 OpenBayes 的浏览器打开显示的链接；\n3. 确认后把一次性码粘贴回输入框。\n\n` +
       `按 Ctrl+D 退出程序。`,
-    `HyperAI Harness requires an OpenBayes account.\n\n` +
+    `Sign in to OpenBayes (recommended) or skip; skipping keeps all non-OpenBayes features available.\n\n` +
       `1. Choose "Sign in to OpenBayes" below.\n2. Open the link in a browser signed in to OpenBayes.\n3. Paste the one-time code back here.\n\n` +
       `Press Ctrl+D to quit.`)
   let reason = ''
@@ -286,7 +286,7 @@ export function gateText(state, vendor, lang = 'zh') {
   } else if (state.state === 'rejected') {
     reason = pick(lang, 'OpenBayes 登录已失效，请重新登录。', 'OpenBayes sign-in is no longer valid; sign in again.')
   }
-  return { title: pick(lang, '登录 OpenBayes（必需）', 'Sign in to OpenBayes (required)'), message: reason === '' ? body : `${reason}\n\n${body}` }
+  return { title: pick(lang, '登录 OpenBayes（推荐）', 'Sign in to OpenBayes (recommended)'), message: reason === '' ? body : `${reason}\n\n${body}` }
 }
 
 /** One-time startup notice for a session that is about to expire. */

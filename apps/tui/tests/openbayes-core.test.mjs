@@ -188,7 +188,7 @@ test('gate copy explains why, how and how to quit', async () => {
   const core = await import('../src/hyperaiOpenbayesCore.js')
   for (const state of [{ state: 'missing' }, { state: 'expired', expiresAt: '2026-01-01T00:00:00Z' }, { state: 'rejected' }]) {
     const text = core.gateText(state, core.VENDORS.openbayes)
-    assert.match(text.message, /需要登录 OpenBayes 账号/u)
+    assert.match(text.message, /登录 OpenBayes（推荐）|可以跳过/u)
     assert.match(text.message, /一次性码/u)
     assert.match(text.message, /Ctrl\+D 退出/u)
   }
