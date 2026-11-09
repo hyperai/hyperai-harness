@@ -446,7 +446,7 @@ export const DATA_DIR = join(homeDir(), dataDirName());`,
                     return version;
                 }`,
       replace: `                // hyperai-tui: package.json.version is the HyperAI release
-                // (0.2.0-beta.5); the dsh-tui version is recorded in
+                // (0.2.0-beta.6); the dsh-tui version is recorded in
                 // hyperai.upstreamVersion. Every caller of this function means
                 // the upstream TUI package — the dsh-tui half of the version
                 // plate, the version-drift warning and /update target checks —
@@ -729,15 +729,24 @@ import { useSkillsUpdate } from '../hyperaiSkills.js';`,
       why: 'import the OpenBayes sign-in command bridge',
       find: "import { useSkillsUpdate } from '../hyperaiSkills.js';",
       replace: `import { useSkillsUpdate } from '../hyperaiSkills.js';
-import { useOpenbayes } from '../hyperaiOpenbayes.js';`,
+import { useOpenbayes, useOpenbayesGate } from '../hyperaiOpenbayes.js';`,
     },
     {
       file: 'lib/types/screens/Chat.js',
       why: 'mount the OpenBayes command bridge hook',
       find: '    const skillsUpdate = useSkillsUpdate({ channel, dialogs });',
       replace: `    const skillsUpdate = useSkillsUpdate({ channel, dialogs });
+    // hyperai-tui: the startup sign-in gate owns the blocking login dialog.
+    const openbayesGate = useOpenbayesGate({ channel, dialogs });
     // hyperai-tui: local /openbayes login, status and logout (never model-bound).
-    const openbayes = useOpenbayes({ channel, dialogs });`,
+    const openbayes = useOpenbayes({ channel, dialogs, onLoggedOut: () => { void openbayesGate.requireLogin(); } });`,
+    },
+    {
+      file: 'lib/types/screens/Chat.js',
+      why: 'keep the test-mode banner visible while the sign-in gate is skipped',
+      find: 'children: skillsUpdate.notice }) })),',
+      replace: `children: skillsUpdate.notice }) })),
+                                    openbayesGate.notice !== undefined && (_jsx(Text, { color: "warning", wrap: "truncate", children: openbayesGate.notice })),`,
     },
     {
       file: 'lib/types/screens/Chat.js',

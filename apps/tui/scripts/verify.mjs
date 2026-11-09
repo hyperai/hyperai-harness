@@ -117,7 +117,7 @@ check('patch touches only the documented upstream files', () => {
   const missing = expected.filter(file => !changed.includes(file))
   if (unexpected.length > 0) throw new Error(`unexpected files: ${unexpected.join(', ')}`)
   if (missing.length > 0) throw new Error(`missing files: ${missing.join(', ')}`)
-  if (patch.length > 100 * 1024) throw new Error(`patch is unexpectedly large (${patch.length} bytes)`)
+  if (patch.length > 120 * 1024) throw new Error(`patch is unexpectedly large (${patch.length} bytes)`)
   return `${changed.length} files, ${patch.length} bytes`
 })
 

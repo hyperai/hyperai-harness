@@ -151,3 +151,50 @@ test('the mask is opt-in: only the login dialog asks for it', async () => {
   }
   assert.deepEqual(offenders, [])
 })
+
+test('expiry math handles time zones, partial days and the 3-day boundary', async () => {
+  const core = await import('../src/hyperaiOpenbayesCore.js')
+  const now = Date.parse('2026-01-01T00:00:00Z')
+  assert.equal(core.daysUntilExpiry('2026-01-11T00:00:00Z', now), 10)
+  assert.equal(core.daysUntilExpiry('2026-01-02T12:00:00Z', now), 2)
+  assert.equal(core.daysUntilExpiry('2025-12-31T23:00:00Z', now), 0)
+  assert.equal(core.millisUntilExpiry('not-a-date', now), undefined)
+  // Exactly 3 days is still "valid" (the notice starts below 3 days).
+  assert.equal(core.classifySession({ expiresAt: '2026-01-04T00:00:00Z' }, now).state, 'valid')
+  assert.equal(core.classifySession({ expiresAt: '2026-01-03T23:59:59Z' }, now).state, 'expiring')
+})
+
+test('every startup situation maps to a gate decision', async () => {
+  const core = await import('../src/hyperaiOpenbayesCore.js')
+  const now = Date.parse('2026-01-01T00:00:00Z')
+  assert.equal(core.classifySession(undefined, now).state, 'missing')
+  assert.equal(core.classifySession({ expired: true, expiresAt: '2025-12-01T00:00:00Z' }, now).state, 'expired')
+  assert.equal(core.classifySession({ expiresAt: '2026-01-11T00:00:00Z', expired: false }, now).state, 'valid')
+  assert.equal(core.classifySession({ expiresAt: '2026-01-03T00:00:00Z', expired: false }, now).state, 'expiring')
+  assert.equal(core.classifySession({ expiresAt: 'nonsense', expired: false }, now).state, 'unknown')
+  assert.deepEqual(core.classifySession({ expiresAt: '2026-01-03T00:00:00Z', expired: false }, now).days, 2)
+})
+
+test('the skip switch accepts only the exact value off', async () => {
+  const core = await import('../src/hyperaiOpenbayesCore.js')
+  assert.equal(core.loginGateSkipped({ HYPERAI_LOGIN_GATE: 'off' }), true)
+  for (const value of ['0', 'OFF', 'false', 'on', '']) {
+    assert.equal(core.loginGateSkipped({ HYPERAI_LOGIN_GATE: value }), false, value)
+  }
+  assert.match(core.skippedGateText(), /测试模式：已跳过 OpenBayes 登录/u)
+})
+
+test('gate copy explains why, how and how to quit', async () => {
+  const core = await import('../src/hyperaiOpenbayesCore.js')
+  for (const state of [{ state: 'missing' }, { state: 'expired', expiresAt: '2026-01-01T00:00:00Z' }, { state: 'rejected' }]) {
+    const text = core.gateText(state, core.VENDORS.openbayes)
+    assert.match(text.message, /需要登录 OpenBayes 账号/u)
+    assert.match(text.message, /一次性码/u)
+    assert.match(text.message, /Ctrl\+D 退出/u)
+  }
+  assert.match(core.gateText({ state: 'expired', expiresAt: '2026-01-01T00:00:00Z' }, core.VENDORS.openbayes).message, /已过期/u)
+  assert.match(core.expiringNoticeText(2), /2 天后到期/u)
+  assert.match(core.expiredDuringUseText(), /下次启动时会回到登录界面/u)
+  assert.match(core.onlineNoticeText('network'), /连不上 OpenBayes/u)
+  assert.match(core.onlineNoticeText('rejected'), /\/openbayes login/u)
+})

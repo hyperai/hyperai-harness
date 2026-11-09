@@ -56,7 +56,7 @@ normal upstream session/chat/tool features remain available.
 `/settings` retains a few upstream compatibility toggles (header art, maid
 portrait, welcome animation, splash font). They are explicitly labelled as not
 used by HyperAI; the branded splash is always the solid pixel wordmark. The
-version plate distinguishes the HyperAI product version (`hyperai-tui v0.2.0-beta.5`)
+version plate distinguishes the HyperAI product version (`hyperai-tui v0.2.0-beta.6`)
 from the pinned upstream TUI version (`dsh-tui v0.16.1`), and the terminal title
 carries no upstream whale glyph. Very narrow terminal windows keep upstream's
 plain-title fallback rather than a cropped pixel wordmark.
@@ -82,7 +82,7 @@ Two guarantees are enforced by assertions, not convention:
 
 `upstream.json` pins the input by size, sha256 and npm integrity; the builder
 refuses any other bytes before unpacking. The product `version` is the HyperAI
-release (`0.2.0-beta.5`), while `hyperai.upstreamVersion` keeps `0.16.1` for the
+release (`0.2.0-beta.6`), while `hyperai.upstreamVersion` keeps `0.16.1` for the
 `dsh-tui v…` half of the plate and for update/version-drift logic.
 
 ## Commands
@@ -183,7 +183,7 @@ as a follow-up, not part of this distribution.
   into collision; the checked-in 120/110/80/56-column PTY captures under
   [`docs/screenshots/real/`](docs/screenshots/real/) show the product version
   remains readable. At 56 columns the footer intentionally shows the compact
-  `hyperai v0.2.0-beta.5` product label and omits the upstream `dsh-tui` version rather
+  `hyperai v0.2.0-beta.6` product label and omits the upstream `dsh-tui` version rather
   than squeezing or overlapping text; 80 columns is the comfortable minimum for
   the full pair. Exact terminal certificates remain QA-owned.
 
@@ -235,3 +235,15 @@ apps/tui/
 ├── docs/third-party-notices.md  upstream / dependency compliance record
 └── docs/licenses/          upstream MIT, third-party and MathJax notices
 ```
+
+## 启动时的 OpenBayes 登录检查
+
+TUI 启动后会调用 `openbayes-user` 的 `run_graphql.sh --identity` 做离线检查：没有登录或已过期时用对话框挡住聊天，登录成功才进入；有效期内直接进入。在线 `whoami` 在后台异步执行，不阻塞首帧。
+
+自动化测试可以在临时 `HOME` 里放一个假的 `openbayes-user` 目录（只放在测试目录或临时目录，不要放进 `~/.agents/skills`，也不要提交进安装包）。调试时可以设置：
+
+```sh
+HYPERAI_LOGIN_GATE=off
+```
+
+跳过登录检查。只识别精确值 `off`（`0`、`OFF`、`false` 都不会跳过），跳过时界面会持续显示「测试模式：已跳过 OpenBayes 登录」。启动器 `~/.hyperai/bin/hyperai` 不会设置这个变量。

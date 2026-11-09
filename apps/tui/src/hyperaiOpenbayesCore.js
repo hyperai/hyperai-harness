@@ -108,6 +108,7 @@ export function classifyFailure(result = {}) {
   if (result.timedOut === true) return 'timeout'
   const text = `${result.stdout ?? ''}\n${result.stderr ?? ''}`
   if (/MISSING_TOKEN/u.test(text)) return 'not-logged-in'
+  if (/\b401\b|Unauthorized|AUTH_|invalid[_ ]token|token[_ ]invalid|认证失败|登录已失效|已被吊销/iu.test(text)) return 'rejected'
   if (/LOGIN_EXCHANGE_FAILED|LOGIN_PENDING_EXPIRED|NO_PENDING_LOGIN|授权码无效|已过期|invalid|expired/iu.test(text)) return 'code'
   if (/'node' not found|Node\.js 18\+|node: command not found/iu.test(text)) return 'node'
   if (/ENOTFOUND|ECONNREFUSED|ECONNRESET|ETIMEDOUT|EAI_AGAIN|fetch failed|network|timeout|timed out|网络/iu.test(text)) return 'network'
@@ -211,4 +212,100 @@ export function usageText(lang = 'zh') {
   return pick(lang,
     '用法：\n/openbayes login   登录 OpenBayes\n/openbayes status  查看登录状态\n/openbayes logout  退出登录（只删除本地 session）',
     'Usage:\n/openbayes login   sign in\n/openbayes status  show sign-in status\n/openbayes logout  sign out (local session only)')
+}
+
+/** How close to expiry a session must be before the startup notice appears. */
+export const EXPIRY_NOTICE_MS = 3 * 24 * 60 * 60 * 1000
+
+/**
+ * Milliseconds from now until `expiresAt`, or undefined when unparseable.
+ * @param {string | undefined} expiresAt ISO timestamp from `--identity`.
+ * @param {number} now epoch milliseconds (tests pass a fixed clock).
+ */
+export function millisUntilExpiry(expiresAt, now = Date.now()) {
+  if (typeof expiresAt !== 'string') return undefined
+  const at = Date.parse(expiresAt)
+  if (Number.isNaN(at)) return undefined
+  return at - now
+}
+
+/** Whole days shown to a person; zero or negative stays 0. */
+export function daysUntilExpiry(expiresAt, now = Date.now()) {
+  const remaining = millisUntilExpiry(expiresAt, now)
+  if (remaining === undefined || remaining <= 0) return 0
+  return Math.ceil(remaining / 86_400_000)
+}
+
+/**
+ * Classify a session from the offline `--identity` view.
+ * @param {{ expired?: boolean, expiresAt?: string } | undefined} identity
+ * @param {number} now
+ * @returns {{ state: 'missing'|'expired'|'expiring'|'valid'|'unknown', days?: number, expiresAt?: string }}
+ */
+export function classifySession(identity, now = Date.now()) {
+  if (identity === undefined) return { state: 'missing' }
+  if (identity.expired === true) return { state: 'expired', expiresAt: identity.expiresAt }
+  const remaining = millisUntilExpiry(identity.expiresAt, now)
+  if (remaining === undefined) return { state: 'unknown', expiresAt: identity.expiresAt }
+  if (remaining <= 0) return { state: 'expired', expiresAt: identity.expiresAt, days: 0 }
+  if (remaining < EXPIRY_NOTICE_MS) {
+    return { state: 'expiring', days: daysUntilExpiry(identity.expiresAt, now), expiresAt: identity.expiresAt }
+  }
+  return { state: 'valid', days: daysUntilExpiry(identity.expiresAt, now), expiresAt: identity.expiresAt }
+}
+
+/** The startup gate is skipped only for the exact value `off`. */
+export function loginGateSkipped(env = process.env) {
+  return env.HYPERAI_LOGIN_GATE === 'off'
+}
+
+/** Persistent banner while the gate is skipped (test-only). */
+export function skippedGateText(lang = 'zh') {
+  return pick(lang, '测试模式：已跳过 OpenBayes 登录', 'Test mode: OpenBayes sign-in skipped')
+}
+
+/** Title + body of the blocking sign-in screen. */
+export function gateText(state, vendor, lang = 'zh') {
+  const expiryHint = state.expiresAt === undefined ? '' : `\n（到期时间：${state.expiresAt}）`
+  const body = pick(lang,
+    `HyperAI Harness 需要登录 OpenBayes 账号才能使用。\n\n` +
+      `1. 选择下面的「登录 OpenBayes」；\n2. 用已登录 OpenBayes 的浏览器打开显示的链接；\n3. 确认后把一次性码粘贴回输入框。\n\n` +
+      `按 Ctrl+D 退出程序。`,
+    `HyperAI Harness requires an OpenBayes account.\n\n` +
+      `1. Choose "Sign in to OpenBayes" below.\n2. Open the link in a browser signed in to OpenBayes.\n3. Paste the one-time code back here.\n\n` +
+      `Press Ctrl+D to quit.`)
+  let reason = ''
+  if (state.state === 'expired') {
+    reason = pick(lang, `OpenBayes 登录已过期，请重新登录。${expiryHint}`, `OpenBayes sign-in expired; sign in again.${expiryHint}`)
+  } else if (state.state === 'missing') {
+    reason = pick(lang, '这台电脑还没有登录过 OpenBayes。', 'This computer has not signed in to OpenBayes yet.')
+  } else if (state.state === 'rejected') {
+    reason = pick(lang, 'OpenBayes 登录已失效，请重新登录。', 'OpenBayes sign-in is no longer valid; sign in again.')
+  }
+  return { title: pick(lang, '登录 OpenBayes（必需）', 'Sign in to OpenBayes (required)'), message: reason === '' ? body : `${reason}\n\n${body}` }
+}
+
+/** One-time startup notice for a session that is about to expire. */
+export function expiringNoticeText(days, lang = 'zh') {
+  return pick(lang,
+    `OpenBayes 登录将在 ${days} 天后到期，输入 /openbayes login 续期。`,
+    `OpenBayes sign-in expires in ${days} day(s); run /openbayes login to renew.`)
+}
+
+/** One-time notices for online failures. */
+export function onlineNoticeText(kind, lang = 'zh') {
+  if (kind === 'network') {
+    return pick(lang, '暂时连不上 OpenBayes，相关功能可能用不了。', 'Cannot reach OpenBayes right now; related features may not work.')
+  }
+  if (kind === 'rejected') {
+    return pick(lang, 'OpenBayes 登录已失效，请输入 /openbayes login 重新登录。', 'OpenBayes sign-in is no longer valid; run /openbayes login.')
+  }
+  return undefined
+}
+
+/** Session expired while the app was running: one warning, no interruption. */
+export function expiredDuringUseText(lang = 'zh') {
+  return pick(lang,
+    'OpenBayes 登录已过期。现在可以输入 /openbayes login 续期；不续期的话，下次启动时会回到登录界面。',
+    'OpenBayes sign-in expired. Run /openbayes login to renew; otherwise the next launch will ask you to sign in.')
 }

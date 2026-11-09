@@ -80,7 +80,7 @@ index 58cd57a..f32812a 100644
 +    return (_jsxs(Pane, { color: "permission", children: [_jsxs(Box, { flexDirection: "column", children: [_jsx(Box, { marginBottom: 1, children: _jsx(Text, { color: "remember", bold: true, children: dialog.title }) }), _jsx(SearchBox, { query: dialog.mask === true ? '•'.repeat([...value].length) : value, cursorOffset: dialog.mask === true ? cursor : [...value].slice(0, cursor).join('').length, placeholder: dialog.placeholder ?? '', placeholderAlign: "left", prefix: "", borderless: true, isFocused: true, isTerminalFocused: true })] }), _jsx(Text, { dimColor: true, italic: true, children: _jsx(HintLine, { text: t('hint-ext-dialog-input') }) })] }));
  }
 diff --git a/lib/types/components/LogoV2.js b/lib/types/components/LogoV2.js
-index ed2f7f3..a6da836 100644
+index ed2f7f3..ba0a384 100644
 --- a/lib/types/components/LogoV2.js
 +++ b/lib/types/components/LogoV2.js
 @@ -8,7 +8,7 @@ import { dirname, join } from 'node:path';
@@ -189,7 +189,7 @@ index ed2f7f3..a6da836 100644
                                  setHeartKey(k => k + 1);
                              }
 -                        }, children: _jsx(Box, { width: WHALE_BOX_WIDTH, flexDirection: "column", alignItems: "center", children: brand === 'deepseek' && mascotSkin !== undefined ? (_jsx(SplashMascot, { skin: mascotSkin, active: !whaleFrozen && whaleIdle, imageBox: imageBox })) : portraitMode ? (_jsx(Box, { width: WHALE_BOX_WIDTH, height: textColumnRows, flexDirection: "row", justifyContent: "center", alignItems: "center", children: maidImageActive ? (_jsx(MaidPortrait, { source: maidHappy ? (portraits?.happy ?? maidSource) : maidSource, maxColumns: WHALE_BOX_WIDTH, maxRows: textColumnRows, presentation: "transcript" })) : (claudeArt ? _jsx(ClaudeGirlArt, { width: WHALE_BOX_WIDTH }) : _jsx(WhaleGirlArt, { width: WHALE_BOX_WIDTH })) })) : (_jsx(WhaleArt, { frameIndex: frameIndex, pose: settled && whaleIdle && !whaleFrozen ? (idlePose ?? RESTING_POSE) : undefined, width: WHALE_BOX_WIDTH })) }) })), (showBigTitle || showPlainTitle) && (_jsxs(Box, { flexDirection: "column", flexShrink: 1, children: [chrome !== 'minimal' && (_jsxs(Text, { wrap: "truncate-end", children: [sweep('✦ dsh-TUI', t, wordmarkRGB, wordmarkShimmerRGB, 60), _jsx(Text, { dimColor: true, children: '  v' + VERSION })] })), showBigTitle ? (_jsxs(_Fragment, { children: [bigDeepSeek.map((row, index) => (_jsx(Text, { wrap: "truncate-end", children: row.replace(/\s+$/u, '') }, `ds-${index}`))), _jsx(Box, { height: 1 }), bigHarness.map((row, index) => (_jsx(Text, { wrap: "truncate-end", children: row.replace(/\s+$/u, '') }, `h-${index}`)))] })) : (showPlainTitle && (_jsx(Text, { color: "accent", bold: true, wrap: "truncate-end", children: words.plain }))), chrome !== 'minimal' && (_jsxs(_Fragment, { children: [_jsxs(Text, { wrap: "truncate-end", children: [model, effort !== undefined && _jsx(Text, { dimColor: true, children: ' · ' + capitalize(effort) + ' effort' })] }), _jsx(Text, { dimColor: true, wrap: "truncate-end", children: cwd }), _jsxs(Text, { wrap: "truncate-end", children: [_jsx(Text, { dimColor: true, children: tr('logo-tip-prefix') }), getLang() === 'zh' ? randomTip.zh : randomTip.en, _jsx(Text, { dimColor: true, children: ' · /tips ' + tr('logo-tip-more') })] })] })), chrome !== 'minimal' && driftLine != null && (_jsxs(Text, { color: "warning", wrap: "wrap", children: ["\u26A0", ' ', tOr(`logo-drift-${driftLine.kind}`, `The dsh engine (${driftLine.versions.join(' / ')}) does not match the validated ${UPSTREAM_VALIDATED_VERSION}; reinstall via npm i -g @deepseek-ai/dsh@${UPSTREAM_VALIDATED_VERSION}.`, {
-+                        }, children: _jsx(Box, { width: WHALE_BOX_WIDTH, flexDirection: "column", alignItems: "center", children: brand === 'deepseek' && mascotSkin !== undefined ? (_jsx(SplashMascot, { skin: mascotSkin, active: !whaleFrozen && whaleIdle, imageBox: imageBox })) : portraitMode ? (_jsx(Box, { width: WHALE_BOX_WIDTH, height: textColumnRows, flexDirection: "row", justifyContent: "center", alignItems: "center", children: maidImageActive ? (_jsx(MaidPortrait, { source: maidHappy ? (portraits?.happy ?? maidSource) : maidSource, maxColumns: WHALE_BOX_WIDTH, maxRows: textColumnRows, presentation: "transcript" })) : (claudeArt ? _jsx(ClaudeGirlArt, { width: WHALE_BOX_WIDTH }) : _jsx(WhaleGirlArt, { width: WHALE_BOX_WIDTH })) })) : (_jsx(WhaleArt, { frameIndex: frameIndex, pose: settled && whaleIdle && !whaleFrozen ? (idlePose ?? RESTING_POSE) : undefined, width: WHALE_BOX_WIDTH })) }) })), (showBigTitle || showPlainTitle) && (_jsxs(Box, { flexDirection: "column", flexShrink: 1, children: [chrome !== 'minimal' && (_jsxs(Text, { wrap: "truncate-end", children: [sweep('✦ hyperai-tui', t, wordmarkRGB, wordmarkShimmerRGB, 60), _jsx(Text, { dimColor: true, children: '  v0.2.0-beta.5' })] })), showBigTitle ? (_jsxs(_Fragment, { children: [bigDeepSeek.map((row, index) => (_jsx(Text, { wrap: "truncate-end", children: row.replace(/\s+$/u, '') }, `ds-${index}`))), _jsx(Box, { height: 1 }), bigHarness.map((row, index) => (_jsx(Text, { wrap: "truncate-end", children: row.replace(/\s+$/u, '') }, `h-${index}`)))] })) : (showPlainTitle && (_jsx(Text, { bold: true, wrap: "truncate-end", children: sweep(words.plain, t, HYPERAI_PALETTE.accent, HYPERAI_PALETTE.accent, 60) }))), chrome !== 'minimal' && (_jsxs(_Fragment, { children: [_jsxs(Text, { wrap: "truncate-end", children: [model, effort !== undefined && _jsx(Text, { dimColor: true, children: ' · ' + capitalize(effort) + ' effort' })] }), _jsx(Text, { dimColor: true, wrap: "truncate-end", children: cwd }), _jsxs(Text, { wrap: "truncate-end", children: [_jsx(Text, { dimColor: true, children: tr('logo-tip-prefix') }), getLang() === 'zh' ? randomTip.zh : randomTip.en, _jsx(Text, { dimColor: true, children: ' · /tips ' + tr('logo-tip-more') })] })] })), chrome !== 'minimal' && driftLine != null && (_jsxs(Text, { color: "warning", wrap: "wrap", children: ["\u26A0", ' ', tOr(`logo-drift-${driftLine.kind}`, `The dsh engine (${driftLine.versions.join(' / ')}) does not match the validated ${UPSTREAM_VALIDATED_VERSION}; reinstall via npm i -g @deepseek-ai/dsh@${UPSTREAM_VALIDATED_VERSION}.`, {
++                        }, children: _jsx(Box, { width: WHALE_BOX_WIDTH, flexDirection: "column", alignItems: "center", children: brand === 'deepseek' && mascotSkin !== undefined ? (_jsx(SplashMascot, { skin: mascotSkin, active: !whaleFrozen && whaleIdle, imageBox: imageBox })) : portraitMode ? (_jsx(Box, { width: WHALE_BOX_WIDTH, height: textColumnRows, flexDirection: "row", justifyContent: "center", alignItems: "center", children: maidImageActive ? (_jsx(MaidPortrait, { source: maidHappy ? (portraits?.happy ?? maidSource) : maidSource, maxColumns: WHALE_BOX_WIDTH, maxRows: textColumnRows, presentation: "transcript" })) : (claudeArt ? _jsx(ClaudeGirlArt, { width: WHALE_BOX_WIDTH }) : _jsx(WhaleGirlArt, { width: WHALE_BOX_WIDTH })) })) : (_jsx(WhaleArt, { frameIndex: frameIndex, pose: settled && whaleIdle && !whaleFrozen ? (idlePose ?? RESTING_POSE) : undefined, width: WHALE_BOX_WIDTH })) }) })), (showBigTitle || showPlainTitle) && (_jsxs(Box, { flexDirection: "column", flexShrink: 1, children: [chrome !== 'minimal' && (_jsxs(Text, { wrap: "truncate-end", children: [sweep('✦ hyperai-tui', t, wordmarkRGB, wordmarkShimmerRGB, 60), _jsx(Text, { dimColor: true, children: '  v0.2.0-beta.6' })] })), showBigTitle ? (_jsxs(_Fragment, { children: [bigDeepSeek.map((row, index) => (_jsx(Text, { wrap: "truncate-end", children: row.replace(/\s+$/u, '') }, `ds-${index}`))), _jsx(Box, { height: 1 }), bigHarness.map((row, index) => (_jsx(Text, { wrap: "truncate-end", children: row.replace(/\s+$/u, '') }, `h-${index}`)))] })) : (showPlainTitle && (_jsx(Text, { bold: true, wrap: "truncate-end", children: sweep(words.plain, t, HYPERAI_PALETTE.accent, HYPERAI_PALETTE.accent, 60) }))), chrome !== 'minimal' && (_jsxs(_Fragment, { children: [_jsxs(Text, { wrap: "truncate-end", children: [model, effort !== undefined && _jsx(Text, { dimColor: true, children: ' · ' + capitalize(effort) + ' effort' })] }), _jsx(Text, { dimColor: true, wrap: "truncate-end", children: cwd }), _jsxs(Text, { wrap: "truncate-end", children: [_jsx(Text, { dimColor: true, children: tr('logo-tip-prefix') }), getLang() === 'zh' ? randomTip.zh : randomTip.en, _jsx(Text, { dimColor: true, children: ' · /tips ' + tr('logo-tip-more') })] })] })), chrome !== 'minimal' && driftLine != null && (_jsxs(Text, { color: "warning", wrap: "wrap", children: ["\u26A0", ' ', tOr(`logo-drift-${driftLine.kind}`, `The dsh engine (${driftLine.versions.join(' / ')}) does not match the validated ${UPSTREAM_VALIDATED_VERSION}; reinstall via npm i -g @deepseek-ai/dsh@${UPSTREAM_VALIDATED_VERSION}.`, {
                                          installed: driftLine.versions.join(' / '),
                                          validated: UPSTREAM_VALIDATED_VERSION,
                                          primary: UPSTREAM_VALIDATED_VERSION,
@@ -264,21 +264,22 @@ index 71e32df..4f233d0 100644
      setActiveBrand(resolveBrand(config.brand, backendChoice));
 diff --git a/lib/types/hyperaiOpenbayes.js b/lib/types/hyperaiOpenbayes.js
 new file mode 100644
-index 0000000..838eef4
+index 0000000..1ffb826
 --- /dev/null
 +++ b/lib/types/hyperaiOpenbayes.js
-@@ -0,0 +1,231 @@
+@@ -0,0 +1,422 @@
 +/**
-+ * `/openbayes` command bridge for the TUI.
++ * `/openbayes` command bridge and the startup sign-in gate for the TUI.
 + *
 + * Runs the skill's own `scripts/run_graphql.sh` locally: the authorize URL, the
 + * one-time code and the token never go through the model, the chat transcript
-+ * or the session log. The dialogs belong to the TUI chrome; the input answer is
-+ * handed straight back to the child process.
++ * or the session log. The gate blocks the chat with a managed dialog until a
++ * session exists; a valid session enters directly, and a session close to
++ * expiry only produces one startup notice.
 + *
 + * The skill is installed by the profile installer into `~/.agents/skills/`; it
-+ * is never modified here. `hyperaiOpenbayesCore.js` holds the formatting and
-+ * validation so it can be tested without React or a terminal.
++ * is never modified here. `hyperaiOpenbayesCore.js` holds the formatting,
++ * expiry math and validation so it can be tested without React or a terminal.
 + */
 +import React from 'react'
 +import { spawn } from 'node:child_process'
@@ -287,16 +288,21 @@ index 0000000..838eef4
 +import { join } from 'node:path'
 +import { getLang } from './i18n.js'
 +import {
-+  VENDORS, classifyFailure, errorText, firstDiagnostic, loginPromptText, loginSuccessText, logoutConfirmText,
-+  logoutDoneText, missingSkillText, normalizeCode, parseAuthorize, parseIdentity, parseLoginSuccess, redact,
-+  statusText, usageText,
++  VENDORS, classifyFailure, classifySession, errorText, expiredDuringUseText, expiringNoticeText, firstDiagnostic,
++  gateText, loginGateSkipped, loginPromptText, loginSuccessText, logoutConfirmText, logoutDoneText,
++  missingSkillText, normalizeCode, onlineNoticeText, parseAuthorize, parseIdentity, parseLoginSuccess, redact,
++  skippedGateText, statusText, usageText,
 +} from './hyperaiOpenbayesCore.js'
 +
 +const LOGIN_TIMEOUT_MS = 60_000
 +const CODE_TIMEOUT_MS = 120_000
 +const IDENTITY_TIMEOUT_MS = 30_000
++const WHOAMI_TIMEOUT_MS = 15_000
 +const LOGOUT_TIMEOUT_MS = 30_000
 +const DIALOG_TIMEOUT_MS = 300_000
++/** The blocking gate must stay on screen until the person acts; 30 days. */
++const GATE_DIALOG_TIMEOUT_MS = 30 * 24 * 60 * 60 * 1000
++const EXPIRY_POLL_MS = 10_000
 +
 +/** Current UI language (`zh` / `en`). Resolved at call time, so `/lang` works. */
 +function lang() {
@@ -304,7 +310,7 @@ index 0000000..838eef4
 +}
 +
 +/** Dialog title for a vendor and a phase. */
-+function heading(vendor, suffix, langCode) {
++function heading(vendor, suffix) {
 +  return `${vendor.label}${suffix === undefined ? '' : suffix}`
 +}
 +
@@ -346,16 +352,272 @@ index 0000000..838eef4
 +  })
 +}
 +
++/** Read the offline identity of the current vendor. */
++export async function readIdentityOnce(vendor = VENDORS.openbayes) {
++  const context = resolveOpenbayesContext(process.env, vendor)
++  if (!context.available) return { error: { code: -1, stdout: '', stderr: 'skill missing' }, missing: true }
++  const result = await run(context, ['--vendor', vendor.name, '--identity', '--pretty'], IDENTITY_TIMEOUT_MS)
++  if (result.code !== 0) return { error: result }
++  try {
++    return { identity: parseIdentity(result.stdout) }
++  } catch {
++    return { error: result }
++  }
++}
++
++/** One lightweight online identity check (`whoami`); never blocks the first frame. */
++export async function verifyOnline(vendor = VENDORS.openbayes) {
++  const context = resolveOpenbayesContext(process.env, vendor)
++  if (!context.available) return { kind: 'missing' }
++  const whoami = join(context.dir, 'references', 'graphql-operations', 'common', 'whoami.graphql')
++  const result = await run(context, ['--vendor', vendor.name, '--query-file', whoami], WHOAMI_TIMEOUT_MS)
++  if (result.code === 0) return { ok: true }
++  return { kind: classifyFailure(result) }
++}
++
 +/**
-+ * @param {{ channel: any, dialogs: any, vendor?: any }} options
-+ * @returns {{ login: () => Promise<void>, status: () => Promise<void>, logout: () => Promise<void>, help: () => Promise<void> }}
++ * The shared sign-in flow used by `/openbayes login` and the startup gate.
++ * Returns `{ ok: true }` only after the exchange and identity read succeed.
++ * @param {{ dialogs: any, vendor?: any, notify?: (message: string) => void }} options
 + */
-+export function useOpenbayes({ channel, dialogs, vendor = VENDORS.openbayes }) {
++export async function runLoginFlow({ dialogs, vendor = VENDORS.openbayes, notify = () => {} }) {
++  const showInfo = async (title, message) => {
++    try {
++      await dialogs.ask({
++        kind: 'confirm',
++        title,
++        message,
++        confirmLabel: lang() === 'zh' ? '确定' : 'OK',
++        cancelLabel: lang() === 'zh' ? '关闭' : 'Close',
++      }, undefined, DIALOG_TIMEOUT_MS)
++    } catch {
++      notify(message)
++    }
++  }
++  const context = resolveOpenbayesContext(process.env, vendor)
++  if (!context.available) {
++    await showInfo(heading(vendor), missingSkillText(vendor, lang()))
++    return { ok: false, missing: true }
++  }
++  const started = await run(context, ['--login', '--vendor', vendor.name], LOGIN_TIMEOUT_MS)
++  if (started.code !== 0) {
++    await showInfo(heading(vendor, lang() === 'zh' ? ' 登录' : ' sign-in'),
++      errorText(classifyFailure(started), firstDiagnostic(started), lang()))
++    return { ok: false, kind: classifyFailure(started) }
++  }
++  const prompt = parseAuthorize(started.stdout)
++  if (prompt.url === undefined) {
++    await showInfo(heading(vendor, lang() === 'zh' ? ' 登录' : ' sign-in'), errorText('unknown', firstDiagnostic(started), lang()))
++    return { ok: false, kind: 'unknown' }
++  }
++  const proceed = await dialogs.ask({
++    kind: 'confirm',
++    title: heading(vendor, lang() === 'zh' ? ' 登录' : ' sign-in'),
++    message: loginPromptText(prompt, lang()),
++    confirmLabel: lang() === 'zh' ? '已确认，输入一次性码' : 'Confirmed, enter code',
++    cancelLabel: lang() === 'zh' ? '取消' : 'Cancel',
++  }, undefined, DIALOG_TIMEOUT_MS)
++  if (proceed !== true) return { ok: false, cancelled: true }
++
++  const answer = await dialogs.ask({
++    kind: 'input',
++    title: lang() === 'zh' ? '输入一次性码（5 分钟内有效）' : 'Enter the one-time code (valid for 5 minutes)',
++    placeholder: lang() === 'zh' ? '粘贴一次性码' : 'Paste the one-time code',
++    mask: true,
++    initial: '',
++  }, undefined, DIALOG_TIMEOUT_MS)
++  const checked = normalizeCode(answer)
++  if (!checked.ok) {
++    if (checked.reason !== 'cancelled') {
++      await showInfo(heading(vendor, lang() === 'zh' ? ' 登录' : ' sign-in'),
++        errorText('code', redact(firstDiagnostic(started), String(answer ?? '')), lang()))
++    }
++    return { ok: false, kind: checked.reason === 'cancelled' ? 'cancelled' : 'code' }
++  }
++
++  const exchanged = await run(context, ['--login', '--vendor', vendor.name, '--code', checked.code], CODE_TIMEOUT_MS)
++  const detail = redact(firstDiagnostic(exchanged), checked.code)
++  if (exchanged.code !== 0) {
++    await showInfo(heading(vendor, lang() === 'zh' ? ' 登录' : ' sign-in'), errorText(classifyFailure(exchanged), detail, lang()))
++    return { ok: false, kind: classifyFailure(exchanged) }
++  }
++  const { identity, error } = await readIdentityOnce(vendor)
++  if (identity === undefined) {
++    const success = parseLoginSuccess(exchanged.stdout)
++    if (success.expiresAt !== undefined) {
++      await showInfo(heading(vendor, lang() === 'zh' ? ' 登录' : ' sign-in'), loginSuccessText({ expiresAt: success.expiresAt }, lang()))
++      return { ok: true, identity: { expiresAt: success.expiresAt, expired: false } }
++    }
++    await showInfo(heading(vendor, lang() === 'zh' ? ' 登录' : ' sign-in'),
++      errorText(classifyFailure(error), redact(firstDiagnostic(error), checked.code), lang()))
++    return { ok: false, kind: classifyFailure(error) }
++  }
++  await showInfo(heading(vendor, lang() === 'zh' ? ' 登录' : ' sign-in'), loginSuccessText(identity, lang()))
++  return { ok: true, identity }
++}
++
++/**
++ * Startup sign-in gate. Mounted once by the Chat screen; it owns the blocking
++ * dialog loop and the one-shot notices.
++ * @param {{ channel: any, dialogs: any, vendor?: any }} options
++ */
++export function useOpenbayesGate({ channel, dialogs, vendor = VENDORS.openbayes }) {
++  const skipped = loginGateSkipped(process.env)
++  const [notice, setNotice] = React.useState(skipped ? skippedGateText(lang()) : undefined)
++  const gateRef = React.useRef(false)
++  const expiringNotified = React.useRef(false)
++  const onlineNotified = React.useRef(false)
++  const expiredNotified = React.useRef(false)
++  const checking = React.useRef(false)
++
 +  const notify = React.useCallback(message => {
-+    try { channel.notify(message, { color: 'warning', timeoutMs: 10_000 }) } catch { /* the notification surface is best-effort */ }
++    try { channel.notify(message, { color: 'warning', timeoutMs: 12_000 }) } catch { /* best-effort */ }
 +  }, [channel])
 +
-+  /** Persistent result dialog; a manual action must stay visible until dismissed. */
++  /** Block the chat until sign-in succeeds; the dialog reopens on cancel/Esc. */
++  const blockUntilSignedIn = React.useCallback(async state => {
++    if (gateRef.current) return
++    gateRef.current = true
++    try {
++      while (gateRef.current) {
++        const text = gateText(state, vendor, lang())
++        let proceed
++        try {
++          proceed = await dialogs.ask({
++            kind: 'confirm',
++            title: text.title,
++            message: text.message,
++            confirmLabel: lang() === 'zh' ? '登录 OpenBayes' : 'Sign in to OpenBayes',
++            cancelLabel: lang() === 'zh' ? '稍后（仍不能使用）' : 'Later (still blocked)',
++          }, undefined, GATE_DIALOG_TIMEOUT_MS)
++        } catch {
++          continue
++        }
++        if (proceed !== true) continue
++        const result = await runLoginFlow({ dialogs, vendor, notify })
++        if (!result.ok) continue
++        const checked = await readIdentityOnce(vendor)
++        const next = checked.identity === undefined ? { state: 'valid' } : classifySession(checked.identity)
++        if (next.state === 'valid' || next.state === 'expiring') {
++          gateRef.current = false
++          setNotice(undefined)
++          void verifyOnline(vendor).then(online => {
++            const message = online.kind === undefined ? undefined : onlineNoticeText(online.kind, lang())
++            if (message !== undefined && !onlineNotified.current) {
++              onlineNotified.current = true
++              notify(message)
++            }
++          })
++          return
++        }
++        state = next.state === 'expired' ? { state: 'expired', expiresAt: next.expiresAt } : { state: 'rejected' }
++      }
++    } finally {
++      gateRef.current = false
++    }
++  }, [dialogs, notify, vendor])
++
++  /** Skill missing: explain, offer manual install and a re-check loop. */
++  const blockMissingSkill = React.useCallback(async () => {
++    gateRef.current = true
++    try {
++      while (gateRef.current) {
++        let proceed
++        try {
++          proceed = await dialogs.ask({
++            kind: 'confirm',
++            title: lang() === 'zh' ? '登录 OpenBayes（必需）' : 'Sign in to OpenBayes (required)',
++            message: `${missingSkillText(vendor, lang())}\n\n${lang() === 'zh' ? '手动安装后选择「重新检测」；按 Ctrl+D 退出程序。' : 'After installing, choose "Check again"; press Ctrl+D to quit.'}`,
++            confirmLabel: lang() === 'zh' ? '重新检测' : 'Check again',
++            cancelLabel: lang() === 'zh' ? '仍不可用' : 'Still blocked',
++          }, undefined, GATE_DIALOG_TIMEOUT_MS)
++        } catch {
++          continue
++        }
++        if (proceed !== true) continue
++        const context = resolveOpenbayesContext(process.env, vendor)
++        if (!context.available) continue
++        gateRef.current = false
++        return evaluate({ online: true })
++      }
++    } finally {
++      gateRef.current = false
++    }
++  }, [dialogs, vendor])
++
++  const evaluate = React.useCallback(async ({ online = true, block = true } = {}) => {
++    if (skipped || checking.current) return
++    checking.current = true
++    try {
++      const context = resolveOpenbayesContext(process.env, vendor)
++      if (!context.available) {
++        if (block) await blockMissingSkill()
++        return
++      }
++      const { identity, error } = await readIdentityOnce(vendor)
++      const kind = identity === undefined ? classifyFailure(error) : undefined
++      if (identity === undefined && kind !== 'not-logged-in' && kind !== 'rejected') {
++        // An unreadable identity is treated as "not signed in" only when the
++        // skill itself said so; otherwise keep the gate closed with a reason.
++        if (block) await blockUntilSignedIn({ state: 'rejected' })
++        return
++      }
++      if (identity === undefined) {
++        if (block) await blockUntilSignedIn({ state: kind === 'rejected' ? 'rejected' : 'missing' })
++        return
++      }
++      const session = classifySession(identity)
++      if (session.state === 'expired') {
++        if (block) return blockUntilSignedIn({ state: 'expired', expiresAt: session.expiresAt })
++        if (!expiredNotified.current) {
++          expiredNotified.current = true
++          notify(expiredDuringUseText(lang()))
++        }
++        return
++      }
++      if (session.state === 'expiring' && !expiringNotified.current) {
++        expiringNotified.current = true
++        notify(expiringNoticeText(session.days, lang()))
++      }
++      if (online) {
++        void verifyOnline(vendor).then(result => {
++          if (result.ok === true) return
++          const message = onlineNoticeText(result.kind, lang())
++          if (message !== undefined && !onlineNotified.current) {
++            onlineNotified.current = true
++            notify(message)
++          }
++        })
++      }
++    } finally {
++      checking.current = false
++    }
++  }, [blockMissingSkill, blockUntilSignedIn, notify, skipped, vendor])
++
++  React.useEffect(() => {
++    if (skipped) return undefined
++    const timer = setTimeout(() => { void evaluate({ online: true }) }, 0)
++    const poll = setInterval(() => { void evaluate({ online: false, block: false }) }, EXPIRY_POLL_MS)
++    return () => { clearTimeout(timer); clearInterval(poll) }
++  }, [evaluate, skipped])
++
++  const requireLogin = React.useCallback(async () => {
++    if (skipped) return
++    await evaluate({ online: true, block: true })
++  }, [evaluate, skipped])
++
++  return { notice, requireLogin, skipped }
++}
++
++/**
++ * `/openbayes` command bridge: login / status / logout and the local help copy.
++ * @param {{ channel: any, dialogs: any, vendor?: any, onLoggedOut?: () => void }} options
++ */
++export function useOpenbayes({ channel, dialogs, vendor = VENDORS.openbayes, onLoggedOut = () => {} }) {
++  const notify = React.useCallback(message => {
++    try { channel.notify(message, { color: 'warning', timeoutMs: 10_000 }) } catch { /* best-effort */ }
++  }, [channel])
++
 +  const showInfo = React.useCallback(async (title, message) => {
 +    try {
 +      await dialogs.ask({
@@ -370,109 +632,38 @@ index 0000000..838eef4
 +    }
 +  }, [dialogs, notify])
 +
-+  const readIdentity = React.useCallback(async context => {
-+    const result = await run(context, ['--vendor', vendor.name, '--identity', '--pretty'], IDENTITY_TIMEOUT_MS)
-+    if (result.code !== 0) return { error: result }
-+    try {
-+      return { identity: parseIdentity(result.stdout) }
-+    } catch {
-+      return { error: result }
-+    }
-+  }, [vendor])
-+
 +  const login = React.useCallback(async () => {
-+    const context = resolveOpenbayesContext(process.env, vendor)
-+    if (!context.available) {
-+      await showInfo(heading(vendor, undefined, lang()), missingSkillText(vendor, lang()))
-+      return
-+    }
-+    const started = await run(context, ['--login', '--vendor', vendor.name], LOGIN_TIMEOUT_MS)
-+    if (started.code !== 0) {
-+      await showInfo(heading(vendor, lang() === 'zh' ? ' 登录' : ' sign-in', lang()),
-+        errorText(classifyFailure(started), firstDiagnostic(started), lang()))
-+      return
-+    }
-+    const prompt = parseAuthorize(started.stdout)
-+    if (prompt.url === undefined) {
-+      await showInfo(heading(vendor, lang() === 'zh' ? ' 登录' : ' sign-in', lang()),
-+        errorText('unknown', firstDiagnostic(started), lang()))
-+      return
-+    }
-+    const proceed = await dialogs.ask({
-+      kind: 'confirm',
-+      title: heading(vendor, lang() === 'zh' ? ' 登录' : ' sign-in', lang()),
-+      message: loginPromptText(prompt, lang()),
-+      confirmLabel: lang() === 'zh' ? '已确认，输入一次性码' : 'Confirmed, enter code',
-+      cancelLabel: lang() === 'zh' ? '取消' : 'Cancel',
-+    }, undefined, DIALOG_TIMEOUT_MS)
-+    if (proceed !== true) return
-+
-+    // The answer is used immediately and never echoed into the chat or logs.
-+    const answer = await dialogs.ask({
-+      kind: 'input',
-+      title: lang() === 'zh' ? '输入一次性码（5 分钟内有效）' : 'Enter the one-time code (valid for 5 minutes)',
-+      placeholder: lang() === 'zh' ? '粘贴一次性码' : 'Paste the one-time code',
-+      // Show bullets while typing/pasting; the resolved value stays the raw code.
-+      mask: true,
-+      // Upstream InputDialog spreads `initial`; omitting it crashes the panel.
-+      initial: '',
-+    }, undefined, DIALOG_TIMEOUT_MS)
-+    const checked = normalizeCode(answer)
-+    if (!checked.ok) {
-+      if (checked.reason !== 'cancelled') {
-+        await showInfo(heading(vendor, lang() === 'zh' ? ' 登录' : ' sign-in', lang()),
-+          errorText('code', redact(firstDiagnostic(started), String(answer ?? '')), lang()))
-+      }
-+      return
-+    }
-+
-+    const exchanged = await run(context, ['--login', '--vendor', vendor.name, '--code', checked.code], CODE_TIMEOUT_MS)
-+    const detail = redact(firstDiagnostic(exchanged), checked.code)
-+    if (exchanged.code !== 0) {
-+      await showInfo(heading(vendor, lang() === 'zh' ? ' 登录' : ' sign-in', lang()),
-+        errorText(classifyFailure(exchanged), detail, lang()))
-+      return
-+    }
-+    const { identity, error } = await readIdentity(context)
-+    if (identity === undefined) {
-+      // The exchange already reported success; fall back to its own summary when
-+      // `--identity` cannot be read (still no token, still no code).
-+      const success = parseLoginSuccess(exchanged.stdout)
-+      if (success.expiresAt !== undefined) {
-+        await showInfo(heading(vendor, lang() === 'zh' ? ' 登录' : ' sign-in', lang()),
-+          loginSuccessText({ expiresAt: success.expiresAt }, lang()))
-+        return
-+      }
-+      await showInfo(heading(vendor, lang() === 'zh' ? ' 登录' : ' sign-in', lang()),
-+        errorText(classifyFailure(error), redact(firstDiagnostic(error), checked.code), lang()))
-+      return
-+    }
-+    await showInfo(heading(vendor, lang() === 'zh' ? ' 登录' : ' sign-in', lang()), loginSuccessText(identity, lang()))
-+  }, [dialogs, readIdentity, showInfo, vendor])
++    await runLoginFlow({ dialogs, vendor, notify })
++  }, [dialogs, notify, vendor])
 +
 +  const status = React.useCallback(async () => {
 +    const context = resolveOpenbayesContext(process.env, vendor)
 +    if (!context.available) {
-+      await showInfo(heading(vendor, undefined, lang()), missingSkillText(vendor, lang()))
++      await showInfo(heading(vendor), missingSkillText(vendor, lang()))
 +      return
 +    }
-+    const { identity, error } = await readIdentity(context)
++    const { identity, error } = await readIdentityOnce(vendor)
 +    if (identity !== undefined) {
-+      await showInfo(heading(vendor, lang() === 'zh' ? ' 状态' : ' status', lang()), statusText(identity, lang()))
++      const session = classifySession(identity)
++      const base = statusText(identity, lang())
++      const text = session.state === 'expiring'
++        ? `${base}\n${lang() === 'zh' ? '即将到期' : 'expiring soon'}`
++        : base
++      await showInfo(heading(vendor, lang() === 'zh' ? ' 状态' : ' status'), text)
 +      return
 +    }
 +    const kind = classifyFailure(error)
 +    if (kind === 'not-logged-in') {
-+      await showInfo(heading(vendor, lang() === 'zh' ? ' 状态' : ' status', lang()), statusText(undefined, lang()))
++      await showInfo(heading(vendor, lang() === 'zh' ? ' 状态' : ' status'), statusText(undefined, lang()))
 +      return
 +    }
-+    await showInfo(heading(vendor, lang() === 'zh' ? ' 状态' : ' status', lang()), errorText(kind, firstDiagnostic(error), lang()))
-+  }, [readIdentity, showInfo, vendor])
++    await showInfo(heading(vendor, lang() === 'zh' ? ' 状态' : ' status'), errorText(kind, firstDiagnostic(error), lang()))
++  }, [showInfo, vendor])
 +
 +  const logout = React.useCallback(async () => {
 +    const context = resolveOpenbayesContext(process.env, vendor)
 +    if (!context.available) {
-+      await showInfo(heading(vendor, undefined, lang()), missingSkillText(vendor, lang()))
++      await showInfo(heading(vendor), missingSkillText(vendor, lang()))
 +      return
 +    }
 +    const confirmed = await dialogs.ask({
@@ -485,26 +676,26 @@ index 0000000..838eef4
 +    if (confirmed !== true) return
 +    const result = await run(context, ['--logout', '--vendor', vendor.name], LOGOUT_TIMEOUT_MS)
 +    if (result.code !== 0) {
-+      await showInfo(heading(vendor, lang() === 'zh' ? ' 退出' : ' sign-out', lang()),
++      await showInfo(heading(vendor, lang() === 'zh' ? ' 退出' : ' sign-out'),
 +        errorText(classifyFailure(result), firstDiagnostic(result), lang()))
 +      return
 +    }
-+    await showInfo(heading(vendor, lang() === 'zh' ? ' 退出' : ' sign-out', lang()),
-+      logoutDoneText(vendor, hostname(), lang()))
-+  }, [dialogs, showInfo, vendor])
++    await showInfo(heading(vendor, lang() === 'zh' ? ' 退出' : ' sign-out'), logoutDoneText(vendor, hostname(), lang()))
++    onLoggedOut()
++  }, [dialogs, notify, onLoggedOut, showInfo, vendor])
 +
 +  const help = React.useCallback(async () => {
-+    await showInfo(heading(vendor, undefined, lang()), usageText(lang()))
++    await showInfo(heading(vendor), usageText(lang()))
 +  }, [showInfo, vendor])
 +
 +  return { login, status, logout, help }
 +}
 diff --git a/lib/types/hyperaiOpenbayesCore.js b/lib/types/hyperaiOpenbayesCore.js
 new file mode 100644
-index 0000000..0771b71
+index 0000000..7587b68
 --- /dev/null
 +++ b/lib/types/hyperaiOpenbayesCore.js
-@@ -0,0 +1,214 @@
+@@ -0,0 +1,311 @@
 +/**
 + * Pure formatting/validation for the OpenBayes TUI bridge.
 + *
@@ -615,6 +806,7 @@ index 0000000..0771b71
 +  if (result.timedOut === true) return 'timeout'
 +  const text = `${result.stdout ?? ''}\n${result.stderr ?? ''}`
 +  if (/MISSING_TOKEN/u.test(text)) return 'not-logged-in'
++  if (/\b401\b|Unauthorized|AUTH_|invalid[_ ]token|token[_ ]invalid|认证失败|登录已失效|已被吊销/iu.test(text)) return 'rejected'
 +  if (/LOGIN_EXCHANGE_FAILED|LOGIN_PENDING_EXPIRED|NO_PENDING_LOGIN|授权码无效|已过期|invalid|expired/iu.test(text)) return 'code'
 +  if (/'node' not found|Node\.js 18\+|node: command not found/iu.test(text)) return 'node'
 +  if (/ENOTFOUND|ECONNREFUSED|ECONNRESET|ETIMEDOUT|EAI_AGAIN|fetch failed|network|timeout|timed out|网络/iu.test(text)) return 'network'
@@ -718,6 +910,102 @@ index 0000000..0771b71
 +  return pick(lang,
 +    '用法：\n/openbayes login   登录 OpenBayes\n/openbayes status  查看登录状态\n/openbayes logout  退出登录（只删除本地 session）',
 +    'Usage:\n/openbayes login   sign in\n/openbayes status  show sign-in status\n/openbayes logout  sign out (local session only)')
++}
++
++/** How close to expiry a session must be before the startup notice appears. */
++export const EXPIRY_NOTICE_MS = 3 * 24 * 60 * 60 * 1000
++
++/**
++ * Milliseconds from now until `expiresAt`, or undefined when unparseable.
++ * @param {string | undefined} expiresAt ISO timestamp from `--identity`.
++ * @param {number} now epoch milliseconds (tests pass a fixed clock).
++ */
++export function millisUntilExpiry(expiresAt, now = Date.now()) {
++  if (typeof expiresAt !== 'string') return undefined
++  const at = Date.parse(expiresAt)
++  if (Number.isNaN(at)) return undefined
++  return at - now
++}
++
++/** Whole days shown to a person; zero or negative stays 0. */
++export function daysUntilExpiry(expiresAt, now = Date.now()) {
++  const remaining = millisUntilExpiry(expiresAt, now)
++  if (remaining === undefined || remaining <= 0) return 0
++  return Math.ceil(remaining / 86_400_000)
++}
++
++/**
++ * Classify a session from the offline `--identity` view.
++ * @param {{ expired?: boolean, expiresAt?: string } | undefined} identity
++ * @param {number} now
++ * @returns {{ state: 'missing'|'expired'|'expiring'|'valid'|'unknown', days?: number, expiresAt?: string }}
++ */
++export function classifySession(identity, now = Date.now()) {
++  if (identity === undefined) return { state: 'missing' }
++  if (identity.expired === true) return { state: 'expired', expiresAt: identity.expiresAt }
++  const remaining = millisUntilExpiry(identity.expiresAt, now)
++  if (remaining === undefined) return { state: 'unknown', expiresAt: identity.expiresAt }
++  if (remaining <= 0) return { state: 'expired', expiresAt: identity.expiresAt, days: 0 }
++  if (remaining < EXPIRY_NOTICE_MS) {
++    return { state: 'expiring', days: daysUntilExpiry(identity.expiresAt, now), expiresAt: identity.expiresAt }
++  }
++  return { state: 'valid', days: daysUntilExpiry(identity.expiresAt, now), expiresAt: identity.expiresAt }
++}
++
++/** The startup gate is skipped only for the exact value `off`. */
++export function loginGateSkipped(env = process.env) {
++  return env.HYPERAI_LOGIN_GATE === 'off'
++}
++
++/** Persistent banner while the gate is skipped (test-only). */
++export function skippedGateText(lang = 'zh') {
++  return pick(lang, '测试模式：已跳过 OpenBayes 登录', 'Test mode: OpenBayes sign-in skipped')
++}
++
++/** Title + body of the blocking sign-in screen. */
++export function gateText(state, vendor, lang = 'zh') {
++  const expiryHint = state.expiresAt === undefined ? '' : `\n（到期时间：${state.expiresAt}）`
++  const body = pick(lang,
++    `HyperAI Harness 需要登录 OpenBayes 账号才能使用。\n\n` +
++      `1. 选择下面的「登录 OpenBayes」；\n2. 用已登录 OpenBayes 的浏览器打开显示的链接；\n3. 确认后把一次性码粘贴回输入框。\n\n` +
++      `按 Ctrl+D 退出程序。`,
++    `HyperAI Harness requires an OpenBayes account.\n\n` +
++      `1. Choose "Sign in to OpenBayes" below.\n2. Open the link in a browser signed in to OpenBayes.\n3. Paste the one-time code back here.\n\n` +
++      `Press Ctrl+D to quit.`)
++  let reason = ''
++  if (state.state === 'expired') {
++    reason = pick(lang, `OpenBayes 登录已过期，请重新登录。${expiryHint}`, `OpenBayes sign-in expired; sign in again.${expiryHint}`)
++  } else if (state.state === 'missing') {
++    reason = pick(lang, '这台电脑还没有登录过 OpenBayes。', 'This computer has not signed in to OpenBayes yet.')
++  } else if (state.state === 'rejected') {
++    reason = pick(lang, 'OpenBayes 登录已失效，请重新登录。', 'OpenBayes sign-in is no longer valid; sign in again.')
++  }
++  return { title: pick(lang, '登录 OpenBayes（必需）', 'Sign in to OpenBayes (required)'), message: reason === '' ? body : `${reason}\n\n${body}` }
++}
++
++/** One-time startup notice for a session that is about to expire. */
++export function expiringNoticeText(days, lang = 'zh') {
++  return pick(lang,
++    `OpenBayes 登录将在 ${days} 天后到期，输入 /openbayes login 续期。`,
++    `OpenBayes sign-in expires in ${days} day(s); run /openbayes login to renew.`)
++}
++
++/** One-time notices for online failures. */
++export function onlineNoticeText(kind, lang = 'zh') {
++  if (kind === 'network') {
++    return pick(lang, '暂时连不上 OpenBayes，相关功能可能用不了。', 'Cannot reach OpenBayes right now; related features may not work.')
++  }
++  if (kind === 'rejected') {
++    return pick(lang, 'OpenBayes 登录已失效，请输入 /openbayes login 重新登录。', 'OpenBayes sign-in is no longer valid; run /openbayes login.')
++  }
++  return undefined
++}
++
++/** Session expired while the app was running: one warning, no interruption. */
++export function expiredDuringUseText(lang = 'zh') {
++  return pick(lang,
++    'OpenBayes 登录已过期。现在可以输入 /openbayes login 续期；不续期的话，下次启动时会回到登录界面。',
++    'OpenBayes sign-in expired. Run /openbayes login to renew; otherwise the next launch will ask you to sign in.')
 +}
 diff --git a/lib/types/hyperaiSkills.js b/lib/types/hyperaiSkills.js
 new file mode 100644
@@ -1289,7 +1577,7 @@ index d7db9d3..ae0cba4 100644
      'onboarding-conn-models': { zh: '{{count}} 个可用模型', en: '{{count}} models available' },
      'onboarding-conn-balance': { zh: '余额 {{amount}}', en: 'Balance {{amount}}' },
 diff --git a/lib/types/screens/Chat.js b/lib/types/screens/Chat.js
-index 050c07c..5a706f6 100644
+index 050c07c..ed35672 100644
 --- a/lib/types/screens/Chat.js
 +++ b/lib/types/screens/Chat.js
 @@ -24,6 +24,8 @@ import { execFileNoThrow } from '../utils/execFileNoThrow.js';
@@ -1297,22 +1585,24 @@ index 050c07c..5a706f6 100644
  import { readModelRecents, recordModelUse } from '../modelRecents.js';
  import { WORKING_GATE_NOTICES } from '../commands.js';
 +import { useSkillsUpdate } from '../hyperaiSkills.js';
-+import { useOpenbayes } from '../hyperaiOpenbayes.js';
++import { useOpenbayes, useOpenbayesGate } from '../hyperaiOpenbayes.js';
  import { TuiDialogStore } from '../dsh-adapter/dialogs.js';
  import { TuiStatusStore } from '../dsh-adapter/status.js';
  import { ActivityStore, useActivity } from '../dsh-adapter/activity-store.js';
-@@ -361,6 +363,10 @@ export function Chat({ channel, questionStore, approvalStore, extensionDialogs,
+@@ -361,6 +363,12 @@ export function Chat({ channel, questionStore, approvalStore, extensionDialogs,
      // extensions row share one inert store that never holds a dialog.
      const dialogs = extensionDialogs ?? (fallbackDialogStore ??= new TuiDialogStore());
      const dialogSnapshot = React.useSyncExternalStore(listener => dialogs.subscribe(listener), () => dialogs.getSnapshot());
 +    // hyperai-tui: asynchronous HyperAI Skills update hint + explicit install flow.
 +    const skillsUpdate = useSkillsUpdate({ channel, dialogs });
++    // hyperai-tui: the startup sign-in gate owns the blocking login dialog.
++    const openbayesGate = useOpenbayesGate({ channel, dialogs });
 +    // hyperai-tui: local /openbayes login, status and logout (never model-bound).
-+    const openbayes = useOpenbayes({ channel, dialogs });
++    const openbayes = useOpenbayes({ channel, dialogs, onLoggedOut: () => { void openbayesGate.requireLogin(); } });
      const coupon = React.useSyncExternalStore(bonusNotices?.subscribe ?? noCouponSubscription, bonusNotices?.getSnapshot ?? noCouponSnapshot);
      // Plugin status contributions: text keys join into one line; bounded rich
      // views keep their own rows immediately above the prompt.
-@@ -2117,7 +2123,7 @@ export function Chat({ channel, questionStore, approvalStore, extensionDialogs,
+@@ -2117,7 +2125,7 @@ export function Chat({ channel, questionStore, approvalStore, extensionDialogs,
      const titlePrefix = channel.working
          ? (TITLE_SPINNER_FRAMES[titleFrame] ?? '✦')
          : '✦';
@@ -1321,7 +1611,7 @@ index 050c07c..5a706f6 100644
      const handleWorkspaceResult = (result) => {
          workspaceFlowAbortRef.current = null;
          if (result.kind === 'target') {
-@@ -2918,6 +2924,22 @@ export function Chat({ channel, questionStore, approvalStore, extensionDialogs,
+@@ -2918,6 +2926,22 @@ export function Chat({ channel, questionStore, approvalStore, extensionDialogs,
                      });
                  return true;
              }
@@ -1344,7 +1634,7 @@ index 050c07c..5a706f6 100644
              case 'skills': {
                  // issue #204: 列出当前 agent 的完整技能目录（名称 + 来源 + 简述），
                  // Enter 把可直调技能以 `/name ` 填回输入行（completion-only 分发的
-@@ -3727,16 +3749,11 @@ export function Chat({ channel, questionStore, approvalStore, extensionDialogs,
+@@ -3727,16 +3751,11 @@ export function Chat({ channel, questionStore, approvalStore, extensionDialogs,
              }
              case 'update':
                  setHelpOpen(false);
@@ -1366,18 +1656,19 @@ index 050c07c..5a706f6 100644
                  return true;
              case 'reload': {
                  // pi-style soft reload: re-read the persisted preference files
-@@ -6285,7 +6302,8 @@ export function Chat({ channel, questionStore, approvalStore, extensionDialogs,
+@@ -6285,7 +6304,9 @@ export function Chat({ channel, questionStore, approvalStore, extensionDialogs,
                                          // inflating the reading next to a real upload number). An
                                          // automatic compaction mid-turn badges THIS line too — it is
                                          // the spinner slot whenever real activity data exists.
 -                                        suffix: `${lastUploadTokens > 0 ? ` · ↑ ${formatTokens(lastUploadTokens)}` : ''} · ↓ ${formatTokens(Math.round(channel.responseChars / 4))} tokens${compactionBadge === undefined ? '' : ` · ${compactionBadge}`}` }) })) : (_jsx(WorkingSpinner, { mode: channel.spinnerMode, hasActiveTools: channel.activeToolCount > 0, responseLengthRef: responseLengthRef, uploadTokensRef: uploadTokensRef, loadingStartTimeRef: loadingStartTimeRef, totalPausedMsRef: totalPausedMsRef, pauseStartTimeRef: pauseStartTimeRef, thinkingStatus: thinkingStatus, suffix: compactionBadge }))), !channel.working && channel.compaction !== undefined && (_jsx(CompactionStatusRow, { compaction: channel.compaction, activityPreset: activitySlot ? channel.activityFrames : undefined })), !(sidePanel.split && sidePanel.enabledPanelIds.includes('todo')) && (_jsx(GoalTodoPanel, { channel: channel, collapsed: todoCollapsed, onToggle: () => setTodoCollapsed(previous => !previous) })), recap !== null && recap.auto && !recap.expanded && (_jsx(AutoRecapRow, { summary: recap.summary, streaming: !recap.done, onExpand: () => setRecap(prev => (prev ? { ...prev, expanded: true } : prev)), onDismiss: () => closeRecap() })), balance !== null && (_jsx(BalanceReportRow, { result: balance.result, refreshing: balance.refreshing, tokens: channel.tokens, model: channel.modelDisplay ?? channel.model, provider: channel.provider, mainCost: channel.mainCost, subagentCost: channel.subagentCost, onRefresh: runBalance, onDismiss: () => setBalance(null) })), statusEntries.length > 0 && (_jsx(Text, { dimColor: true, wrap: "truncate", children: statusEntries.map(entry => entry.text).join(' · ') })), activePreview === null && statusViews.map(view => (_jsx(PluginStatusViewBoundary, { viewKey: view.key, onError: (key, error) => statusContributions.reportViewError(key, error), children: _jsx(Box, { flexDirection: "column", flexShrink: 0, maxHeight: view.maxRows, overflow: "hidden", children: _jsx(Box, { flexDirection: "column", flexShrink: 0, children: React.createElement(view.component, {
 +                                        suffix: `${lastUploadTokens > 0 ? ` · ↑ ${formatTokens(lastUploadTokens)}` : ''} · ↓ ${formatTokens(Math.round(channel.responseChars / 4))} tokens${compactionBadge === undefined ? '' : ` · ${compactionBadge}`}` }) })) : (_jsx(WorkingSpinner, { mode: channel.spinnerMode, hasActiveTools: channel.activeToolCount > 0, responseLengthRef: responseLengthRef, uploadTokensRef: uploadTokensRef, loadingStartTimeRef: loadingStartTimeRef, totalPausedMsRef: totalPausedMsRef, pauseStartTimeRef: pauseStartTimeRef, thinkingStatus: thinkingStatus, suffix: compactionBadge }))), !channel.working && channel.compaction !== undefined && (_jsx(CompactionStatusRow, { compaction: channel.compaction, activityPreset: activitySlot ? channel.activityFrames : undefined })), !(sidePanel.split && sidePanel.enabledPanelIds.includes('todo')) && (_jsx(GoalTodoPanel, { channel: channel, collapsed: todoCollapsed, onToggle: () => setTodoCollapsed(previous => !previous) })), recap !== null && recap.auto && !recap.expanded && (_jsx(AutoRecapRow, { summary: recap.summary, streaming: !recap.done, onExpand: () => setRecap(prev => (prev ? { ...prev, expanded: true } : prev)), onDismiss: () => closeRecap() })), balance !== null && (_jsx(BalanceReportRow, { result: balance.result, refreshing: balance.refreshing, tokens: channel.tokens, model: channel.modelDisplay ?? channel.model, provider: channel.provider, mainCost: channel.mainCost, subagentCost: channel.subagentCost, onRefresh: runBalance, onDismiss: () => setBalance(null) })), statusEntries.length > 0 && (_jsx(Text, { dimColor: true, wrap: "truncate", children: statusEntries.map(entry => entry.text).join(' · ') })),
-+                                    skillsUpdate.notice !== null && (_jsx(Box, { onClick: () => { void skillsUpdate.open(); }, children: _jsx(Text, { color: "warning", wrap: "truncate", children: skillsUpdate.notice }) })), activePreview === null && statusViews.map(view => (_jsx(PluginStatusViewBoundary, { viewKey: view.key, onError: (key, error) => statusContributions.reportViewError(key, error), children: _jsx(Box, { flexDirection: "column", flexShrink: 0, maxHeight: view.maxRows, overflow: "hidden", children: _jsx(Box, { flexDirection: "column", flexShrink: 0, children: React.createElement(view.component, {
++                                    skillsUpdate.notice !== null && (_jsx(Box, { onClick: () => { void skillsUpdate.open(); }, children: _jsx(Text, { color: "warning", wrap: "truncate", children: skillsUpdate.notice }) })),
++                                    openbayesGate.notice !== undefined && (_jsx(Text, { color: "warning", wrap: "truncate", children: openbayesGate.notice })), activePreview === null && statusViews.map(view => (_jsx(PluginStatusViewBoundary, { viewKey: view.key, onError: (key, error) => statusContributions.reportViewError(key, error), children: _jsx(Box, { flexDirection: "column", flexShrink: 0, maxHeight: view.maxRows, overflow: "hidden", children: _jsx(Box, { flexDirection: "column", flexShrink: 0, children: React.createElement(view.component, {
                                              React,
                                              ui: STATUS_VIEW_UI,
                                          }) }) }) }, `${view.key}:${view.registrationId}`))), _jsxs(Box, { flexDirection: "column", flexShrink: 0, children: [approvalPanelNode !== null ? (approvalPanelNode) : dialogSnapshot !== null ? (_jsx(ExtensionDialog, { dialog: dialogSnapshot, onDecide: value => dialogs.decide(dialogSnapshot.key, value), onCancel: () => dialogs.cancel(dialogSnapshot.key) }, dialogSnapshot.key)) : overlay.kind === 'tips' ? (_jsx(Box, { flexDirection: "column", marginTop: 1, children: _jsx(TipsPanel, { onClose: () => dispatchOverlay({ type: 'close-if', kind: 'tips' }) }) })) : recap !== null && (!recap.auto || recap.expanded) ? (_jsx(Box, { flexDirection: "column", marginTop: 1, children: _jsx(RecapPanel, { summary: recap.summary, title: recap.title, error: recap.error, streaming: !recap.done, titleApplied: recap.titleApplied, onClose: () => {
 diff --git a/lib/types/screens/Launchpad.js b/lib/types/screens/Launchpad.js
-index d8a8835..4f44b8a 100644
+index d8a8835..2960105 100644
 --- a/lib/types/screens/Launchpad.js
 +++ b/lib/types/screens/Launchpad.js
 @@ -479,7 +479,11 @@ onKernelPick, cwd, branch, tuiVersion, onFocusChange, onAction, onQueryChange, o
@@ -1389,7 +1680,7 @@ index d8a8835..4f44b8a 100644
 +    // product+upstream pair is used only when there is room for it.
 +    const tuiPart = tuiVersion === undefined || tuiVersion === ''
 +        ? undefined
-+        : (columns < 72 ? `hyperai v0.2.0-beta.5` : `hyperai-tui v0.2.0-beta.5 · dsh-tui v${tuiVersion}`);
++        : (columns < 72 ? `hyperai v0.2.0-beta.6` : `hyperai-tui v0.2.0-beta.6 · dsh-tui v${tuiVersion}`);
      // 名字用**短品牌名**（option.shortLabel，来自 manifest：DSH / Claude，与启动页
      // 「内核 · DSH」那个 chip 同源）：这一格与左下角的 `工作目录:分支` 共用底边，
      // 全名（DeepSeek Harness · … = 40 列）在窄终端里会把左边的目录铭牌挤掉。
@@ -1546,7 +1837,7 @@ index f6d3e1c..fa86ce0 100644
          id: 'disp-smooth',
          group: 'display',
 diff --git a/lib/types/update.js b/lib/types/update.js
-index 8efb701..9d432fe 100644
+index 8efb701..d0207b5 100644
 --- a/lib/types/update.js
 +++ b/lib/types/update.js
 @@ -219,6 +219,16 @@ export function installedTuiVersion() {
@@ -1554,7 +1845,7 @@ index 8efb701..9d432fe 100644
                  const packageJson = parsed;
                  const version = packageJson.version;
 +                // hyperai-tui: package.json.version is the HyperAI release
-+                // (0.2.0-beta.5); the dsh-tui version is recorded in
++                // (0.2.0-beta.6); the dsh-tui version is recorded in
 +                // hyperai.upstreamVersion. Every caller of this function means
 +                // the upstream TUI package — the dsh-tui half of the version
 +                // plate, the version-drift warning and /update target checks —
