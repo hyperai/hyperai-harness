@@ -100,9 +100,9 @@ if [ "$SCENARIO_STATUS" -eq 3 ]; then
 fi
 [ "$SCENARIO_STATUS" -eq 0 ] || fail "安装场景识别失败（退出码 ${SCENARIO_STATUS}）。请把上面的输出发给负责人。"
 
-SCENARIO_MODE=$(node "$HERE/profile/scripts/install.mjs" --scenario-field mode --dsh-home "$DSH_HOME" --profile "$PROFILE_NAME")
-SCENARIO_FROM=$(node "$HERE/profile/scripts/install.mjs" --scenario-field from --dsh-home "$DSH_HOME" --profile "$PROFILE_NAME")
-SCENARIO_TO=$(node "$HERE/profile/scripts/install.mjs" --scenario-field to --dsh-home "$DSH_HOME" --profile "$PROFILE_NAME")
+SCENARIO_MODE=$(node "$HERE/profile/scripts/install.mjs" --scenario-field mode --dsh-home "$DSH_HOME" --profile "$PROFILE_NAME" $SCENARIO_FLAGS)
+SCENARIO_FROM=$(node "$HERE/profile/scripts/install.mjs" --scenario-field from --dsh-home "$DSH_HOME" --profile "$PROFILE_NAME" $SCENARIO_FLAGS)
+SCENARIO_TO=$(node "$HERE/profile/scripts/install.mjs" --scenario-field to --dsh-home "$DSH_HOME" --profile "$PROFILE_NAME" $SCENARIO_FLAGS)
 
 case " $* " in
   *" --dry-run "*)
