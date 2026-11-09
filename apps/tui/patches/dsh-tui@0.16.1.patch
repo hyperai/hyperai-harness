@@ -1581,7 +1581,7 @@ index d7db9d3..ae0cba4 100644
      'onboarding-conn-models': { zh: '{{count}} 个可用模型', en: '{{count}} models available' },
      'onboarding-conn-balance': { zh: '余额 {{amount}}', en: 'Balance {{amount}}' },
 diff --git a/lib/types/screens/Chat.js b/lib/types/screens/Chat.js
-index 050c07c..1cfb04c 100644
+index 050c07c..5bc94b6 100644
 --- a/lib/types/screens/Chat.js
 +++ b/lib/types/screens/Chat.js
 @@ -24,6 +24,8 @@ import { execFileNoThrow } from '../utils/execFileNoThrow.js';
@@ -1593,7 +1593,7 @@ index 050c07c..1cfb04c 100644
  import { TuiDialogStore } from '../dsh-adapter/dialogs.js';
  import { TuiStatusStore } from '../dsh-adapter/status.js';
  import { ActivityStore, useActivity } from '../dsh-adapter/activity-store.js';
-@@ -361,6 +363,12 @@ export function Chat({ channel, questionStore, approvalStore, extensionDialogs,
+@@ -361,6 +363,14 @@ export function Chat({ channel, questionStore, approvalStore, extensionDialogs,
      // extensions row share one inert store that never holds a dialog.
      const dialogs = extensionDialogs ?? (fallbackDialogStore ??= new TuiDialogStore());
      const dialogSnapshot = React.useSyncExternalStore(listener => dialogs.subscribe(listener), () => dialogs.getSnapshot());
@@ -1603,10 +1603,12 @@ index 050c07c..1cfb04c 100644
 +    const openbayesGate = useOpenbayesGate({ channel, dialogs });
 +    // hyperai-tui: local /openbayes login, status and logout (never model-bound).
 +    const openbayes = useOpenbayes({ channel, dialogs, onLoggedOut: () => { void openbayesGate.requireLogin(); } });
++    // hyperai-tui: the landing page would cover the blocking dialog.
++    React.useEffect(() => { if (openbayesGate.blocked) setLaunchpadOpen(false); }, [openbayesGate.blocked]);
      const coupon = React.useSyncExternalStore(bonusNotices?.subscribe ?? noCouponSubscription, bonusNotices?.getSnapshot ?? noCouponSnapshot);
      // Plugin status contributions: text keys join into one line; bounded rich
      // views keep their own rows immediately above the prompt.
-@@ -2117,7 +2125,7 @@ export function Chat({ channel, questionStore, approvalStore, extensionDialogs,
+@@ -2117,7 +2127,7 @@ export function Chat({ channel, questionStore, approvalStore, extensionDialogs,
      const titlePrefix = channel.working
          ? (TITLE_SPINNER_FRAMES[titleFrame] ?? '✦')
          : '✦';
@@ -1615,7 +1617,7 @@ index 050c07c..1cfb04c 100644
      const handleWorkspaceResult = (result) => {
          workspaceFlowAbortRef.current = null;
          if (result.kind === 'target') {
-@@ -2414,6 +2422,7 @@ export function Chat({ channel, questionStore, approvalStore, extensionDialogs,
+@@ -2414,6 +2424,7 @@ export function Chat({ channel, questionStore, approvalStore, extensionDialogs,
      /** Not-ready refusal (`ChannelUi.ready`) for paths that bypass the composer:
       *  true, after a notice, when `name` (undefined: plain text) must wait. */
      const refusedAtStartup = (name) => {
@@ -1623,7 +1625,7 @@ index 050c07c..1cfb04c 100644
          if (channel.ready !== false || (name !== undefined && isBootSafeCommand(name)))
              return false;
          channel.notify(t('startup-not-ready', { backend: kernelCurrentOption?.shortLabel ?? channel.backendCapabilities.backendId }), { color: 'warning', timeoutMs: 2500 });
-@@ -2918,6 +2927,22 @@ export function Chat({ channel, questionStore, approvalStore, extensionDialogs,
+@@ -2918,6 +2929,22 @@ export function Chat({ channel, questionStore, approvalStore, extensionDialogs,
                      });
                  return true;
              }
@@ -1646,7 +1648,7 @@ index 050c07c..1cfb04c 100644
              case 'skills': {
                  // issue #204: 列出当前 agent 的完整技能目录（名称 + 来源 + 简述），
                  // Enter 把可直调技能以 `/name ` 填回输入行（completion-only 分发的
-@@ -3727,16 +3752,11 @@ export function Chat({ channel, questionStore, approvalStore, extensionDialogs,
+@@ -3727,16 +3754,11 @@ export function Chat({ channel, questionStore, approvalStore, extensionDialogs,
              }
              case 'update':
                  setHelpOpen(false);
@@ -1668,7 +1670,7 @@ index 050c07c..1cfb04c 100644
                  return true;
              case 'reload': {
                  // pi-style soft reload: re-read the persisted preference files
-@@ -6285,7 +6305,9 @@ export function Chat({ channel, questionStore, approvalStore, extensionDialogs,
+@@ -6285,7 +6307,9 @@ export function Chat({ channel, questionStore, approvalStore, extensionDialogs,
                                          // inflating the reading next to a real upload number). An
                                          // automatic compaction mid-turn badges THIS line too — it is
                                          // the spinner slot whenever real activity data exists.
@@ -1679,7 +1681,7 @@ index 050c07c..1cfb04c 100644
                                              React,
                                              ui: STATUS_VIEW_UI,
                                          }) }) }) }, `${view.key}:${view.registrationId}`))), _jsxs(Box, { flexDirection: "column", flexShrink: 0, children: [approvalPanelNode !== null ? (approvalPanelNode) : dialogSnapshot !== null ? (_jsx(ExtensionDialog, { dialog: dialogSnapshot, onDecide: value => dialogs.decide(dialogSnapshot.key, value), onCancel: () => dialogs.cancel(dialogSnapshot.key) }, dialogSnapshot.key)) : overlay.kind === 'tips' ? (_jsx(Box, { flexDirection: "column", marginTop: 1, children: _jsx(TipsPanel, { onClose: () => dispatchOverlay({ type: 'close-if', kind: 'tips' }) }) })) : recap !== null && (!recap.auto || recap.expanded) ? (_jsx(Box, { flexDirection: "column", marginTop: 1, children: _jsx(RecapPanel, { summary: recap.summary, title: recap.title, error: recap.error, streaming: !recap.done, titleApplied: recap.titleApplied, onClose: () => {
-@@ -6311,7 +6333,7 @@ export function Chat({ channel, questionStore, approvalStore, extensionDialogs,
+@@ -6311,7 +6335,7 @@ export function Chat({ channel, questionStore, approvalStore, extensionDialogs,
                                                  void setClipboard(answer).then(raw => { if (raw)
                                                      writeRaw?.(raw); });
                                                  channel.notify(t('copied-chars', { n: answer.length }), { timeoutMs: 1500 });

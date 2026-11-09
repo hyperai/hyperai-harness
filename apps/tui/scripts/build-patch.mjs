@@ -739,7 +739,9 @@ import { useOpenbayes, useOpenbayesGate } from '../hyperaiOpenbayes.js';`,
     // hyperai-tui: the startup sign-in gate owns the blocking login dialog.
     const openbayesGate = useOpenbayesGate({ channel, dialogs });
     // hyperai-tui: local /openbayes login, status and logout (never model-bound).
-    const openbayes = useOpenbayes({ channel, dialogs, onLoggedOut: () => { void openbayesGate.requireLogin(); } });`,
+    const openbayes = useOpenbayes({ channel, dialogs, onLoggedOut: () => { void openbayesGate.requireLogin(); } });
+    // hyperai-tui: the landing page would cover the blocking dialog.
+    React.useEffect(() => { if (openbayesGate.blocked) setLaunchpadOpen(false); }, [openbayesGate.blocked]);`,
     },
     {
       file: 'lib/types/screens/Chat.js',
