@@ -1,4 +1,4 @@
-# HyperAI Harness 内测版使用说明（v0.2.0-beta.5）
+# HyperAI Harness 内测版使用说明（v0.2.0-beta.6）
 
 这份说明写给第一次接触 HyperAI Harness 的同事。照着做就能装好，不需要 GitHub 权限，也不需要 clone 任何源码仓库。
 
@@ -44,19 +44,19 @@ HYPERAI_NPM_REGISTRY=https://registry.npmmirror.com ./install.sh
 
 ### 2.1 获取安装包
 
-从分发人处获取安装包和 `.sha256` 文件：`hyperai-harness-0.2.0-beta.5.tar.gz` 与 `hyperai-harness-0.2.0-beta.5.tar.gz.sha256`。
+从分发人处获取安装包和 `.sha256` 文件：`hyperai-harness-0.2.0-beta.6.tar.gz` 与 `hyperai-harness-0.2.0-beta.6.tar.gz.sha256`。
 
 ### 2.2 校验并解压
 
 ```sh
 # 校验（macOS）
-shasum -a 256 -c hyperai-harness-0.2.0-beta.5.tar.gz.sha256
+shasum -a 256 -c hyperai-harness-0.2.0-beta.6.tar.gz.sha256
 # 校验（Ubuntu）
-sha256sum -c hyperai-harness-0.2.0-beta.5.tar.gz.sha256
+sha256sum -c hyperai-harness-0.2.0-beta.6.tar.gz.sha256
 
 # 解压
-tar xzf hyperai-harness-0.2.0-beta.5.tar.gz
-cd hyperai-harness-0.2.0-beta.5
+tar xzf hyperai-harness-0.2.0-beta.6.tar.gz
+cd hyperai-harness-0.2.0-beta.6
 ```
 
 ### 2.3 安装包放在哪里、HyperAI 装在哪里
@@ -114,11 +114,70 @@ HYPERAI_NPM_REGISTRY=https://registry.npmmirror.com ./install.sh
 export PATH="$HOME/.hyperai/bin:$PATH"
 ```
 
-进去以后看到粉色 `HYPERAI HARNESS` 像素字、右下角铭牌 `hyperai-tui v0.2.0-beta.5 · dsh-tui v0.16.1` 就说明装好了。
+进去以后看到粉色 `HYPERAI HARNESS` 像素字、右下角铭牌 `hyperai-tui v0.2.0-beta.6 · dsh-tui v0.16.1` 就说明装好了。
 
 ---
 
-## 4. 首次配置模型
+## 4. 登录 OpenBayes（必需）
+
+HyperAI Harness 启动时会检查 OpenBayes 登录。**没有登录、或者登录已过期，会先显示登录界面，登录成功之前不能进入聊天。** 每台电脑只需要登录一次，有效期由你在浏览器里选择（1/7/30/90 天）；在有效期内，关掉、重启、覆盖升级都不会要求重新登录。登录信息保存在 `~/.config/openbayes-skills/`，卸载重装也不会删除。
+
+登录后可以直接用自然语言操作自己的 OpenBayes 资源，例如「看看我正在运行的容器」「我的余额还有多少」「列一下我最近的训练任务」。
+
+### 4.1 第一次登录
+
+在 TUI 里执行：
+
+```text
+/openbayes login
+```
+
+TUI 会显示一个授权页链接。用已经登录 OpenBayes 的浏览器打开它，确认后选择令牌有效期，页面会给一个 **5 分钟内有效的一次性码**，把码粘贴回 TUI 的输入框即可。
+
+> 授权链接很长，终端里可能会折行显示；复制时请确认是**一整行**，不要把换行或空格带进去。
+
+- 令牌有效期按需要选：日常使用建议 **7 天或 30 天**；只在临时机器上用可以选 1 天。
+- 一次性码在 TUI 的输入框里输入，不会进入对话，也不会写进会话记录。
+- 授权链接本身也会过期：要在几分钟内确认；过期了就重新执行 `/openbayes login`。
+- 如果链接不是以 `https://openbayes.com/` 开头，通常是环境里设置了 `OPENBAYES_GRAPHQL_ENDPOINT`（一般只出现在 OpenBayes 容器里）；先 `unset OPENBAYES_GRAPHQL_ENDPOINT`，再重新登录。
+
+### 4.2 到期提醒与续期
+
+- 登录有效、剩余时间 **≥ 3 天**：启动直接进入，不弹登录界面，也不提示。
+- 剩余时间 **< 3 天**：照常进入，但每次启动都会提示「OpenBayes 登录将在 X 天后到期，输入 /openbayes login 续期」；`/openbayes status` 也会显示「即将到期」。
+- **续期**：随时执行 `/openbayes login`，在浏览器里确认新的有效期，把一次性码贴回来即可；不需要重启，续期后到期时间按新选择重新计算。
+- **已过期**：下次启动会回到登录界面，并说明登录已过期。
+- **使用过程中到期**：当前会话不打断，只提示一次；不续期的话，下次启动会回到登录界面。
+
+### 4.3 连不上 OpenBayes 或登录失效
+
+- 本地登录仍然有效、但暂时连不上 OpenBayes（断网、服务故障）：照常进入，只提示一次「暂时连不上 OpenBayes，相关功能可能用不了」。
+- 服务端拒绝认证（例如令牌被吊销）：如果已经进入聊天，只提示一次「OpenBayes 登录已失效，请输入 /openbayes login 重新登录」，不打断当前会话；如果还在启动阶段，会直接显示登录界面并说明原因。
+
+### 4.4 退出登录
+
+```text
+/openbayes status    # 是否已登录、用户名、到期时间、是否过期
+/openbayes logout    # 确认后删除本地登录，并立即回到登录界面
+```
+
+`/openbayes logout` **只删除本机的 session，不会吊销服务端的令牌**。要彻底撤销，请到 <https://openbayes.com/console/settings/account/personalAccessToken> 吊销名为 `CLI · <设备名>` 的令牌。
+
+### 4.5 安全与更新
+
+- 令牌等同于账号密码。不要发给别人，也不要贴进聊天、截图或日志。
+- 涉及计费的操作（创建容器、启动 Serving 等）Agent 会先向你确认，请看清楚再同意。
+- skill 会自动检查更新，按它给出的提示重新运行安装命令即可升级；安装器不会覆盖已有的 `openbayes-user` 目录。
+- skill 每天会发一次只包含版本号和安装 ID 的心跳；设置 `OPENBAYES_NO_TELEMETRY=1` 可以关闭。
+- 找不到 skill 时，按提示手动安装：`npx skills add https://openbayes.com/skills/openbayes-user`。
+
+### 4.6 没有 OpenBayes 账号
+
+请联系分发安装包给你的同事。
+
+---
+
+## 5. 首次配置模型
 
 HyperAI 不预置任何模型服务，用 DSH 原生命令配置：
 
@@ -129,7 +188,7 @@ API key 由 DSH 保存在 `~/.dsh/.credentials.yaml`（权限 0600），不会�
 
 ---
 
-## 5. 确认 Skills 已加载
+## 6. 确认 Skills 已加载
 
 内测版自带两个官方 Skills：`ppt-generation`、`example-verified-skill`；安装器还会装上 OpenBayes 官方 Skill `openbayes-user`（见第 6 节）。
 
@@ -156,62 +215,13 @@ python3 -m venv ~/hyperai-ppt && ~/hyperai-ppt/bin/pip install python-pptx
 
 ---
 
-## 6. 使用 OpenBayes（openbayes-user）
-
-安装 HyperAI 时会顺带装好 OpenBayes 官方 Skill `openbayes-user`（位置 `~/.agents/skills/openbayes-user/`，装的是当时的最新版）。装好后可以直接用自然语言操作自己的 OpenBayes 资源，例如：
-
-- 「看看我正在运行的容器」
-- 「我的余额还有多少」
-- 「列一下我最近的训练任务」
-- 「帮我找几个公开的模型或数据集」
-
-### 6.1 登录
-
-在 TUI 里执行：
-
-```text
-/openbayes login
-```
-
-TUI 会显示一个授权页链接。用已经登录 OpenBayes 的浏览器打开它，确认后选择令牌有效期，页面会给一个 **5 分钟内有效的一次性码**，把码粘贴回 TUI 的输入框即可。
-
-> 授权链接很长，终端里可能会折行显示；复制时请确认是**一整行**，不要把换行或空格带进去。
-
-- 令牌有效期按需要选：日常使用建议 **7 天或 30 天**；只在临时机器上用可以选 1 天。
-- **授权链接本身也会过期**：打开链接后要在几分钟内完成确认，并把一次性码贴回来；过期了就重新执行 `/openbayes login` 生成新链接。
-- 如果授权链接不是以 `https://openbayes.com/` 开头（例如是一个内部地址），说明这台机器的环境变量里设置了 `OPENBAYES_GRAPHQL_ENDPOINT`。这种情况通常只出现在 OpenBayes 的容器里；先执行 `unset OPENBAYES_GRAPHQL_ENDPOINT`，再重新登录。
-- 一次性码在 TUI 的输入框里输入，不会进入对话，也不会写进会话记录。
-- 也可以在聊天里让 Agent 帮你登录，同样能成功，但一次性码会经过模型；**推荐用 `/openbayes login`**。
-
-### 6.2 查看状态与退出
-
-```text
-/openbayes status    # 是否已登录、用户名、到期时间、是否过期
-/openbayes logout    # 先确认，再删除本地登录
-```
-
-`/openbayes logout` **只删除本机的 session，不会吊销服务端的令牌**。要彻底撤销，请到 <https://openbayes.com/console/settings/account/personalAccessToken> 吊销名为 `CLI · <设备名>` 的令牌。
-
-### 6.3 安全提醒
-
-- 令牌等同于账号密码。不要发给别人，也不要贴进聊天、截图或日志。
-- 涉及计费的操作（创建容器、启动 Serving 等）Agent 会先向你确认，请看清楚再同意；不确定时选取消。
-- 未登录时执行 `/openbayes status` 会提示先执行 `/openbayes login`；如果找不到 skill，按提示手动安装：`npx skills add https://openbayes.com/skills/openbayes-user`。
-
-### 6.4 更新与遥测
-
-- skill 会自动检查更新，按它给出的提示重新运行安装命令即可升级。安装器不会覆盖你已有的 `openbayes-user` 目录。
-- skill 每天会发一次只包含版本号和安装 ID 的心跳；设置环境变量 `OPENBAYES_NO_TELEMETRY=1` 可以关闭。
-
----
-
 ## 7. 升级
 
 拿到新安装包后重复第 2 节（校验、解压、`./install.sh`）。**安装程序会自动识别旧版本**，在开始写入之前显示：
 
 ```text
 检测到已安装：HyperAI Harness 0.2.0-beta.1
-本次安装：    HyperAI Harness 0.2.0-beta.5
+本次安装：    HyperAI Harness 0.2.0-beta.6
 这是一次覆盖升级，不需要先卸载。以下内容会保留：
   - 模型服务配置和 API key
   - 选中的模型和界面偏好
@@ -219,7 +229,7 @@ TUI 会显示一个授权页链接。用已经登录 OpenBayes 的浏览器打�
   - 你自己添加的 Skills 和文件
 ```
 
-结束时会再总结一次，例如「已从 0.2.0-beta.1 升级到 0.2.0-beta.5，你的配置和对话记录已保留。」。
+结束时会再总结一次，例如「已从 0.2.0-beta.1 升级到 0.2.0-beta.6，你的配置和对话记录已保留。」。
 
 ### 7.1 查看自己装的是什么版本
 
@@ -292,7 +302,7 @@ rm -rf ~/.hyperai
 - **`/update` 已禁用**：升级只走安装包，`/update` 会提示使用安装包流程。
 - **上游更新**：内测版固定基于 `@deepseek-harness-tui/dsh-tui@0.16.1` 与 `dsh@0.2.0-rc.2`，不要自行升级这两个依赖。
 - **`ppt-generation` 依赖**：需要 Python 3 + `python-pptx`，以及可用的模型服务。
-- **首次启动**：没有配置 provider 时发消息会报 `no API key`，属于预期；先按第 4 节配置。
+- **首次启动**：没有配置 provider 时发消息会报 `no API key`，属于预期；先按第 5 节配置。
 - **终端**：需要真实交互终端（iTerm2 / Terminal.app / gnome-terminal 等），不要在管道或 CI 里启动。
 
 ### 排障

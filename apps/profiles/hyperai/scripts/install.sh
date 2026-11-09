@@ -209,7 +209,7 @@ finish_report() {
   fi
   case "$SCENARIO_MODE" in
     fresh|uninstalled)
-      say "首次使用：进入 TUI 后用 /provider 添加模型服务，再用 /model 选择模型。"
+      say "首次使用：先登录 OpenBayes（启动后按提示操作，或输入 /openbayes login），再用 /provider 添加模型服务、/model 选择模型。"
       say "API key 由 DSH 保存在 $DSH_HOME/.credentials.yaml（权限 0600），不会写进安装包。"
       ;;
     *)

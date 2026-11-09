@@ -30,7 +30,7 @@ function makeProfile({ root, layout, withPatch }) {
         name: 'dsh-profile-hyperai',
         private: true,
         hyperaiTuiManaged: true,
-        dependencies: { '@hyperai/hyperai-tui': 'file:packages/hyperai-tui-0.2.0-beta.5.tgz' },
+        dependencies: { '@hyperai/hyperai-tui': 'file:packages/hyperai-tui-0.2.0-beta.6.tgz' },
         dsh: { profile: { bundles: ['@deepseek-ai/dsh-base', '@hyperai/hyperai-tui'] } },
       }
     : {
@@ -50,7 +50,7 @@ function makeProfile({ root, layout, withPatch }) {
   const pnpmBin = fakeBin(runtime, 'pnpm', '10.28.1')
   writeFileSync(join(profileDir, '.hyperai-install.json'), `${JSON.stringify({
     schema: 1,
-    version: '0.2.0-beta.5',
+    version: '0.2.0-beta.6',
     status: 'completed',
     phase: 'done',
     runtime: { dshBin, pnpmBin, node: process.version },
