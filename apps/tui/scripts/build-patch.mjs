@@ -743,6 +743,12 @@ import { useOpenbayes, useOpenbayesGate } from '../hyperaiOpenbayes.js';`,
     },
     {
       file: 'lib/types/screens/Chat.js',
+      why: 'suspend the composer while the sign-in gate blocks the chat',
+      find: '_jsx(PromptInput, { channel: channel, suspended: promptReplacementOpen,',
+      replace: '_jsx(PromptInput, { channel: channel, suspended: promptReplacementOpen || openbayesGate.blocked,',
+    },
+    {
+      file: 'lib/types/screens/Chat.js',
       why: 'keep the test-mode banner visible while the sign-in gate is skipped',
       find: 'children: skillsUpdate.notice }) })),',
       replace: `children: skillsUpdate.notice }) })),

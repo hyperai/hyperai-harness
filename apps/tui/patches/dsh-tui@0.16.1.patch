@@ -264,10 +264,10 @@ index 71e32df..4f233d0 100644
      setActiveBrand(resolveBrand(config.brand, backendChoice));
 diff --git a/lib/types/hyperaiOpenbayes.js b/lib/types/hyperaiOpenbayes.js
 new file mode 100644
-index 0000000..1ffb826
+index 0000000..b9757ef
 --- /dev/null
 +++ b/lib/types/hyperaiOpenbayes.js
-@@ -0,0 +1,422 @@
+@@ -0,0 +1,426 @@
 +/**
 + * `/openbayes` command bridge and the startup sign-in gate for the TUI.
 + *
@@ -464,6 +464,7 @@ index 0000000..1ffb826
 +export function useOpenbayesGate({ channel, dialogs, vendor = VENDORS.openbayes }) {
 +  const skipped = loginGateSkipped(process.env)
 +  const [notice, setNotice] = React.useState(skipped ? skippedGateText(lang()) : undefined)
++  const [blocked, setBlocked] = React.useState(false)
 +  const gateRef = React.useRef(false)
 +  const expiringNotified = React.useRef(false)
 +  const onlineNotified = React.useRef(false)
@@ -478,6 +479,7 @@ index 0000000..1ffb826
 +  const blockUntilSignedIn = React.useCallback(async state => {
 +    if (gateRef.current) return
 +    gateRef.current = true
++    setBlocked(true)
 +    try {
 +      while (gateRef.current) {
 +        const text = gateText(state, vendor, lang())
@@ -500,6 +502,7 @@ index 0000000..1ffb826
 +        const next = checked.identity === undefined ? { state: 'valid' } : classifySession(checked.identity)
 +        if (next.state === 'valid' || next.state === 'expiring') {
 +          gateRef.current = false
++          setBlocked(false)
 +          setNotice(undefined)
 +          void verifyOnline(vendor).then(online => {
 +            const message = online.kind === undefined ? undefined : onlineNoticeText(online.kind, lang())
@@ -520,6 +523,7 @@ index 0000000..1ffb826
 +  /** Skill missing: explain, offer manual install and a re-check loop. */
 +  const blockMissingSkill = React.useCallback(async () => {
 +    gateRef.current = true
++    setBlocked(true)
 +    try {
 +      while (gateRef.current) {
 +        let proceed
@@ -606,7 +610,7 @@ index 0000000..1ffb826
 +    await evaluate({ online: true, block: true })
 +  }, [evaluate, skipped])
 +
-+  return { notice, requireLogin, skipped }
++  return { notice, blocked, requireLogin, skipped }
 +}
 +
 +/**
@@ -1577,7 +1581,7 @@ index d7db9d3..ae0cba4 100644
      'onboarding-conn-models': { zh: '{{count}} 个可用模型', en: '{{count}} models available' },
      'onboarding-conn-balance': { zh: '余额 {{amount}}', en: 'Balance {{amount}}' },
 diff --git a/lib/types/screens/Chat.js b/lib/types/screens/Chat.js
-index 050c07c..ed35672 100644
+index 050c07c..46de195 100644
 --- a/lib/types/screens/Chat.js
 +++ b/lib/types/screens/Chat.js
 @@ -24,6 +24,8 @@ import { execFileNoThrow } from '../utils/execFileNoThrow.js';
@@ -1667,6 +1671,15 @@ index 050c07c..ed35672 100644
                                              React,
                                              ui: STATUS_VIEW_UI,
                                          }) }) }) }, `${view.key}:${view.registrationId}`))), _jsxs(Box, { flexDirection: "column", flexShrink: 0, children: [approvalPanelNode !== null ? (approvalPanelNode) : dialogSnapshot !== null ? (_jsx(ExtensionDialog, { dialog: dialogSnapshot, onDecide: value => dialogs.decide(dialogSnapshot.key, value), onCancel: () => dialogs.cancel(dialogSnapshot.key) }, dialogSnapshot.key)) : overlay.kind === 'tips' ? (_jsx(Box, { flexDirection: "column", marginTop: 1, children: _jsx(TipsPanel, { onClose: () => dispatchOverlay({ type: 'close-if', kind: 'tips' }) }) })) : recap !== null && (!recap.auto || recap.expanded) ? (_jsx(Box, { flexDirection: "column", marginTop: 1, children: _jsx(RecapPanel, { summary: recap.summary, title: recap.title, error: recap.error, streaming: !recap.done, titleApplied: recap.titleApplied, onClose: () => {
+@@ -6311,7 +6332,7 @@ export function Chat({ channel, questionStore, approvalStore, extensionDialogs,
+                                                 void setClipboard(answer).then(raw => { if (raw)
+                                                     writeRaw?.(raw); });
+                                                 channel.notify(t('copied-chars', { n: answer.length }), { timeoutMs: 1500 });
+-                                            } }) })) : questionPanelNode !== null ? (questionPanelNode) : null, _jsx(PromptInput, { channel: channel, suspended: promptReplacementOpen, 
++                                            } }) })) : questionPanelNode !== null ? (questionPanelNode) : null, _jsx(PromptInput, { channel: channel, suspended: promptReplacementOpen || openbayesGate.blocked, 
+                                         // 选择器、搜索框或侧栏持有键盘焦点时，让对应输入框接管原生
+                                         // 光标与 IME 锚点，避免主输入框在后续提交中抢回声明。
+                                         cursorParking: overlay.kind === 'none' && sidePanel.focus !== 'panel', 
 diff --git a/lib/types/screens/Launchpad.js b/lib/types/screens/Launchpad.js
 index d8a8835..2960105 100644
 --- a/lib/types/screens/Launchpad.js

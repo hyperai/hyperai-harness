@@ -194,6 +194,7 @@ export async function runLoginFlow({ dialogs, vendor = VENDORS.openbayes, notify
 export function useOpenbayesGate({ channel, dialogs, vendor = VENDORS.openbayes }) {
   const skipped = loginGateSkipped(process.env)
   const [notice, setNotice] = React.useState(skipped ? skippedGateText(lang()) : undefined)
+  const [blocked, setBlocked] = React.useState(false)
   const gateRef = React.useRef(false)
   const expiringNotified = React.useRef(false)
   const onlineNotified = React.useRef(false)
@@ -208,6 +209,7 @@ export function useOpenbayesGate({ channel, dialogs, vendor = VENDORS.openbayes 
   const blockUntilSignedIn = React.useCallback(async state => {
     if (gateRef.current) return
     gateRef.current = true
+    setBlocked(true)
     try {
       while (gateRef.current) {
         const text = gateText(state, vendor, lang())
@@ -230,6 +232,7 @@ export function useOpenbayesGate({ channel, dialogs, vendor = VENDORS.openbayes 
         const next = checked.identity === undefined ? { state: 'valid' } : classifySession(checked.identity)
         if (next.state === 'valid' || next.state === 'expiring') {
           gateRef.current = false
+          setBlocked(false)
           setNotice(undefined)
           void verifyOnline(vendor).then(online => {
             const message = online.kind === undefined ? undefined : onlineNoticeText(online.kind, lang())
@@ -250,6 +253,7 @@ export function useOpenbayesGate({ channel, dialogs, vendor = VENDORS.openbayes 
   /** Skill missing: explain, offer manual install and a re-check loop. */
   const blockMissingSkill = React.useCallback(async () => {
     gateRef.current = true
+    setBlocked(true)
     try {
       while (gateRef.current) {
         let proceed
@@ -336,7 +340,7 @@ export function useOpenbayesGate({ channel, dialogs, vendor = VENDORS.openbayes 
     await evaluate({ online: true, block: true })
   }, [evaluate, skipped])
 
-  return { notice, requireLogin, skipped }
+  return { notice, blocked, requireLogin, skipped }
 }
 
 /**
