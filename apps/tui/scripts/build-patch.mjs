@@ -743,6 +743,12 @@ import { useOpenbayes, useOpenbayesGate } from '../hyperaiOpenbayes.js';`,
     },
     {
       file: 'lib/types/screens/Chat.js',
+      why: 'refuse launchpad submissions while the sign-in gate blocks the chat',
+      find: '    const refusedAtStartup = (name) => {',
+      replace: '    const refusedAtStartup = (name) => {\n        if (openbayesGate.blocked) return true;',
+    },
+    {
+      file: 'lib/types/screens/Chat.js',
       why: 'suspend the composer while the sign-in gate blocks the chat',
       find: '_jsx(PromptInput, { channel: channel, suspended: promptReplacementOpen,',
       replace: '_jsx(PromptInput, { channel: channel, suspended: promptReplacementOpen || openbayesGate.blocked,',
