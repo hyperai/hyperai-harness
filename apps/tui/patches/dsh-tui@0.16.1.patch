@@ -1581,7 +1581,7 @@ index d7db9d3..ae0cba4 100644
      'onboarding-conn-models': { zh: '{{count}} 个可用模型', en: '{{count}} models available' },
      'onboarding-conn-balance': { zh: '余额 {{amount}}', en: 'Balance {{amount}}' },
 diff --git a/lib/types/screens/Chat.js b/lib/types/screens/Chat.js
-index 050c07c..f83b821 100644
+index 050c07c..d264a39 100644
 --- a/lib/types/screens/Chat.js
 +++ b/lib/types/screens/Chat.js
 @@ -24,6 +24,8 @@ import { execFileNoThrow } from '../utils/execFileNoThrow.js';
@@ -1604,7 +1604,7 @@ index 050c07c..f83b821 100644
 +    // hyperai-tui: local /openbayes login, status and logout (never model-bound).
 +    const openbayes = useOpenbayes({ channel, dialogs, onLoggedOut: () => { void openbayesGate.requireLogin(); } });
 +    // hyperai-tui: the landing page would cover the blocking dialog.
-+    React.useEffect(() => { if (openbayesGate.blocked) setLaunchpadOpen(false); }, [openbayesGate.blocked]);
++    React.useEffect(() => { if (openbayesGate.blocked || openbayesGate.skipped) setLaunchpadOpen(false); }, [openbayesGate.blocked, openbayesGate.skipped]);
      const coupon = React.useSyncExternalStore(bonusNotices?.subscribe ?? noCouponSubscription, bonusNotices?.getSnapshot ?? noCouponSnapshot);
      // Plugin status contributions: text keys join into one line; bounded rich
      // views keep their own rows immediately above the prompt.
