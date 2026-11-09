@@ -286,7 +286,16 @@ export function gateText(state, vendor, lang = 'zh') {
   } else if (state.state === 'rejected') {
     reason = pick(lang, 'OpenBayes 登录已失效，请重新登录。', 'OpenBayes sign-in is no longer valid; sign in again.')
   }
-  return { title: pick(lang, '登录 OpenBayes（推荐）', 'Sign in to OpenBayes (recommended)'), message: reason === '' ? body : `${reason}\n\n${body}` }
+  // The managed `select` panel renders the title and options, not `message`,
+  // so the reason and the login steps have to be visible in those strings.
+  const title = state.state === 'expired'
+    ? pick(lang, '登录 OpenBayes（已过期，请重新登录）', 'OpenBayes sign-in expired — sign in again')
+    : state.state === 'missing'
+      ? pick(lang, '登录 OpenBayes（这台电脑还没有登录过）', 'Sign in to OpenBayes (not signed in on this computer)')
+      : state.state === 'rejected'
+        ? pick(lang, '登录 OpenBayes（登录已失效，请重新登录）', 'OpenBayes sign-in is no longer valid — sign in again')
+        : pick(lang, '登录 OpenBayes（推荐）', 'Sign in to OpenBayes (recommended)')
+  return { title, message: reason === '' ? body : `${reason}\n\n${body}` , steps: body }
 }
 
 /** One-time startup notice for a session that is about to expire. */
@@ -377,7 +386,7 @@ export function skippedStatusText(lang = 'zh') {
 /** The three-way sign-in screen: login (default), skip, quit. */
 export function gateOptions(lang = 'zh') {
   return [
-    { id: 'login', label: pick(lang, '登录 OpenBayes', 'Sign in to OpenBayes'), description: pick(lang, '推荐；登录后可以使用 OpenBayes 相关功能', 'Recommended; enables OpenBayes features') },
+    { id: 'login', label: pick(lang, '登录 OpenBayes', 'Sign in to OpenBayes'), description: pick(lang, '推荐；在浏览器打开链接确认，再把一次性码粘贴回来', 'Recommended; confirm in the browser, then paste the one-time code') },
     { id: 'skip', label: pick(lang, '跳过', 'Skip'), description: pick(lang, '不登录也能正常使用；以后随时可以输入 /openbayes login 登录', 'Use the app without signing in; run /openbayes login later') },
     { id: 'exit', label: pick(lang, '退出程序', 'Quit'), description: pick(lang, '按 Ctrl+D 也可以退出', 'Ctrl+D also quits') },
   ]
