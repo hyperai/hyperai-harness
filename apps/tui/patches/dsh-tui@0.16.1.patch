@@ -264,10 +264,10 @@ index 71e32df..4f233d0 100644
      setActiveBrand(resolveBrand(config.brand, backendChoice));
 diff --git a/lib/types/hyperaiOpenbayes.js b/lib/types/hyperaiOpenbayes.js
 new file mode 100644
-index 0000000..41813eb
+index 0000000..b5eaf81
 --- /dev/null
 +++ b/lib/types/hyperaiOpenbayes.js
-@@ -0,0 +1,426 @@
+@@ -0,0 +1,432 @@
 +/**
 + * `/openbayes` command bridge and the startup sign-in gate for the TUI.
 + *
@@ -607,6 +607,12 @@ index 0000000..41813eb
 +
 +  const requireLogin = React.useCallback(async () => {
 +    if (skipped) return
++    // A scheduled expiry poll may be in flight; wait for it so the logout
++    // check is never skipped by the `checking` guard.
++    const deadline = Date.now() + 2_000
++    while (checking.current && Date.now() < deadline) {
++      await new Promise(resolve => setTimeout(resolve, 25))
++    }
 +    await evaluate({ online: true, block: true })
 +  }, [evaluate, skipped])
 +
