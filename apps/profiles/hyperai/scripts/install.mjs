@@ -310,7 +310,7 @@ export function describeScenario(scenario, profileDir) {
         `检测到已安装：HyperAI Harness ${scenario.fromVersion}`,
         `本次安装：    ${target}`,
         '这是一次覆盖升级，不需要先卸载。',
-        '从这个版本开始，启动时需要登录 OpenBayes 账号（每台电脑登录一次，有效期内启动会直接进入）。',
+        '从这个版本开始，启动时会提示登录 OpenBayes（可以跳过）。',
         '以下内容会保留：',
         '  - 模型服务配置和 API key',
         '  - 选中的模型和界面偏好',
@@ -348,7 +348,7 @@ export function describeScenario(scenario, profileDir) {
       return [
         '检测到已安装 HyperAI Harness（版本未知），按覆盖升级处理。',
         `本次安装：${target}`,
-        '从这个版本开始，启动时需要登录 OpenBayes 账号。',
+        '从这个版本开始，启动时会提示登录 OpenBayes（可以跳过）。',
         '配置和对话记录会保留。',
       ].join('\n')
     case 'foreign':

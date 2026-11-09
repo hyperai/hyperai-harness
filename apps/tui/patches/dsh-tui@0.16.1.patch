@@ -264,10 +264,10 @@ index 71e32df..4f233d0 100644
      setActiveBrand(resolveBrand(config.brand, backendChoice));
 diff --git a/lib/types/hyperaiOpenbayes.js b/lib/types/hyperaiOpenbayes.js
 new file mode 100644
-index 0000000..b5eaf81
+index 0000000..a3631ae
 --- /dev/null
 +++ b/lib/types/hyperaiOpenbayes.js
-@@ -0,0 +1,432 @@
+@@ -0,0 +1,475 @@
 +/**
 + * `/openbayes` command bridge and the startup sign-in gate for the TUI.
 + *
@@ -291,7 +291,7 @@ index 0000000..b5eaf81
 +  VENDORS, classifyFailure, classifySession, errorText, expiredDuringUseText, expiringNoticeText, firstDiagnostic,
 +  gateText, loginGateSkipped, loginPromptText, loginSuccessText, logoutConfirmText, logoutDoneText,
 +  missingSkillText, normalizeCode, onlineNoticeText, parseAuthorize, parseIdentity, parseLoginSuccess, redact,
-+  skippedGateText, statusText, usageText,
++  clearSkipRecord, gateOptions, readSkipRecord, skippedGateText, skippedStatusText, startupDecision, statusText, unauthenticatedText, usageText, writeSkipRecord,
 +} from './hyperaiOpenbayesCore.js'
 +
 +const LOGIN_TIMEOUT_MS = 60_000
@@ -461,7 +461,7 @@ index 0000000..b5eaf81
 + * dialog loop and the one-shot notices.
 + * @param {{ channel: any, dialogs: any, vendor?: any }} options
 + */
-+export function useOpenbayesGate({ channel, dialogs, vendor = VENDORS.openbayes }) {
++export function useOpenbayesGate({ channel, dialogs, vendor = VENDORS.openbayes, onExit = () => {} }) {
 +  const skipped = loginGateSkipped(process.env)
 +  const [notice, setNotice] = React.useState(skipped ? skippedGateText(lang()) : undefined)
 +  const [blocked, setBlocked] = React.useState(false)
@@ -475,6 +475,14 @@ index 0000000..b5eaf81
 +    try { channel.notify(message, { color: 'warning', timeoutMs: 12_000 }) } catch { /* best-effort */ }
 +  }, [channel])
 +
++  /** Leave the gate for a while, remembering the choice on disk. */
++  const skipGate = React.useCallback(() => {
++    writeSkipRecord()
++    gateRef.current = false
++    setBlocked(false)
++    setNotice(unauthenticatedText(lang()))
++  }, [])
++
 +  /** Block the chat until sign-in succeeds; the dialog reopens on cancel/Esc. */
 +  const blockUntilSignedIn = React.useCallback(async state => {
 +    if (gateRef.current) return
@@ -483,19 +491,28 @@ index 0000000..b5eaf81
 +    try {
 +      while (gateRef.current) {
 +        const text = gateText(state, vendor, lang())
-+        let proceed
++        let choice
 +        try {
-+          proceed = await dialogs.ask({
-+            kind: 'confirm',
++          choice = await dialogs.ask({
++            kind: 'select',
 +            title: text.title,
 +            message: text.message,
-+            confirmLabel: lang() === 'zh' ? '登录 OpenBayes' : 'Sign in to OpenBayes',
-+            cancelLabel: lang() === 'zh' ? '稍后（仍不能使用）' : 'Later (still blocked)',
++            options: gateOptions(lang()),
 +          }, undefined, GATE_DIALOG_TIMEOUT_MS)
 +        } catch {
 +          continue
 +        }
-+        if (proceed !== true) continue
++        if (choice === 'exit') {
++          gateRef.current = false
++          setBlocked(false)
++          onExit()
++          return
++        }
++        if (choice === 'skip') {
++          skipGate()
++          return
++        }
++        if (choice !== 'login') continue
 +        const result = await runLoginFlow({ dialogs, vendor, notify })
 +        if (!result.ok) continue
 +        const checked = await readIdentityOnce(vendor)
@@ -503,6 +520,7 @@ index 0000000..b5eaf81
 +        if (next.state === 'valid' || next.state === 'expiring') {
 +          gateRef.current = false
 +          setBlocked(false)
++          clearSkipRecord()
 +          setNotice(undefined)
 +          void verifyOnline(vendor).then(online => {
 +            const message = online.kind === undefined ? undefined : onlineNoticeText(online.kind, lang())
@@ -526,19 +544,32 @@ index 0000000..b5eaf81
 +    setBlocked(true)
 +    try {
 +      while (gateRef.current) {
-+        let proceed
++        let choice
 +        try {
-+          proceed = await dialogs.ask({
-+            kind: 'confirm',
-+            title: lang() === 'zh' ? '登录 OpenBayes（必需）' : 'Sign in to OpenBayes (required)',
-+            message: `${missingSkillText(vendor, lang())}\n\n${lang() === 'zh' ? '手动安装后选择「重新检测」；按 Ctrl+D 退出程序。' : 'After installing, choose "Check again"; press Ctrl+D to quit.'}`,
-+            confirmLabel: lang() === 'zh' ? '重新检测' : 'Check again',
-+            cancelLabel: lang() === 'zh' ? '仍不可用' : 'Still blocked',
++          choice = await dialogs.ask({
++            kind: 'select',
++            title: lang() === 'zh' ? '登录 OpenBayes（推荐）' : 'Sign in to OpenBayes (recommended)',
++            message: `${missingSkillText(vendor, lang())}\n\n${lang() === 'zh' ? '手动安装后选择「重新检测」；也可以先跳过。' : 'After installing, choose "Check again"; you can also skip.'}`,
++            options: [
++              { value: 'retry', label: lang() === 'zh' ? '重新检测' : 'Check again' },
++              { value: 'skip', label: lang() === 'zh' ? '跳过' : 'Skip' },
++              { value: 'exit', label: lang() === 'zh' ? '退出程序' : 'Quit' },
++            ],
 +          }, undefined, GATE_DIALOG_TIMEOUT_MS)
 +        } catch {
 +          continue
 +        }
-+        if (proceed !== true) continue
++        if (choice === 'exit') {
++          gateRef.current = false
++          setBlocked(false)
++          onExit()
++          return
++        }
++        if (choice === 'skip') {
++          skipGate()
++          return
++        }
++        if (choice !== 'retry') continue
 +        const context = resolveOpenbayesContext(process.env, vendor)
 +        if (!context.available) continue
 +        gateRef.current = false
@@ -567,18 +598,29 @@ index 0000000..b5eaf81
 +        return
 +      }
 +      if (identity === undefined) {
++        if (readSkipRecord()?.skipped === true) {
++          setNotice(unauthenticatedText(lang()))
++          return
++        }
 +        if (block) await blockUntilSignedIn({ state: kind === 'rejected' ? 'rejected' : 'missing' })
 +        return
 +      }
 +      const session = classifySession(identity)
-+      if (session.state === 'expired') {
-+        if (block) return blockUntilSignedIn({ state: 'expired', expiresAt: session.expiresAt })
++      const skipRecord = readSkipRecord()
++      const decision = startupDecision(identity, skipRecord)
++      if (decision === 'enter-unauthenticated') {
++        setNotice(unauthenticatedText(lang()))
++        return
++      }
++      if (decision === 'gate') {
++        if (block) return blockUntilSignedIn({ state: session.state === 'expired' ? 'expired' : 'missing', expiresAt: session.expiresAt })
 +        if (!expiredNotified.current) {
 +          expiredNotified.current = true
 +          notify(expiredDuringUseText(lang()))
 +        }
 +        return
 +      }
++      setNotice(undefined)
 +      if (session.state === 'expiring' && !expiringNotified.current) {
 +        expiringNotified.current = true
 +        notify(expiringNoticeText(session.days, lang()))
@@ -664,7 +706,8 @@ index 0000000..b5eaf81
 +    }
 +    const kind = classifyFailure(error)
 +    if (kind === 'not-logged-in') {
-+      await showInfo(heading(vendor, lang() === 'zh' ? ' 状态' : ' status'), statusText(undefined, lang()))
++      const text = readSkipRecord() === undefined ? statusText(undefined, lang()) : skippedStatusText(lang())
++      await showInfo(heading(vendor, lang() === 'zh' ? ' 状态' : ' status'), text)
 +      return
 +    }
 +    await showInfo(heading(vendor, lang() === 'zh' ? ' 状态' : ' status'), errorText(kind, firstDiagnostic(error), lang()))
@@ -702,10 +745,10 @@ index 0000000..b5eaf81
 +}
 diff --git a/lib/types/hyperaiOpenbayesCore.js b/lib/types/hyperaiOpenbayesCore.js
 new file mode 100644
-index 0000000..7587b68
+index 0000000..5a139e5
 --- /dev/null
 +++ b/lib/types/hyperaiOpenbayesCore.js
-@@ -0,0 +1,311 @@
+@@ -0,0 +1,384 @@
 +/**
 + * Pure formatting/validation for the OpenBayes TUI bridge.
 + *
@@ -718,6 +761,10 @@ index 0000000..7587b68
 + */
 +
 +/** Console pages used in the copy; a future vendor only supplies its own. */
++import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
++import { homedir } from 'node:os'
++import { dirname, join } from 'node:path'
++
 +export const VENDORS = Object.freeze({
 +  openbayes: Object.freeze({
 +    name: 'openbayes',
@@ -1016,6 +1063,75 @@ index 0000000..7587b68
 +  return pick(lang,
 +    'OpenBayes 登录已过期。现在可以输入 /openbayes login 续期；不续期的话，下次启动时会回到登录界面。',
 +    'OpenBayes sign-in expired. Run /openbayes login to renew; otherwise the next launch will ask you to sign in.')
++}
++
++
++/** Where the "skip sign-in" preference lives (HyperAI's own TUI state). */
++export function skipRecordPath(env = process.env) {
++  const home = env.HOME || homedir()
++  return join(home, '.dsh-tui-hyperai', 'login-skip.json')
++}
++
++/**
++ * Read the skip preference. A missing or malformed file means "not skipped";
++ * the file contains only the choice and a timestamp, never account data.
++ */
++export function readSkipRecord(env = process.env) {
++  const path = skipRecordPath(env)
++  if (!existsSync(path)) return undefined
++  try {
++    const parsed = JSON.parse(readFileSync(path, 'utf8'))
++    if (parsed?.skipped !== true) return undefined
++    return { skipped: true, at: typeof parsed.at === 'string' ? parsed.at : undefined }
++  } catch {
++    return undefined
++  }
++}
++
++/** Persist the skip choice; returns the record that was written. */
++export function writeSkipRecord(env = process.env, now = new Date()) {
++  const path = skipRecordPath(env)
++  const record = { skipped: true, at: now.toISOString() }
++  mkdirSync(dirname(path), { recursive: true })
++  writeFileSync(path, `${JSON.stringify(record, undefined, 2)}\n`, { mode: 0o600 })
++  return record
++}
++
++/** Forget the skip choice (after a successful login). */
++export function clearSkipRecord(env = process.env) {
++  rmSync(skipRecordPath(env), { force: true })
++}
++
++/**
++ * Startup decision with the skip preference applied.
++ * @returns {'enter'|'enter-unauthenticated'|'gate'}
++ */
++export function startupDecision(identity, skipRecord, now = Date.now()) {
++  const session = classifySession(identity, now)
++  if (session.state === 'valid' || session.state === 'expiring') return 'enter'
++  if (skipRecord?.skipped === true) return 'enter-unauthenticated'
++  return 'gate'
++}
++
++/** Persistent status-line text while the person uses the app without signing in. */
++export function unauthenticatedText(lang = 'zh') {
++  return pick(lang, '未登录 OpenBayes · /openbayes login', 'OpenBayes: signed out · /openbayes login')
++}
++
++/** `/openbayes status` copy when there is no session but the person skipped. */
++export function skippedStatusText(lang = 'zh') {
++  return pick(lang,
++    '未登录（已跳过登录）\n输入 /openbayes login 可以登录。',
++    'Signed out (sign-in was skipped)\nRun /openbayes login to sign in.')
++}
++
++/** The three-way sign-in screen: login (default), skip, quit. */
++export function gateOptions(lang = 'zh') {
++  return [
++    { value: 'login', label: pick(lang, '登录 OpenBayes', 'Sign in to OpenBayes'), description: pick(lang, '推荐；登录后可以使用 OpenBayes 相关功能', 'Recommended; enables OpenBayes features') },
++    { value: 'skip', label: pick(lang, '跳过', 'Skip'), description: pick(lang, '不登录也能正常使用；以后随时可以输入 /openbayes login 登录', 'Use the app without signing in; run /openbayes login later') },
++    { value: 'exit', label: pick(lang, '退出程序', 'Quit'), description: pick(lang, '按 Ctrl+D 也可以退出', 'Ctrl+D also quits') },
++  ]
 +}
 diff --git a/lib/types/hyperaiSkills.js b/lib/types/hyperaiSkills.js
 new file mode 100644
@@ -1587,7 +1703,7 @@ index d7db9d3..ae0cba4 100644
      'onboarding-conn-models': { zh: '{{count}} 个可用模型', en: '{{count}} models available' },
      'onboarding-conn-balance': { zh: '余额 {{amount}}', en: 'Balance {{amount}}' },
 diff --git a/lib/types/screens/Chat.js b/lib/types/screens/Chat.js
-index 050c07c..d264a39 100644
+index 050c07c..09fdaef 100644
 --- a/lib/types/screens/Chat.js
 +++ b/lib/types/screens/Chat.js
 @@ -24,6 +24,8 @@ import { execFileNoThrow } from '../utils/execFileNoThrow.js';
@@ -1606,7 +1722,7 @@ index 050c07c..d264a39 100644
 +    // hyperai-tui: asynchronous HyperAI Skills update hint + explicit install flow.
 +    const skillsUpdate = useSkillsUpdate({ channel, dialogs });
 +    // hyperai-tui: the startup sign-in gate owns the blocking login dialog.
-+    const openbayesGate = useOpenbayesGate({ channel, dialogs });
++    const openbayesGate = useOpenbayesGate({ channel, dialogs, onExit });
 +    // hyperai-tui: local /openbayes login, status and logout (never model-bound).
 +    const openbayes = useOpenbayes({ channel, dialogs, onLoggedOut: () => { void openbayesGate.requireLogin(); } });
 +    // hyperai-tui: the landing page would cover the blocking dialog.

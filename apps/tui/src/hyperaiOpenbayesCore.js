@@ -10,6 +10,10 @@
  */
 
 /** Console pages used in the copy; a future vendor only supplies its own. */
+import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { homedir } from 'node:os'
+import { dirname, join } from 'node:path'
+
 export const VENDORS = Object.freeze({
   openbayes: Object.freeze({
     name: 'openbayes',
@@ -308,4 +312,73 @@ export function expiredDuringUseText(lang = 'zh') {
   return pick(lang,
     'OpenBayes 登录已过期。现在可以输入 /openbayes login 续期；不续期的话，下次启动时会回到登录界面。',
     'OpenBayes sign-in expired. Run /openbayes login to renew; otherwise the next launch will ask you to sign in.')
+}
+
+
+/** Where the "skip sign-in" preference lives (HyperAI's own TUI state). */
+export function skipRecordPath(env = process.env) {
+  const home = env.HOME || homedir()
+  return join(home, '.dsh-tui-hyperai', 'login-skip.json')
+}
+
+/**
+ * Read the skip preference. A missing or malformed file means "not skipped";
+ * the file contains only the choice and a timestamp, never account data.
+ */
+export function readSkipRecord(env = process.env) {
+  const path = skipRecordPath(env)
+  if (!existsSync(path)) return undefined
+  try {
+    const parsed = JSON.parse(readFileSync(path, 'utf8'))
+    if (parsed?.skipped !== true) return undefined
+    return { skipped: true, at: typeof parsed.at === 'string' ? parsed.at : undefined }
+  } catch {
+    return undefined
+  }
+}
+
+/** Persist the skip choice; returns the record that was written. */
+export function writeSkipRecord(env = process.env, now = new Date()) {
+  const path = skipRecordPath(env)
+  const record = { skipped: true, at: now.toISOString() }
+  mkdirSync(dirname(path), { recursive: true })
+  writeFileSync(path, `${JSON.stringify(record, undefined, 2)}\n`, { mode: 0o600 })
+  return record
+}
+
+/** Forget the skip choice (after a successful login). */
+export function clearSkipRecord(env = process.env) {
+  rmSync(skipRecordPath(env), { force: true })
+}
+
+/**
+ * Startup decision with the skip preference applied.
+ * @returns {'enter'|'enter-unauthenticated'|'gate'}
+ */
+export function startupDecision(identity, skipRecord, now = Date.now()) {
+  const session = classifySession(identity, now)
+  if (session.state === 'valid' || session.state === 'expiring') return 'enter'
+  if (skipRecord?.skipped === true) return 'enter-unauthenticated'
+  return 'gate'
+}
+
+/** Persistent status-line text while the person uses the app without signing in. */
+export function unauthenticatedText(lang = 'zh') {
+  return pick(lang, '未登录 OpenBayes · /openbayes login', 'OpenBayes: signed out · /openbayes login')
+}
+
+/** `/openbayes status` copy when there is no session but the person skipped. */
+export function skippedStatusText(lang = 'zh') {
+  return pick(lang,
+    '未登录（已跳过登录）\n输入 /openbayes login 可以登录。',
+    'Signed out (sign-in was skipped)\nRun /openbayes login to sign in.')
+}
+
+/** The three-way sign-in screen: login (default), skip, quit. */
+export function gateOptions(lang = 'zh') {
+  return [
+    { value: 'login', label: pick(lang, '登录 OpenBayes', 'Sign in to OpenBayes'), description: pick(lang, '推荐；登录后可以使用 OpenBayes 相关功能', 'Recommended; enables OpenBayes features') },
+    { value: 'skip', label: pick(lang, '跳过', 'Skip'), description: pick(lang, '不登录也能正常使用；以后随时可以输入 /openbayes login 登录', 'Use the app without signing in; run /openbayes login later') },
+    { value: 'exit', label: pick(lang, '退出程序', 'Quit'), description: pick(lang, '按 Ctrl+D 也可以退出', 'Ctrl+D also quits') },
+  ]
 }

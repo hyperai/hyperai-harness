@@ -21,7 +21,7 @@ import {
   VENDORS, classifyFailure, classifySession, errorText, expiredDuringUseText, expiringNoticeText, firstDiagnostic,
   gateText, loginGateSkipped, loginPromptText, loginSuccessText, logoutConfirmText, logoutDoneText,
   missingSkillText, normalizeCode, onlineNoticeText, parseAuthorize, parseIdentity, parseLoginSuccess, redact,
-  skippedGateText, statusText, usageText,
+  clearSkipRecord, gateOptions, readSkipRecord, skippedGateText, skippedStatusText, startupDecision, statusText, unauthenticatedText, usageText, writeSkipRecord,
 } from './hyperaiOpenbayesCore.js'
 
 const LOGIN_TIMEOUT_MS = 60_000
@@ -191,7 +191,7 @@ export async function runLoginFlow({ dialogs, vendor = VENDORS.openbayes, notify
  * dialog loop and the one-shot notices.
  * @param {{ channel: any, dialogs: any, vendor?: any }} options
  */
-export function useOpenbayesGate({ channel, dialogs, vendor = VENDORS.openbayes }) {
+export function useOpenbayesGate({ channel, dialogs, vendor = VENDORS.openbayes, onExit = () => {} }) {
   const skipped = loginGateSkipped(process.env)
   const [notice, setNotice] = React.useState(skipped ? skippedGateText(lang()) : undefined)
   const [blocked, setBlocked] = React.useState(false)
@@ -205,6 +205,14 @@ export function useOpenbayesGate({ channel, dialogs, vendor = VENDORS.openbayes 
     try { channel.notify(message, { color: 'warning', timeoutMs: 12_000 }) } catch { /* best-effort */ }
   }, [channel])
 
+  /** Leave the gate for a while, remembering the choice on disk. */
+  const skipGate = React.useCallback(() => {
+    writeSkipRecord()
+    gateRef.current = false
+    setBlocked(false)
+    setNotice(unauthenticatedText(lang()))
+  }, [])
+
   /** Block the chat until sign-in succeeds; the dialog reopens on cancel/Esc. */
   const blockUntilSignedIn = React.useCallback(async state => {
     if (gateRef.current) return
@@ -213,19 +221,28 @@ export function useOpenbayesGate({ channel, dialogs, vendor = VENDORS.openbayes 
     try {
       while (gateRef.current) {
         const text = gateText(state, vendor, lang())
-        let proceed
+        let choice
         try {
-          proceed = await dialogs.ask({
-            kind: 'confirm',
+          choice = await dialogs.ask({
+            kind: 'select',
             title: text.title,
             message: text.message,
-            confirmLabel: lang() === 'zh' ? '登录 OpenBayes' : 'Sign in to OpenBayes',
-            cancelLabel: lang() === 'zh' ? '稍后（仍不能使用）' : 'Later (still blocked)',
+            options: gateOptions(lang()),
           }, undefined, GATE_DIALOG_TIMEOUT_MS)
         } catch {
           continue
         }
-        if (proceed !== true) continue
+        if (choice === 'exit') {
+          gateRef.current = false
+          setBlocked(false)
+          onExit()
+          return
+        }
+        if (choice === 'skip') {
+          skipGate()
+          return
+        }
+        if (choice !== 'login') continue
         const result = await runLoginFlow({ dialogs, vendor, notify })
         if (!result.ok) continue
         const checked = await readIdentityOnce(vendor)
@@ -233,6 +250,7 @@ export function useOpenbayesGate({ channel, dialogs, vendor = VENDORS.openbayes 
         if (next.state === 'valid' || next.state === 'expiring') {
           gateRef.current = false
           setBlocked(false)
+          clearSkipRecord()
           setNotice(undefined)
           void verifyOnline(vendor).then(online => {
             const message = online.kind === undefined ? undefined : onlineNoticeText(online.kind, lang())
@@ -256,19 +274,32 @@ export function useOpenbayesGate({ channel, dialogs, vendor = VENDORS.openbayes 
     setBlocked(true)
     try {
       while (gateRef.current) {
-        let proceed
+        let choice
         try {
-          proceed = await dialogs.ask({
-            kind: 'confirm',
-            title: lang() === 'zh' ? '登录 OpenBayes（必需）' : 'Sign in to OpenBayes (required)',
-            message: `${missingSkillText(vendor, lang())}\n\n${lang() === 'zh' ? '手动安装后选择「重新检测」；按 Ctrl+D 退出程序。' : 'After installing, choose "Check again"; press Ctrl+D to quit.'}`,
-            confirmLabel: lang() === 'zh' ? '重新检测' : 'Check again',
-            cancelLabel: lang() === 'zh' ? '仍不可用' : 'Still blocked',
+          choice = await dialogs.ask({
+            kind: 'select',
+            title: lang() === 'zh' ? '登录 OpenBayes（推荐）' : 'Sign in to OpenBayes (recommended)',
+            message: `${missingSkillText(vendor, lang())}\n\n${lang() === 'zh' ? '手动安装后选择「重新检测」；也可以先跳过。' : 'After installing, choose "Check again"; you can also skip.'}`,
+            options: [
+              { value: 'retry', label: lang() === 'zh' ? '重新检测' : 'Check again' },
+              { value: 'skip', label: lang() === 'zh' ? '跳过' : 'Skip' },
+              { value: 'exit', label: lang() === 'zh' ? '退出程序' : 'Quit' },
+            ],
           }, undefined, GATE_DIALOG_TIMEOUT_MS)
         } catch {
           continue
         }
-        if (proceed !== true) continue
+        if (choice === 'exit') {
+          gateRef.current = false
+          setBlocked(false)
+          onExit()
+          return
+        }
+        if (choice === 'skip') {
+          skipGate()
+          return
+        }
+        if (choice !== 'retry') continue
         const context = resolveOpenbayesContext(process.env, vendor)
         if (!context.available) continue
         gateRef.current = false
@@ -297,18 +328,29 @@ export function useOpenbayesGate({ channel, dialogs, vendor = VENDORS.openbayes 
         return
       }
       if (identity === undefined) {
+        if (readSkipRecord()?.skipped === true) {
+          setNotice(unauthenticatedText(lang()))
+          return
+        }
         if (block) await blockUntilSignedIn({ state: kind === 'rejected' ? 'rejected' : 'missing' })
         return
       }
       const session = classifySession(identity)
-      if (session.state === 'expired') {
-        if (block) return blockUntilSignedIn({ state: 'expired', expiresAt: session.expiresAt })
+      const skipRecord = readSkipRecord()
+      const decision = startupDecision(identity, skipRecord)
+      if (decision === 'enter-unauthenticated') {
+        setNotice(unauthenticatedText(lang()))
+        return
+      }
+      if (decision === 'gate') {
+        if (block) return blockUntilSignedIn({ state: session.state === 'expired' ? 'expired' : 'missing', expiresAt: session.expiresAt })
         if (!expiredNotified.current) {
           expiredNotified.current = true
           notify(expiredDuringUseText(lang()))
         }
         return
       }
+      setNotice(undefined)
       if (session.state === 'expiring' && !expiringNotified.current) {
         expiringNotified.current = true
         notify(expiringNoticeText(session.days, lang()))
@@ -394,7 +436,8 @@ export function useOpenbayes({ channel, dialogs, vendor = VENDORS.openbayes, onL
     }
     const kind = classifyFailure(error)
     if (kind === 'not-logged-in') {
-      await showInfo(heading(vendor, lang() === 'zh' ? ' 状态' : ' status'), statusText(undefined, lang()))
+      const text = readSkipRecord() === undefined ? statusText(undefined, lang()) : skippedStatusText(lang())
+      await showInfo(heading(vendor, lang() === 'zh' ? ' 状态' : ' status'), text)
       return
     }
     await showInfo(heading(vendor, lang() === 'zh' ? ' 状态' : ' status'), errorText(kind, firstDiagnostic(error), lang()))
