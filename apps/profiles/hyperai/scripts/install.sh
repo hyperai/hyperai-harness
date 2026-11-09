@@ -186,29 +186,41 @@ cat > "$HYPERAI_HOME/.hyperai-launcher.json" <<EOF
 }
 EOF
 
-say ""
-case "$SCENARIO_MODE" in
-  upgrade) say "已从 ${SCENARIO_FROM} 升级到 ${SCENARIO_TO}，你的配置和对话记录已保留。" ;;
-  reinstall) say "已重新安装 ${SCENARIO_TO}。" ;;
-  fresh) say "已全新安装 ${SCENARIO_TO}。" ;;
-  interrupted) say "已修复上次未完成的安装，当前版本 ${SCENARIO_TO}。" ;;
-  uninstalled) say "已重新安装 ${SCENARIO_TO}（之前的卸载归档不会自动恢复）。" ;;
-  upgrade-unknown) say "已从旧版本（未知）升级到 ${SCENARIO_TO}。" ;;
-  *) say "已安装 HyperAI Harness ${SCENARIO_TO}。" ;;
-esac
-say ""
-say "启动："
-say "  $LAUNCHER"
-say ""
-if ! printf '%s' ":$PATH:" | grep -q ":$BIN_DIR:"; then
-  say "如果希望直接输入 hyperai 启动，把下面一行加进 shell 配置（~/.zshrc 或 ~/.bashrc）："
-  say "  export PATH=\"$BIN_DIR:\$PATH\""
+finish_report() {
   say ""
-fi
-say "首次使用：进入 TUI 后用 /provider 添加模型服务，再用 /model 选择模型。"
-say "API key 由 DSH 保存在 $DSH_HOME/.credentials.yaml（权限 0600），不会写进安装包。"
-say ""
-say "注意：ppt-generation 技能需要 Python 3 和 python-pptx，本脚本不会自动安装："
-say "  python3 -m pip install python-pptx"
-say ""
-say "卸载：见安装包里的 README.md（使用 profile/scripts/manage.mjs uninstall）。"
+  case "$SCENARIO_MODE" in
+    upgrade) say "已从 ${SCENARIO_FROM} 升级到 ${SCENARIO_TO}，你的配置和对话记录已保留。" ;;
+    reinstall) say "已重新安装 ${SCENARIO_TO}。" ;;
+    fresh) say "已全新安装 ${SCENARIO_TO}。" ;;
+    interrupted) say "已修复上次未完成的安装，当前版本 ${SCENARIO_TO}。" ;;
+    uninstalled) say "已重新安装 ${SCENARIO_TO}（之前的卸载归档不会自动恢复）。" ;;
+    upgrade-unknown) say "已从旧版本（未知）升级到 ${SCENARIO_TO}。" ;;
+    downgrade) say "已降级到 ${SCENARIO_TO}（降级不做保证）。" ;;
+    *) say "已安装 HyperAI Harness ${SCENARIO_TO}。" ;;
+  esac
+  say ""
+  say "启动："
+  say "  $LAUNCHER"
+  say ""
+  if ! printf '%s' ":$PATH:" | grep -q ":$BIN_DIR:"; then
+    say "如果希望直接输入 hyperai 启动，把下面一行加进 shell 配置（~/.zshrc 或 ~/.bashrc）："
+    say "  export PATH=\"$BIN_DIR:\$PATH\""
+    say ""
+  fi
+  case "$SCENARIO_MODE" in
+    fresh|uninstalled)
+      say "首次使用：进入 TUI 后用 /provider 添加模型服务，再用 /model 选择模型。"
+      say "API key 由 DSH 保存在 $DSH_HOME/.credentials.yaml（权限 0600），不会写进安装包。"
+      ;;
+    *)
+      say "你原来的模型配置可以直接使用。"
+      ;;
+  esac
+  say ""
+  say "注意：ppt-generation 技能需要 Python 3 和 python-pptx，本脚本不会自动安装："
+  say "  python3 -m pip install python-pptx"
+  say ""
+  say "卸载：见安装包里的 README.md（使用 profile/scripts/manage.mjs uninstall）。"
+}
+
+finish_report
