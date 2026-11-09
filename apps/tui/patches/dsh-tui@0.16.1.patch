@@ -264,7 +264,7 @@ index 71e32df..4f233d0 100644
      setActiveBrand(resolveBrand(config.brand, backendChoice));
 diff --git a/lib/types/hyperaiOpenbayes.js b/lib/types/hyperaiOpenbayes.js
 new file mode 100644
-index 0000000..a3631ae
+index 0000000..cbd1d69
 --- /dev/null
 +++ b/lib/types/hyperaiOpenbayes.js
 @@ -0,0 +1,475 @@
@@ -551,9 +551,9 @@ index 0000000..a3631ae
 +            title: lang() === 'zh' ? '登录 OpenBayes（推荐）' : 'Sign in to OpenBayes (recommended)',
 +            message: `${missingSkillText(vendor, lang())}\n\n${lang() === 'zh' ? '手动安装后选择「重新检测」；也可以先跳过。' : 'After installing, choose "Check again"; you can also skip.'}`,
 +            options: [
-+              { value: 'retry', label: lang() === 'zh' ? '重新检测' : 'Check again' },
-+              { value: 'skip', label: lang() === 'zh' ? '跳过' : 'Skip' },
-+              { value: 'exit', label: lang() === 'zh' ? '退出程序' : 'Quit' },
++              { id: 'retry', label: lang() === 'zh' ? '重新检测' : 'Check again' },
++              { id: 'skip', label: lang() === 'zh' ? '跳过' : 'Skip' },
++              { id: 'exit', label: lang() === 'zh' ? '退出程序' : 'Quit' },
 +            ],
 +          }, undefined, GATE_DIALOG_TIMEOUT_MS)
 +        } catch {
@@ -745,7 +745,7 @@ index 0000000..a3631ae
 +}
 diff --git a/lib/types/hyperaiOpenbayesCore.js b/lib/types/hyperaiOpenbayesCore.js
 new file mode 100644
-index 0000000..c0e6669
+index 0000000..aae0e57
 --- /dev/null
 +++ b/lib/types/hyperaiOpenbayesCore.js
 @@ -0,0 +1,384 @@
@@ -1128,9 +1128,9 @@ index 0000000..c0e6669
 +/** The three-way sign-in screen: login (default), skip, quit. */
 +export function gateOptions(lang = 'zh') {
 +  return [
-+    { value: 'login', label: pick(lang, '登录 OpenBayes', 'Sign in to OpenBayes'), description: pick(lang, '推荐；登录后可以使用 OpenBayes 相关功能', 'Recommended; enables OpenBayes features') },
-+    { value: 'skip', label: pick(lang, '跳过', 'Skip'), description: pick(lang, '不登录也能正常使用；以后随时可以输入 /openbayes login 登录', 'Use the app without signing in; run /openbayes login later') },
-+    { value: 'exit', label: pick(lang, '退出程序', 'Quit'), description: pick(lang, '按 Ctrl+D 也可以退出', 'Ctrl+D also quits') },
++    { id: 'login', label: pick(lang, '登录 OpenBayes', 'Sign in to OpenBayes'), description: pick(lang, '推荐；登录后可以使用 OpenBayes 相关功能', 'Recommended; enables OpenBayes features') },
++    { id: 'skip', label: pick(lang, '跳过', 'Skip'), description: pick(lang, '不登录也能正常使用；以后随时可以输入 /openbayes login 登录', 'Use the app without signing in; run /openbayes login later') },
++    { id: 'exit', label: pick(lang, '退出程序', 'Quit'), description: pick(lang, '按 Ctrl+D 也可以退出', 'Ctrl+D also quits') },
 +  ]
 +}
 diff --git a/lib/types/hyperaiSkills.js b/lib/types/hyperaiSkills.js

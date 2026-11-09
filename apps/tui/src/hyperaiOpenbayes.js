@@ -281,9 +281,9 @@ export function useOpenbayesGate({ channel, dialogs, vendor = VENDORS.openbayes,
             title: lang() === 'zh' ? '登录 OpenBayes（推荐）' : 'Sign in to OpenBayes (recommended)',
             message: `${missingSkillText(vendor, lang())}\n\n${lang() === 'zh' ? '手动安装后选择「重新检测」；也可以先跳过。' : 'After installing, choose "Check again"; you can also skip.'}`,
             options: [
-              { value: 'retry', label: lang() === 'zh' ? '重新检测' : 'Check again' },
-              { value: 'skip', label: lang() === 'zh' ? '跳过' : 'Skip' },
-              { value: 'exit', label: lang() === 'zh' ? '退出程序' : 'Quit' },
+              { id: 'retry', label: lang() === 'zh' ? '重新检测' : 'Check again' },
+              { id: 'skip', label: lang() === 'zh' ? '跳过' : 'Skip' },
+              { id: 'exit', label: lang() === 'zh' ? '退出程序' : 'Quit' },
             ],
           }, undefined, GATE_DIALOG_TIMEOUT_MS)
         } catch {

@@ -71,9 +71,9 @@ test('the startup decision matrix follows the RFC table', () => {
 test('the sign-in screen offers login (default), skip and quit', () => {
   const options = gateOptions('zh')
   assert.equal(options.length, 3)
-  assert.equal(options[0].value, 'login')
-  assert.equal(options[1].value, 'skip')
-  assert.equal(options[2].value, 'exit')
+  assert.equal(options[0].id, 'login')
+  assert.equal(options[1].id, 'skip')
+  assert.equal(options[2].id, 'exit')
   assert.match(options[1].description, /\/openbayes login/u)
   assert.match(unauthenticatedText('zh'), /未登录 OpenBayes · \/openbayes login/u)
   assert.match(skippedStatusText('zh'), /未登录（已跳过登录）/u)
