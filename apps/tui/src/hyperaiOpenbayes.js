@@ -350,6 +350,7 @@ export function useOpenbayesGate({ channel, dialogs, vendor = VENDORS.openbayes,
         }
         return
       }
+      if (skipRecord?.skipped === true) clearSkipRecord()
       setNotice(undefined)
       if (session.state === 'expiring' && !expiringNotified.current) {
         expiringNotified.current = true
@@ -388,14 +389,20 @@ export function useOpenbayesGate({ channel, dialogs, vendor = VENDORS.openbayes,
     await evaluate({ online: true, block: true })
   }, [evaluate, skipped])
 
-  return { notice, blocked, requireLogin, skipped }
+  const signedIn = React.useCallback(() => {
+    clearSkipRecord()
+    setNotice(undefined)
+    void evaluate({ online: true, block: false })
+  }, [evaluate])
+
+  return { notice, blocked, requireLogin, signedIn, skipped }
 }
 
 /**
  * `/openbayes` command bridge: login / status / logout and the local help copy.
  * @param {{ channel: any, dialogs: any, vendor?: any, onLoggedOut?: () => void }} options
  */
-export function useOpenbayes({ channel, dialogs, vendor = VENDORS.openbayes, onLoggedOut = () => {} }) {
+export function useOpenbayes({ channel, dialogs, vendor = VENDORS.openbayes, onLoggedOut = () => {}, onLoggedIn = () => {} }) {
   const notify = React.useCallback(message => {
     try { channel.notify(message, { color: 'warning', timeoutMs: 10_000 }) } catch { /* best-effort */ }
   }, [channel])
@@ -415,8 +422,9 @@ export function useOpenbayes({ channel, dialogs, vendor = VENDORS.openbayes, onL
   }, [dialogs, notify])
 
   const login = React.useCallback(async () => {
-    await runLoginFlow({ dialogs, vendor, notify })
-  }, [dialogs, notify, vendor])
+    const result = await runLoginFlow({ dialogs, vendor, notify })
+    if (result.ok) onLoggedIn()
+  }, [dialogs, notify, onLoggedIn, vendor])
 
   const status = React.useCallback(async () => {
     const context = resolveOpenbayesContext(process.env, vendor)

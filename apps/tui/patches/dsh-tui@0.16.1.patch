@@ -264,10 +264,10 @@ index 71e32df..4f233d0 100644
      setActiveBrand(resolveBrand(config.brand, backendChoice));
 diff --git a/lib/types/hyperaiOpenbayes.js b/lib/types/hyperaiOpenbayes.js
 new file mode 100644
-index 0000000..cbd1d69
+index 0000000..f431c47
 --- /dev/null
 +++ b/lib/types/hyperaiOpenbayes.js
-@@ -0,0 +1,475 @@
+@@ -0,0 +1,483 @@
 +/**
 + * `/openbayes` command bridge and the startup sign-in gate for the TUI.
 + *
@@ -620,6 +620,7 @@ index 0000000..cbd1d69
 +        }
 +        return
 +      }
++      if (skipRecord?.skipped === true) clearSkipRecord()
 +      setNotice(undefined)
 +      if (session.state === 'expiring' && !expiringNotified.current) {
 +        expiringNotified.current = true
@@ -658,14 +659,20 @@ index 0000000..cbd1d69
 +    await evaluate({ online: true, block: true })
 +  }, [evaluate, skipped])
 +
-+  return { notice, blocked, requireLogin, skipped }
++  const signedIn = React.useCallback(() => {
++    clearSkipRecord()
++    setNotice(undefined)
++    void evaluate({ online: true, block: false })
++  }, [evaluate])
++
++  return { notice, blocked, requireLogin, signedIn, skipped }
 +}
 +
 +/**
 + * `/openbayes` command bridge: login / status / logout and the local help copy.
 + * @param {{ channel: any, dialogs: any, vendor?: any, onLoggedOut?: () => void }} options
 + */
-+export function useOpenbayes({ channel, dialogs, vendor = VENDORS.openbayes, onLoggedOut = () => {} }) {
++export function useOpenbayes({ channel, dialogs, vendor = VENDORS.openbayes, onLoggedOut = () => {}, onLoggedIn = () => {} }) {
 +  const notify = React.useCallback(message => {
 +    try { channel.notify(message, { color: 'warning', timeoutMs: 10_000 }) } catch { /* best-effort */ }
 +  }, [channel])
@@ -685,8 +692,9 @@ index 0000000..cbd1d69
 +  }, [dialogs, notify])
 +
 +  const login = React.useCallback(async () => {
-+    await runLoginFlow({ dialogs, vendor, notify })
-+  }, [dialogs, notify, vendor])
++    const result = await runLoginFlow({ dialogs, vendor, notify })
++    if (result.ok) onLoggedIn()
++  }, [dialogs, notify, onLoggedIn, vendor])
 +
 +  const status = React.useCallback(async () => {
 +    const context = resolveOpenbayesContext(process.env, vendor)
@@ -1703,7 +1711,7 @@ index d7db9d3..ae0cba4 100644
      'onboarding-conn-models': { zh: '{{count}} 个可用模型', en: '{{count}} models available' },
      'onboarding-conn-balance': { zh: '余额 {{amount}}', en: 'Balance {{amount}}' },
 diff --git a/lib/types/screens/Chat.js b/lib/types/screens/Chat.js
-index 050c07c..09fdaef 100644
+index 050c07c..e8b55d6 100644
 --- a/lib/types/screens/Chat.js
 +++ b/lib/types/screens/Chat.js
 @@ -24,6 +24,8 @@ import { execFileNoThrow } from '../utils/execFileNoThrow.js';
@@ -1724,7 +1732,7 @@ index 050c07c..09fdaef 100644
 +    // hyperai-tui: the startup sign-in gate owns the blocking login dialog.
 +    const openbayesGate = useOpenbayesGate({ channel, dialogs, onExit });
 +    // hyperai-tui: local /openbayes login, status and logout (never model-bound).
-+    const openbayes = useOpenbayes({ channel, dialogs, onLoggedOut: () => { void openbayesGate.requireLogin(); } });
++    const openbayes = useOpenbayes({ channel, dialogs, onLoggedOut: () => { void openbayesGate.requireLogin(); }, onLoggedIn: () => openbayesGate.signedIn() });
 +    // hyperai-tui: the landing page would cover the blocking dialog.
 +    React.useEffect(() => { if (openbayesGate.blocked || openbayesGate.skipped) setLaunchpadOpen(false); }, [openbayesGate.blocked, openbayesGate.skipped]);
      const coupon = React.useSyncExternalStore(bonusNotices?.subscribe ?? noCouponSubscription, bonusNotices?.getSnapshot ?? noCouponSnapshot);
