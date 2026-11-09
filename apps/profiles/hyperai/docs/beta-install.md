@@ -1,4 +1,4 @@
-# HyperAI Harness 内测版使用说明（v0.2.0-beta.4）
+# HyperAI Harness 内测版使用说明（v0.2.0-beta.5）
 
 这份说明写给第一次接触 HyperAI Harness 的同事。照着做就能装好，不需要 GitHub 权限，也不需要 clone 任何源码仓库。
 
@@ -44,22 +44,31 @@ HYPERAI_NPM_REGISTRY=https://registry.npmmirror.com ./install.sh
 
 ### 2.1 获取安装包
 
-从分发人处获取安装包和 `.sha256` 文件：`hyperai-harness-0.2.0-beta.4.tar.gz` 与 `hyperai-harness-0.2.0-beta.4.tar.gz.sha256`。
+从分发人处获取安装包和 `.sha256` 文件：`hyperai-harness-0.2.0-beta.5.tar.gz` 与 `hyperai-harness-0.2.0-beta.5.tar.gz.sha256`。
 
 ### 2.2 校验并解压
 
 ```sh
 # 校验（macOS）
-shasum -a 256 -c hyperai-harness-0.2.0-beta.4.tar.gz.sha256
+shasum -a 256 -c hyperai-harness-0.2.0-beta.5.tar.gz.sha256
 # 校验（Ubuntu）
-sha256sum -c hyperai-harness-0.2.0-beta.4.tar.gz.sha256
+sha256sum -c hyperai-harness-0.2.0-beta.5.tar.gz.sha256
 
 # 解压
-tar xzf hyperai-harness-0.2.0-beta.4.tar.gz
-cd hyperai-harness-0.2.0-beta.4
+tar xzf hyperai-harness-0.2.0-beta.5.tar.gz
+cd hyperai-harness-0.2.0-beta.5
 ```
 
-### 2.3 安装
+### 2.3 安装包放在哪里、HyperAI 装在哪里
+
+这是两件不同的事：
+
+- **这次下载的压缩包**放在你下载/解压的地方（例如 `~/Downloads`）。校验、解压、运行 `./install.sh` 都在那个目录里完成。
+- **HyperAI 本身**总是装到固定位置：启动命令和运行时在 `~/.hyperai/`，profile 在 `$DSH_HOME/profiles/hyperai/`（默认 `~/.dsh/profiles/hyperai/`）。安装完成后，下载的安装包目录可以删除，不影响使用。
+
+所以你不需要记得上次装在哪里，安装器会自己找到旧版本。
+
+### 2.4 安装
 
 两种方式，按你的网络情况选一种：
 
@@ -105,7 +114,7 @@ HYPERAI_NPM_REGISTRY=https://registry.npmmirror.com ./install.sh
 export PATH="$HOME/.hyperai/bin:$PATH"
 ```
 
-进去以后看到粉色 `HYPERAI HARNESS` 像素字、右下角铭牌 `hyperai-tui v0.2.0-beta.4 · dsh-tui v0.16.1` 就说明装好了。
+进去以后看到粉色 `HYPERAI HARNESS` 像素字、右下角铭牌 `hyperai-tui v0.2.0-beta.5 · dsh-tui v0.16.1` 就说明装好了。
 
 ---
 
@@ -198,7 +207,43 @@ TUI 会显示一个授权页链接。用已经登录 OpenBayes 的浏览器打�
 
 ## 7. 升级
 
-拿到新安装包后重复第 2 节（校验、解压、`./install.sh`）。安装器是幂等的：
+拿到新安装包后重复第 2 节（校验、解压、`./install.sh`）。**安装程序会自动识别旧版本**，在开始写入之前显示：
+
+```text
+检测到已安装：HyperAI Harness 0.2.0-beta.1
+本次安装：    HyperAI Harness 0.2.0-beta.5
+这是一次覆盖升级，不需要先卸载。以下内容会保留：
+  - 模型服务配置和 API key
+  - 选中的模型和界面偏好
+  - 对话记录
+  - 你自己添加的 Skills 和文件
+```
+
+结束时会再总结一次，例如「已从 0.2.0-beta.1 升级到 0.2.0-beta.5，你的配置和对话记录已保留。」。
+
+### 7.1 查看自己装的是什么版本
+
+推荐在解压后的安装包目录里运行：
+
+```sh
+./install.sh --dry-run
+```
+
+它只做识别、不写任何文件，会显示当前版本、目标版本和这次是全新安装还是升级。
+
+### 7.2 降级
+
+如果这个安装包比已安装的版本旧，安装器默认会停止，并说明「你已经装了更新的版本 X，这个安装包是 Y，降级不做保证」，**不会写入任何文件**。确认要降级时，加 `--allow-downgrade`：
+
+```sh
+./install.sh --allow-downgrade
+```
+
+降级不做数据兼容保证，请先备份重要对话。
+
+### 7.3 升级细节
+
+安装器是幂等的：
 
 - 你的 provider/model 配置、API key、会话记录、`~/.dsh-tui-hyperai` 里的偏好都会保留；
 - 被替换的受管文件会先备份到 `~/.dsh/profiles/hyperai/.hyperai-backups/<时间戳>/`；

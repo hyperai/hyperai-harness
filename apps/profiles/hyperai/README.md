@@ -53,7 +53,7 @@ checkout. On a development machine:
 
 ```sh
 cd apps/profiles/hyperai
-node scripts/build-beta.mjs          # -> dist/hyperai-harness-0.2.0-beta.4.tar.gz(.sha256)
+node scripts/build-beta.mjs          # -> dist/hyperai-harness-0.2.0-beta.5.tar.gz(.sha256)
 ```
 
 `dist/` is git-ignored: the archive embeds a pre-built `@hyperai/hyperai-tui`
