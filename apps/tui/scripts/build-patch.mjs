@@ -752,9 +752,9 @@ import { useOpenbayes, useOpenbayesGate } from '../hyperaiOpenbayes.js';`,
     {
       file: 'lib/types/screens/Chat.js',
       why: 'suspend the composer while the sign-in gate blocks the chat',
-      find: '_jsx(PromptInput, { channel: channel, suspended: promptReplacementOpen,',
-      replace: `openbayesGate.notice !== undefined && (_jsx(Text, { color: "warning", wrap: "truncate", children: openbayesGate.notice })),
-                                            _jsx(PromptInput, { channel: channel, suspended: promptReplacementOpen || openbayesGate.blocked,`,
+      find: "children: statusEntries.map(entry => entry.text).join(' · ') })),",
+      replace: `children: statusEntries.map(entry => entry.text).join(' · ') })),
+                                        openbayesGate.notice !== undefined && (_jsx(Text, { color: "warning", wrap: "truncate", children: openbayesGate.notice })),`,
     },
     {
       file: 'lib/types/screens/Chat.js',
