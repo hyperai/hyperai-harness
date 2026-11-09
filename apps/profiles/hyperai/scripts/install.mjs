@@ -195,6 +195,166 @@ export async function installOpenbayesSkill(options = {}) {
   }
 }
 
+/* ─────────────── install scenario detection (read-only) ─────────────── */
+
+/**
+ * Parse a semver string into its comparison parts.
+ * @param {string} value
+ * @returns {{ major: number, minor: number, patch: number, pre: string[] } | undefined}
+ */
+function parseSemver(value) {
+  const match = /^(\d+)\.(\d+)\.(\d+)(?:-([0-9A-Za-z.-]+))?(?:\+[0-9A-Za-z.-]+)?$/u.exec(String(value).trim())
+  if (match === null) return undefined
+  return {
+    major: Number(match[1]),
+    minor: Number(match[2]),
+    patch: Number(match[3]),
+    pre: match[4] === undefined ? [] : match[4].split('.'),
+  }
+}
+
+/**
+ * Compare two semver versions including prerelease precedence.
+ * `0.2.0-beta.1 < 0.2.0-beta.4 < 0.2.0-beta.5 < 0.2.0`.
+ * @param {string} a
+ * @param {string} b
+ * @returns {number} -1, 0 or 1
+ */
+export function compareVersions(a, b) {
+  const left = parseSemver(a)
+  const right = parseSemver(b)
+  if (left === undefined || right === undefined) throw new Error(`invalid semver: ${left === undefined ? a : b}`)
+  for (const key of ['major', 'minor', 'patch']) {
+    if (left[key] !== right[key]) return left[key] < right[key] ? -1 : 1
+  }
+  // A version without a prerelease is higher than any prerelease of the same release.
+  if (left.pre.length === 0 && right.pre.length > 0) return 1
+  if (right.pre.length === 0 && left.pre.length > 0) return -1
+  const length = Math.max(left.pre.length, right.pre.length)
+  for (let index = 0; index < length; index += 1) {
+    const l = left.pre[index]
+    const r = right.pre[index]
+    if (l === undefined) return -1
+    if (r === undefined) return 1
+    const lNumeric = /^\d+$/u.test(l)
+    const rNumeric = /^\d+$/u.test(r)
+    if (lNumeric && rNumeric) {
+      if (Number(l) !== Number(r)) return Number(l) < Number(r) ? -1 : 1
+      continue
+    }
+    if (lNumeric !== rNumeric) return lNumeric ? -1 : 1
+    if (l !== r) return l < r ? -1 : 1
+  }
+  return 0
+}
+
+/**
+ * Detect what the installer is about to do without touching the filesystem.
+ *
+ * Only reads the profile manifest, the install state and the uninstall marker.
+ * @param {{ profileDir: string, allowDowngrade?: boolean }} options
+ * @returns {{ mode: string, fromVersion?: string, toVersion: string, archive?: string, phase?: string, state?: string, blocked?: boolean }}
+ */
+export function detectInstallScenario(options) {
+  const profileDir = options.profileDir
+  const toVersion = TUI_PACKAGE.version
+  const exists = existsSync(profileDir)
+  const entries = exists ? readdirSync(profileDir) : []
+  if (!exists || entries.length === 0) return { mode: 'fresh', toVersion }
+  const uninstall = readJson(join(profileDir, '.hyperai-uninstall.json'))
+  if (uninstall?.status === 'uninstalled') {
+    return {
+      mode: 'uninstalled',
+      toVersion,
+      archive: typeof uninstall.archive === 'string' ? uninstall.archive : undefined,
+    }
+  }
+  const manifest = readJson(join(profileDir, 'package.json'))
+  if (manifest?.hyperaiTuiManaged !== true) return { mode: 'foreign', toVersion }
+  const fromVersion = typeof manifest?.hyperaiTui?.version === 'string' ? manifest.hyperaiTui.version : undefined
+  const state = readInstallState(profileDir)
+  if (state?.status === 'installing' || state?.status === 'failed') {
+    return {
+      mode: 'interrupted',
+      toVersion,
+      fromVersion,
+      state: state.status,
+      phase: typeof state.phase === 'string' ? state.phase : undefined,
+    }
+  }
+  if (fromVersion === undefined) return { mode: 'upgrade-unknown', toVersion }
+  const order = compareVersions(fromVersion, toVersion)
+  if (order < 0) return { mode: 'upgrade', toVersion, fromVersion }
+  if (order === 0) return { mode: 'reinstall', toVersion, fromVersion }
+  return { mode: 'downgrade', toVersion, fromVersion, blocked: options.allowDowngrade !== true }
+}
+
+/** Read one scenario field for the shell wrapper (`--scenario-field`). */
+export function scenarioField(scenario, name) {
+  if (name === 'mode') return scenario.mode
+  if (name === 'from') return scenario.fromVersion ?? ''
+  if (name === 'to') return scenario.toVersion
+  if (name === 'blocked') return scenario.blocked === true ? '1' : '0'
+  throw new Error(`unknown scenario field ${JSON.stringify(name)}`)
+}
+
+/** Human-readable scenario block printed before any write. */
+export function describeScenario(scenario, profileDir) {
+  const backup = join(profileDir, '.hyperai-backups', '<时间戳>/')
+  const target = `HyperAI Harness ${scenario.toVersion}`
+  switch (scenario.mode) {
+    case 'fresh':
+      return `没有检测到已安装的 HyperAI Harness，这是一次全新安装：${scenario.toVersion}`
+    case 'upgrade':
+      return [
+        `检测到已安装：HyperAI Harness ${scenario.fromVersion}`,
+        `本次安装：    ${target}`,
+        '这是一次覆盖升级，不需要先卸载。以下内容会保留：',
+        '  - 模型服务配置和 API key',
+        '  - 选中的模型和界面偏好',
+        '  - 对话记录',
+        '  - 你自己添加的 Skills 和文件',
+        `被替换的程序文件会先备份到 ${backup}`,
+      ].join('\n')
+    case 'reinstall':
+      return [
+        `检测到已安装：HyperAI Harness ${scenario.fromVersion}`,
+        `本次安装：    ${target}`,
+        '版本相同，这次相当于修复/重装；配置和对话记录会保留。',
+        `被替换的程序文件会先备份到 ${backup}`,
+      ].join('\n')
+    case 'downgrade':
+      return [
+        `检测到已安装：HyperAI Harness ${scenario.fromVersion}`,
+        `本次安装：    ${target}`,
+        '你已经装了更新的版本，这个安装包是旧版本，降级不做保证。',
+        scenario.blocked
+          ? '默认停止，没有写入任何文件。确认要降级时，加 --allow-downgrade 重新运行。'
+          : '已允许降级，继续安装；配置和对话记录仍会保留。',
+      ].join('\n')
+    case 'interrupted':
+      return [
+        `检测到上次安装没有完成（版本 ${scenario.fromVersion ?? '未知'}，停在 ${scenario.phase ?? '未知'} 阶段），这次会接着修复。`,
+        `本次安装：${target}`,
+      ].join('\n')
+    case 'uninstalled':
+      return [
+        `检测到之前卸载过，归档在 ${scenario.archive ?? '（未记录）'}；这次会重新安装，归档不会自动恢复。`,
+        `本次安装：${target}`,
+      ].join('\n')
+    case 'upgrade-unknown':
+      return [
+        '检测到已安装 HyperAI Harness（版本未知），按覆盖升级处理。',
+        `本次安装：${target}`,
+        '配置和对话记录会保留。',
+      ].join('\n')
+    case 'foreign':
+      return `目标目录已存在，但不是本安装器创建的：${profileDir}。安装器会拒绝并提示处理办法。`
+    default:
+      return `检测结果：${scenario.mode}`
+  }
+}
+
 /** Parse CLI arguments into an options object. */
 export function parseArgs(argv) {
   const options = {
@@ -211,6 +371,9 @@ export function parseArgs(argv) {
     skillsLock: undefined,
     openbayes: true,
     openbayesUrl: process.env.HYPERAI_OPENBAYES_URL,
+    detectScenario: false,
+    scenarioField: undefined,
+    allowDowngrade: false,
     dryRun: false,
     force: false,
     json: false,
@@ -223,6 +386,9 @@ export function parseArgs(argv) {
     else if (arg === '--pnpm-bin') options.pnpmBin = argv[++index]
     else if (arg === '--no-skills') options.skills = false
     else if (arg === '--no-openbayes') options.openbayes = false
+    else if (arg === '--detect-scenario') options.detectScenario = true
+    else if (arg === '--scenario-field') { options.scenarioField = argv[++index]; options.detectScenario = true }
+    else if (arg === '--allow-downgrade') options.allowDowngrade = true
     else if (arg === '--verified-only') options.verifiedOnly = true
     else if (arg === '--include-unverified') options.verifiedOnly = false
     else if (arg === '--frozen-lockfile') options.frozenLockfile = true
@@ -615,6 +781,18 @@ function verifyInstall(options) {
 export async function install(options = parseArgs([])) {
   const plan = []
   const result = { profileDir: options.profileDir, plan, skills: undefined, warnings: [] }
+  const scenario = detectInstallScenario(options)
+  result.scenario = {
+    mode: scenario.mode,
+    fromVersion: scenario.fromVersion,
+    toVersion: scenario.toVersion,
+  }
+  if (scenario.mode === 'downgrade' && scenario.blocked === true) {
+    throw new Error(
+      `检测到降级：已安装 ${scenario.fromVersion}，本次安装包是 ${scenario.toVersion}。` +
+        '降级不做保证，默认停止；确认要继续时加 --allow-downgrade。',
+    )
+  }
   if (options.preflight !== false) {
     try {
       result.environment = runPreflight({
@@ -782,6 +960,15 @@ function invokedDirectly() {
 
 if (invokedDirectly()) {
   const options = parseArgs(process.argv.slice(2))
+  if (options.detectScenario) {
+    const scenario = detectInstallScenario(options)
+    if (options.scenarioField !== undefined) {
+      process.stdout.write(`${scenarioField(scenario, options.scenarioField)}\n`)
+    } else {
+      process.stdout.write(`${describeScenario(scenario, options.profileDir)}\n`)
+    }
+    process.exit(scenario.mode === 'downgrade' && scenario.blocked === true ? 3 : 0)
+  }
   try {
     const result = await install(options)
     if (options.json) {

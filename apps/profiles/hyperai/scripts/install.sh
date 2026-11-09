@@ -19,6 +19,17 @@ HERE=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 HYPERAI_HOME=${HYPERAI_HOME:-"$HOME/.hyperai"}
 DSH_HOME=${DSH_HOME:-"$HOME/.dsh"}
 REGISTRY=${HYPERAI_NPM_REGISTRY:-https://registry.npmjs.org}
+PROFILE_NAME=hyperai
+ALLOW_DOWNGRADE=0
+PREV_ARG=""
+for arg in "$@"; do
+  case $PREV_ARG in --profile) PROFILE_NAME=$arg ;; esac
+  case $arg in
+    --profile=*) PROFILE_NAME=${arg#*=} ;;
+    --allow-downgrade) ALLOW_DOWNGRADE=1 ;;
+  esac
+  PREV_ARG=$arg
+done
 
 say() { printf '[%s] %s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$*" >&2; }
 fail() { say ""; say "安装失败：$*"; exit 1; }
@@ -72,6 +83,35 @@ PRODUCT_VERSION=$(node -p 'require(process.argv[1]).version' "$HERE/MANIFEST.jso
 
 say "Node.js ${NODE_VERSION} 检查通过；准备安装 HyperAI Harness ${PRODUCT_VERSION}。"
 
+# ── 1.5 识别安装场景（只读，先于任何写入） ───────────────────────────────────
+SCENARIO_FLAGS=""
+[ "$ALLOW_DOWNGRADE" = "1" ] && SCENARIO_FLAGS="--allow-downgrade"
+set +e
+SCENARIO_TEXT=$(node "$HERE/profile/scripts/install.mjs" --detect-scenario \
+  --dsh-home "$DSH_HOME" --profile "$PROFILE_NAME" $SCENARIO_FLAGS)
+SCENARIO_STATUS=$?
+set -e
+[ -n "$SCENARIO_TEXT" ] && printf '%s\n' "$SCENARIO_TEXT"
+if [ "$SCENARIO_STATUS" -eq 3 ]; then
+  say ""
+  say "安装已停止：检测到降级。没有写入任何文件。"
+  say "确认要降级时，加 --allow-downgrade 重新运行；降级不做保证。"
+  exit 1
+fi
+[ "$SCENARIO_STATUS" -eq 0 ] || fail "安装场景识别失败（退出码 ${SCENARIO_STATUS}）。请把上面的输出发给负责人。"
+
+SCENARIO_MODE=$(node "$HERE/profile/scripts/install.mjs" --scenario-field mode --dsh-home "$DSH_HOME" --profile "$PROFILE_NAME")
+SCENARIO_FROM=$(node "$HERE/profile/scripts/install.mjs" --scenario-field from --dsh-home "$DSH_HOME" --profile "$PROFILE_NAME")
+SCENARIO_TO=$(node "$HERE/profile/scripts/install.mjs" --scenario-field to --dsh-home "$DSH_HOME" --profile "$PROFILE_NAME")
+
+case " $* " in
+  *" --dry-run "*)
+    say ""
+    say "dry-run：以上是安装场景识别结果，没有写入任何文件。"
+    exit 0
+    ;;
+esac
+
 # ── 2. 隔离的运行时（dsh + pnpm） ───────────────────────────────────────────
 RUNTIME="$HYPERAI_HOME/runtime"
 BIN_DIR="$HYPERAI_HOME/bin"
@@ -106,13 +146,6 @@ fi
 # ── 4. 确认安装真的成功 ─────────────────────────────────────────────────────
 # Silent no-ops are worse than failures: a skipped installer used to print
 # "安装完成" while no profile existed. Only a completed install may get a launcher.
-PROFILE_NAME=hyperai
-PREV_ARG=""
-for arg in "$@"; do
-  case $PREV_ARG in --profile) PROFILE_NAME=$arg ;; esac
-  case $arg in --profile=*) PROFILE_NAME=${arg#*=} ;; esac
-  PREV_ARG=$arg
-done
 PROFILE_DIR="$DSH_HOME/profiles/$PROFILE_NAME"
 INSTALL_STATE="$PROFILE_DIR/.hyperai-install.json"
 case " $* " in
@@ -154,7 +187,15 @@ cat > "$HYPERAI_HOME/.hyperai-launcher.json" <<EOF
 EOF
 
 say ""
-say "安装完成。"
+case "$SCENARIO_MODE" in
+  upgrade) say "已从 ${SCENARIO_FROM} 升级到 ${SCENARIO_TO}，你的配置和对话记录已保留。" ;;
+  reinstall) say "已重新安装 ${SCENARIO_TO}。" ;;
+  fresh) say "已全新安装 ${SCENARIO_TO}。" ;;
+  interrupted) say "已修复上次未完成的安装，当前版本 ${SCENARIO_TO}。" ;;
+  uninstalled) say "已重新安装 ${SCENARIO_TO}（之前的卸载归档不会自动恢复）。" ;;
+  upgrade-unknown) say "已从旧版本（未知）升级到 ${SCENARIO_TO}。" ;;
+  *) say "已安装 HyperAI Harness ${SCENARIO_TO}。" ;;
+esac
 say ""
 say "启动："
 say "  $LAUNCHER"
