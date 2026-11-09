@@ -21,7 +21,7 @@ import {
   VENDORS, classifyFailure, classifySession, errorText, expiredDuringUseText, expiringNoticeText, firstDiagnostic,
   gateText, loginGateSkipped, loginPromptText, loginSuccessText, logoutConfirmText, logoutDoneText,
   missingSkillText, normalizeCode, onlineNoticeText, parseAuthorize, parseIdentity, parseLoginSuccess, redact,
-  clearSkipRecord, gateOptions, readSkipRecord, skippedGateText, skippedStatusText, startupDecision, statusText, unauthenticatedText, usageText, writeSkipRecord,
+  clearSkipRecord, gateOptions, missingSkillGate, readSkipRecord, skippedGateText, skippedStatusText, startupDecision, statusText, unauthenticatedText, usageText, writeSkipRecord,
 } from './hyperaiOpenbayesCore.js'
 
 const LOGIN_TIMEOUT_MS = 60_000
@@ -276,15 +276,11 @@ export function useOpenbayesGate({ channel, dialogs, vendor = VENDORS.openbayes,
       while (gateRef.current) {
         let choice
         try {
+          const missing = missingSkillGate(vendor, lang())
           choice = await dialogs.ask({
             kind: 'select',
-            title: lang() === 'zh' ? '登录 OpenBayes（推荐）' : 'Sign in to OpenBayes (recommended)',
-            message: `${missingSkillText(vendor, lang())}\n\n${lang() === 'zh' ? '手动安装后选择「重新检测」；也可以先跳过。' : 'After installing, choose "Check again"; you can also skip.'}`,
-            options: [
-              { id: 'retry', label: lang() === 'zh' ? '重新检测' : 'Check again' },
-              { id: 'skip', label: lang() === 'zh' ? '跳过' : 'Skip' },
-              { id: 'exit', label: lang() === 'zh' ? '退出程序' : 'Quit' },
-            ],
+            title: missing.title,
+            options: missing.options,
           }, undefined, GATE_DIALOG_TIMEOUT_MS)
         } catch {
           continue

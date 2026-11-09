@@ -391,3 +391,28 @@ export function gateOptions(lang = 'zh') {
     { id: 'exit', label: pick(lang, '退出程序', 'Quit'), description: pick(lang, '按 Ctrl+D 也可以退出', 'Ctrl+D also quits') },
   ]
 }
+
+
+/**
+ * Blocking screen when the skill directory is missing. The managed `select`
+ * panel only renders the title and the option rows, so the explanation and
+ * the install command live in the (multi-line) title.
+ */
+export function missingSkillGate(vendor, lang = 'zh') {
+  const command = 'npx skills add https://openbayes.com/skills/openbayes-user'
+  const title = pick(lang,
+    `没有找到 OpenBayes 官方 skill（${vendor.name}-user）\n` +
+      `在终端运行下面的命令安装：\n${command}\n` +
+      '装好后回到这里选「重新检测」；也可以先选「跳过」，正常使用 HyperAI Harness，以后再装。',
+    `OpenBayes skill (${vendor.name}-user) is missing\n` +
+      `Run this in a terminal to install it:\n${command}\n` +
+      'Then choose "Check again"; you can also choose "Skip" and use HyperAI Harness now.')
+  return {
+    title,
+    options: [
+      { id: 'retry', label: pick(lang, '重新检测', 'Check again') },
+      { id: 'skip', label: pick(lang, '跳过', 'Skip') },
+      { id: 'exit', label: pick(lang, '退出程序', 'Quit') },
+    ],
+  }
+}

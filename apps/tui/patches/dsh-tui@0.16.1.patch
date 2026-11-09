@@ -264,10 +264,10 @@ index 71e32df..4f233d0 100644
      setActiveBrand(resolveBrand(config.brand, backendChoice));
 diff --git a/lib/types/hyperaiOpenbayes.js b/lib/types/hyperaiOpenbayes.js
 new file mode 100644
-index 0000000..f431c47
+index 0000000..c6fa4d5
 --- /dev/null
 +++ b/lib/types/hyperaiOpenbayes.js
-@@ -0,0 +1,483 @@
+@@ -0,0 +1,479 @@
 +/**
 + * `/openbayes` command bridge and the startup sign-in gate for the TUI.
 + *
@@ -291,7 +291,7 @@ index 0000000..f431c47
 +  VENDORS, classifyFailure, classifySession, errorText, expiredDuringUseText, expiringNoticeText, firstDiagnostic,
 +  gateText, loginGateSkipped, loginPromptText, loginSuccessText, logoutConfirmText, logoutDoneText,
 +  missingSkillText, normalizeCode, onlineNoticeText, parseAuthorize, parseIdentity, parseLoginSuccess, redact,
-+  clearSkipRecord, gateOptions, readSkipRecord, skippedGateText, skippedStatusText, startupDecision, statusText, unauthenticatedText, usageText, writeSkipRecord,
++  clearSkipRecord, gateOptions, missingSkillGate, readSkipRecord, skippedGateText, skippedStatusText, startupDecision, statusText, unauthenticatedText, usageText, writeSkipRecord,
 +} from './hyperaiOpenbayesCore.js'
 +
 +const LOGIN_TIMEOUT_MS = 60_000
@@ -546,15 +546,11 @@ index 0000000..f431c47
 +      while (gateRef.current) {
 +        let choice
 +        try {
++          const missing = missingSkillGate(vendor, lang())
 +          choice = await dialogs.ask({
 +            kind: 'select',
-+            title: lang() === 'zh' ? '登录 OpenBayes（推荐）' : 'Sign in to OpenBayes (recommended)',
-+            message: `${missingSkillText(vendor, lang())}\n\n${lang() === 'zh' ? '手动安装后选择「重新检测」；也可以先跳过。' : 'After installing, choose "Check again"; you can also skip.'}`,
-+            options: [
-+              { id: 'retry', label: lang() === 'zh' ? '重新检测' : 'Check again' },
-+              { id: 'skip', label: lang() === 'zh' ? '跳过' : 'Skip' },
-+              { id: 'exit', label: lang() === 'zh' ? '退出程序' : 'Quit' },
-+            ],
++            title: missing.title,
++            options: missing.options,
 +          }, undefined, GATE_DIALOG_TIMEOUT_MS)
 +        } catch {
 +          continue
@@ -753,10 +749,10 @@ index 0000000..f431c47
 +}
 diff --git a/lib/types/hyperaiOpenbayesCore.js b/lib/types/hyperaiOpenbayesCore.js
 new file mode 100644
-index 0000000..6fcec32
+index 0000000..9588823
 --- /dev/null
 +++ b/lib/types/hyperaiOpenbayesCore.js
-@@ -0,0 +1,393 @@
+@@ -0,0 +1,418 @@
 +/**
 + * Pure formatting/validation for the OpenBayes TUI bridge.
 + *
@@ -1149,6 +1145,31 @@ index 0000000..6fcec32
 +    { id: 'skip', label: pick(lang, '跳过', 'Skip'), description: pick(lang, '不登录也能正常使用；以后随时可以输入 /openbayes login 登录', 'Use the app without signing in; run /openbayes login later') },
 +    { id: 'exit', label: pick(lang, '退出程序', 'Quit'), description: pick(lang, '按 Ctrl+D 也可以退出', 'Ctrl+D also quits') },
 +  ]
++}
++
++
++/**
++ * Blocking screen when the skill directory is missing. The managed `select`
++ * panel only renders the title and the option rows, so the explanation and
++ * the install command live in the (multi-line) title.
++ */
++export function missingSkillGate(vendor, lang = 'zh') {
++  const command = 'npx skills add https://openbayes.com/skills/openbayes-user'
++  const title = pick(lang,
++    `没有找到 OpenBayes 官方 skill（${vendor.name}-user）\n` +
++      `在终端运行下面的命令安装：\n${command}\n` +
++      '装好后回到这里选「重新检测」；也可以先选「跳过」，正常使用 HyperAI Harness，以后再装。',
++    `OpenBayes skill (${vendor.name}-user) is missing\n` +
++      `Run this in a terminal to install it:\n${command}\n` +
++      'Then choose "Check again"; you can also choose "Skip" and use HyperAI Harness now.')
++  return {
++    title,
++    options: [
++      { id: 'retry', label: pick(lang, '重新检测', 'Check again') },
++      { id: 'skip', label: pick(lang, '跳过', 'Skip') },
++      { id: 'exit', label: pick(lang, '退出程序', 'Quit') },
++    ],
++  }
 +}
 diff --git a/lib/types/hyperaiSkills.js b/lib/types/hyperaiSkills.js
 new file mode 100644

@@ -198,3 +198,16 @@ test('gate copy explains why, how and how to quit', async () => {
   assert.match(core.onlineNoticeText('network'), /连不上 OpenBayes/u)
   assert.match(core.onlineNoticeText('rejected'), /\/openbayes login/u)
 })
+
+test('the missing-skill screen shows the reason and the install command', async () => {
+  const core = await import('../src/hyperaiOpenbayesCore.js')
+  const gate = core.missingSkillGate(core.VENDORS.openbayes, 'zh')
+  assert.match(gate.title, /没有找到 OpenBayes 官方 skill（openbayes-user）/u)
+  assert.match(gate.title, /npx skills add https:\/\/openbayes\.com\/skills\/openbayes-user/u)
+  assert.match(gate.title, /重新检测/u)
+  assert.match(gate.title, /跳过/u)
+  assert.deepEqual(gate.options.map(option => option.id), ['retry', 'skip', 'exit'])
+  const en = core.missingSkillGate(core.VENDORS.openbayes, 'en')
+  assert.match(en.title, /npx skills add/u)
+  assert.match(en.title, /Check again/u)
+})
