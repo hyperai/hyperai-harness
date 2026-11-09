@@ -264,7 +264,7 @@ index 71e32df..4f233d0 100644
      setActiveBrand(resolveBrand(config.brand, backendChoice));
 diff --git a/lib/types/hyperaiOpenbayes.js b/lib/types/hyperaiOpenbayes.js
 new file mode 100644
-index 0000000..1db9fc1
+index 0000000..41813eb
 --- /dev/null
 +++ b/lib/types/hyperaiOpenbayes.js
 @@ -0,0 +1,426 @@
@@ -684,7 +684,7 @@ index 0000000..1db9fc1
 +        errorText(classifyFailure(result), firstDiagnostic(result), lang()))
 +      return
 +    }
-+    await showInfo(heading(vendor, lang() === 'zh' ? ' 退出' : ' sign-out'), logoutDoneText(vendor, hostname(), lang()))
++    notify(logoutDoneText(vendor, hostname(), lang()))
 +    onLoggedOut()
 +  }, [dialogs, notify, onLoggedOut, showInfo, vendor])
 +

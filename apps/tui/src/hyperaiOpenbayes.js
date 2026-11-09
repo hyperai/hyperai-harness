@@ -414,7 +414,7 @@ export function useOpenbayes({ channel, dialogs, vendor = VENDORS.openbayes, onL
         errorText(classifyFailure(result), firstDiagnostic(result), lang()))
       return
     }
-    await showInfo(heading(vendor, lang() === 'zh' ? ' 退出' : ' sign-out'), logoutDoneText(vendor, hostname(), lang()))
+    notify(logoutDoneText(vendor, hostname(), lang()))
     onLoggedOut()
   }, [dialogs, notify, onLoggedOut, showInfo, vendor])
 
