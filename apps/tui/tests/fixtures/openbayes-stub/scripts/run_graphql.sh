@@ -29,7 +29,7 @@ done
 prev=""
 for arg in "$@"; do
   if [ "$prev" = "--code" ]; then code="$arg"; fi
-  case "$arg" in --query-file) whoami=1 ;; esac
+  if [ "$prev" = "--query-file" ]; then whoami=1; fi
   prev="$arg"
 done
 
