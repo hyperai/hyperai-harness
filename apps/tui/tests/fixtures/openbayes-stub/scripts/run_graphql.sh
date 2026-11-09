@@ -50,7 +50,7 @@ if [ "$login" = 1 ] && [ "$has" = 0 ]; then
 fi
 
 if [ "$login" = 1 ] && [ "$has" = 1 ]; then
-  if [ "$code" = "GOODCODE" ]; then
+  if [ -n "$code" ] && [ "$code" != "WRONG" ]; then
     rm -f "${HOME:?}/.ob-stub-loggedout"
     echo $((NOW + 30*86400)) > "$STATE"
     echo "Logged in as vendor \"openbayes\" (token name: CLI · stub, expires: 2099-01-01T00:00:00Z)."
