@@ -30,8 +30,8 @@ const IDENTITY_TIMEOUT_MS = 30_000
 const WHOAMI_TIMEOUT_MS = 15_000
 const LOGOUT_TIMEOUT_MS = 30_000
 const DIALOG_TIMEOUT_MS = 300_000
-/** The blocking gate must stay on screen until the person acts; 30 days. */
-const GATE_DIALOG_TIMEOUT_MS = 30 * 24 * 60 * 60 * 1000
+/** Long enough to wait for a person; JS timers overflow above 2^31-1 ms. */
+const GATE_DIALOG_TIMEOUT_MS = 24 * 60 * 60 * 1000
 const EXPIRY_POLL_MS = 10_000
 
 /** Current UI language (`zh` / `en`). Resolved at call time, so `/lang` works. */
