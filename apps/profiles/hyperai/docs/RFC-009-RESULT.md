@@ -215,3 +215,67 @@ macOS 的 beta.5 环境带上一轮的数据，beta.6 是干净环境，绝对�
 2. 主机名前缀 grep = 0。
 3. 令牌 / 一次性码 / 假 key / `/Users/<名字>` / `/home/<测试用户>` = 0。
 4. stub 不在安装包里：`tar tzf` 无 `openbayes-stub`。
+
+## fix-3：“重新检测”后登录界面被绕过
+
+### 根因
+
+`evaluate()` 先把 `checking.current` 置为 `true`，再调用 `blockMissingSkill()`；用户选「重新检测」后，`blockMissingSkill()` 直接 `return evaluate(...)`。内层 `evaluate` 一开头就被 `if (skipped || checking.current) return` 挡住，identity 没重读、门也没重新打开，于是界面关闭、输入框可用——可以绕过登录界面。
+
+### 改法
+
+- `blockMissingSkill()` 不再递归调用 `evaluate()`，只在 skill 已恢复时返回 `'retry'`。
+- 外层 `evaluate()` 收到 `'retry'` 后**在同一个判断里继续**读取 identity、按五种状态决定界面；`gateRef` 在交回控制权时释放，但 `blocked` 保持为 true，直到新结果落地才解除。新结果出来前登录界面不会收起。
+- 五条分支都走原有判断：skill 仍缺失（继续缺失界面）、未登录（三选项登录门）、有效（进入）、已过期（过期门）、已跳过（进入 + 未登录标识）。
+- 回归测试 `tests/openbayes-gate-retry.test.mjs`：断言 `blockMissingSkill` 内不得出现 `return/await evaluate(`，且外层必须处理 `'retry'`、重判前保持挂起。
+
+### 修复前后
+
+| 版本 | 回归测试 | PTY 复现（缺失→放回→重新检测） |
+|---|---|---|
+| 旧代码（fix-2） | 2 个用例全部失败：`blockMissingSkill must not call evaluate while checking`；`setBlocked(true)` 不存在 | 门关闭、进入聊天（`gate=0`） |
+| 修复后 | 2/2 通过 | 出现「这台电脑还没有登录过」登录界面，三选项可见（`gate=1`） |
+
+### 第 2 节第 3 条的排查
+
+| 触发点 | 是否会被 `checking` 吞掉 | 结论 |
+|---|---|---|
+| 启动时 `evaluate` | 否，只跑一次 | 正常 |
+| 10 秒到期轮询 | 会并发，但 `block:false` 不负责开门，只发一次提示 | 正常 |
+| `/openbayes logout` → `requireLogin` | 可能撞上轮询；已有「等待在途检查结束（最多 2 秒）」再判断 | 正常（F7 实测） |
+| 命令登录成功 → `signedIn` | `block:false`，只清跳过/标识，不弹门 | 正常（F7 实测） |
+| 门内登录失败后重试 | 不调用 `evaluate` | 正常 |
+| 「重新检测」 | **会**，已修复 | 本次问题 |
+
+### F1～F8
+
+| # | 场景 | macOS | Ubuntu |
+|---|---|---|---|
+| F1 | 测试与构建 | 通过：TUI 47/47、verify 15/15；profile 102/102、verify 12/12；两次构建 `26bc7a91…` 一致 | — |
+| F2 | 缺失→放回→重新检测（未登录） | 通过（2/2）：三选项登录门，未进入聊天 | 通过（2/2） |
+| F3 | 同上（有效） | 通过（2/2）：直接进入 | 通过（2/2） |
+| F4 | 同上（已过期） | 通过（2/2）：过期登录门 | 通过（2/2） |
+| F5 | 同上（已跳过） | 通过（2/2）：直接进入 + 未登录标识 | 通过（2/2） |
+| F6 | 缺失→不放回→重新检测 | 通过（2/2）：仍是缺失界面，说明和命令都在 | 通过（2/2） |
+| F7 | logout、命令登录、使用中到期 | 通过：logout 回门、登录清跳过、到期提示一次 | 通过（各 2 次） |
+| F8 | 跳过、登录、logout、剩余 2 天、使用中到期 | 通过 | 通过（各 2 次） |
+
+证据：`docs/evidence/rfc-009/fix3/`。
+
+### 新安装包
+
+| 项 | 值 |
+|---|---|
+| 文件 | `hyperai-harness-0.2.0-beta.6.tar.gz`（版本号不变） |
+| 大小 | 18 484 668 字节 |
+| sha256 | `26bc7a914572be7818016b6f77075f9d3e6d3e6df3dca9313c10c34400f08ae0` |
+| 构建 commit | `57d74951cf7ef606c333f6627627fca327d4f844` |
+| 构建 | 同 commit 两次构建一致 |
+| 服务器 | 已覆盖开发测试用户 home 下的 beta.6，beta.5 保留 |
+
+### 固定自查
+
+1. `/skills` 截屏 / 内部 Skill 描述：PNG = 0，`Use when` = 0。
+2. 主机名前缀 grep = 0。
+3. 令牌 / 一次性码 / 假 key / `/Users/<名字>` / `/home/<测试用户>` = 0。
+4. stub 不在安装包里：`tar tzf` 无 `openbayes-stub`。
