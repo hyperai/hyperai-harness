@@ -298,8 +298,10 @@ export function useOpenbayesGate({ channel, dialogs, vendor = VENDORS.openbayes,
         if (choice !== 'retry') continue
         const context = resolveOpenbayesContext(process.env, vendor)
         if (!context.available) continue
+        // Release the gate for the next decision but keep the composer
+        // suspended until that decision lands; the outer evaluate() continues.
         gateRef.current = false
-        return evaluate({ online: true })
+        return 'retry'
       }
     } finally {
       gateRef.current = false
@@ -312,8 +314,12 @@ export function useOpenbayesGate({ channel, dialogs, vendor = VENDORS.openbayes,
     try {
       const context = resolveOpenbayesContext(process.env, vendor)
       if (!context.available) {
-        if (block) await blockMissingSkill()
-        return
+        if (!block) return
+        const retry = await blockMissingSkill()
+        if (retry !== 'retry') return
+        // Fall through inside the same evaluate(): reading identity and opening
+        // the next screen must not be swallowed by the `checking` guard.
+        setBlocked(true)
       }
       const { identity, error } = await readIdentityOnce(vendor)
       const kind = identity === undefined ? classifyFailure(error) : undefined
@@ -335,6 +341,7 @@ export function useOpenbayesGate({ channel, dialogs, vendor = VENDORS.openbayes,
       const skipRecord = readSkipRecord()
       const decision = startupDecision(identity, skipRecord)
       if (decision === 'enter-unauthenticated') {
+        setBlocked(false)
         setNotice(unauthenticatedText(lang()))
         return
       }
@@ -347,6 +354,7 @@ export function useOpenbayesGate({ channel, dialogs, vendor = VENDORS.openbayes,
         return
       }
       if (skipRecord?.skipped === true) clearSkipRecord()
+      setBlocked(false)
       setNotice(undefined)
       if (session.state === 'expiring' && !expiringNotified.current) {
         expiringNotified.current = true

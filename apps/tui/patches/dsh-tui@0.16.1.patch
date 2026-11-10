@@ -264,10 +264,10 @@ index 71e32df..4f233d0 100644
      setActiveBrand(resolveBrand(config.brand, backendChoice));
 diff --git a/lib/types/hyperaiOpenbayes.js b/lib/types/hyperaiOpenbayes.js
 new file mode 100644
-index 0000000..c6fa4d5
+index 0000000..78a9562
 --- /dev/null
 +++ b/lib/types/hyperaiOpenbayes.js
-@@ -0,0 +1,479 @@
+@@ -0,0 +1,487 @@
 +/**
 + * `/openbayes` command bridge and the startup sign-in gate for the TUI.
 + *
@@ -568,8 +568,10 @@ index 0000000..c6fa4d5
 +        if (choice !== 'retry') continue
 +        const context = resolveOpenbayesContext(process.env, vendor)
 +        if (!context.available) continue
++        // Release the gate for the next decision but keep the composer
++        // suspended until that decision lands; the outer evaluate() continues.
 +        gateRef.current = false
-+        return evaluate({ online: true })
++        return 'retry'
 +      }
 +    } finally {
 +      gateRef.current = false
@@ -582,8 +584,12 @@ index 0000000..c6fa4d5
 +    try {
 +      const context = resolveOpenbayesContext(process.env, vendor)
 +      if (!context.available) {
-+        if (block) await blockMissingSkill()
-+        return
++        if (!block) return
++        const retry = await blockMissingSkill()
++        if (retry !== 'retry') return
++        // Fall through inside the same evaluate(): reading identity and opening
++        // the next screen must not be swallowed by the `checking` guard.
++        setBlocked(true)
 +      }
 +      const { identity, error } = await readIdentityOnce(vendor)
 +      const kind = identity === undefined ? classifyFailure(error) : undefined
@@ -605,6 +611,7 @@ index 0000000..c6fa4d5
 +      const skipRecord = readSkipRecord()
 +      const decision = startupDecision(identity, skipRecord)
 +      if (decision === 'enter-unauthenticated') {
++        setBlocked(false)
 +        setNotice(unauthenticatedText(lang()))
 +        return
 +      }
@@ -617,6 +624,7 @@ index 0000000..c6fa4d5
 +        return
 +      }
 +      if (skipRecord?.skipped === true) clearSkipRecord()
++      setBlocked(false)
 +      setNotice(undefined)
 +      if (session.state === 'expiring' && !expiringNotified.current) {
 +        expiringNotified.current = true
