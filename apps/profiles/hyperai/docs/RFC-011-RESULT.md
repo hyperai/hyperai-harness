@@ -120,3 +120,39 @@ M1 的 7 类数据：model、prefs、userskill、builtinskill、credential 与�
 - **I1**：同事那条 `is incompatible … 0.1.0-rc.7` 仍未复现；已确认 dsh 只读 `$DSH_HOME` 内部位置。
 - **真实 beta.1 二进制安装**：beta.1 安装器在临时 `DSH_HOME` 下没有生成 profile，未能做“真实 beta.1 → beta.7”；M2 的 beta.1 路径是版本标记模拟。
 - Ubuntu 的 I2、I4 没有在最终构建上重跑（I3、I5 已各 2 次）；M1 的 7 类逐项对比在 Ubuntu 上只核对了迁移记录/storages/哈希。
+
+## 第三轮补测（负责人指定）
+
+### 真实 beta.1 → beta.7
+
+**尝试的方法：**
+
+1. 临时 `HOME` + 临时 `DSH_HOME`：beta.1 安装器返回成功，但临时目录下没有生成 profile。
+2. 只设临时 `HOME`、显式 `env -u DSH_HOME`：macOS 上仍然返回成功但没有生成 profile（`~/.dsh/profile` 也不存在，真实 `~/.dsh` 未被改动）；**Ubuntu 上成功**，profile 落在临时 `HOME/.dsh/profiles/hyperai`，版本为 `0.2.0-beta.1`。
+
+**结果：**
+
+- Ubuntu：真实 beta.1 装好后在同一临时 HOME 装 beta.7，2 次均迁移成功；7 类快照（provider、credential、model、prefs、sessions、userskill、builtinskill）升级前后逐行相同（该 fixture 的 sessions 为空，迁移不复制会话由 macOS M1 的“有会话”场景单独验证）。
+- macOS：两种方法都无法在临时 HOME 生成 beta.1 profile，按负责人允许的兜底方案，用 beta.6 profile 把版本标记改为 `0.2.0-beta.1` 验证迁移路径；6 类与迁移前一致，sessions 按决定不复制，provider 仅差 skill 根表达式。
+
+### I1 收口
+
+按负责人决定：**无法复现同事的 `is incompatible … 0.1.0-rc.7`**。证据与结论：
+
+- 三种构造（旧依赖写 manifest、旧依赖放 profile node_modules、home 级 `cordis.patch.yml` 插入旧插件）都没有触发同样的拒绝；
+- `dsh --dump-config` 证明 home 级 patch 会被加载，但 `dsh plugin install` 不报兼容性错误；
+- 已确认 dsh 只读 `$DSH_HOME` 内部：`profiles/<name>`、home 级 `cordis.patch.yml`、共享 `profiles/node_modules`，不读 `$DSH_HOME` 之外的位置；
+- 因此“换目录隔离”成立。beta.7 发出后请那位同事实际安装一次，作为最终确认。
+
+### Ubuntu 最终构建补测
+
+| 场景 | 结果 |
+|---|---|
+| I2 旧 `~/.dsh`（含旧插件/patch）→ beta.7 | 2/2：迁移成功，旧目录哈希不变 |
+| I4 `HYPERAI_DSH_HOME` | 2/2：装到自定义目录，默认目录未创建 |
+| M1 beta.6 → beta.7 | 2/2：迁移成功；6 类快照一致，sessions 未复制（fixture 无会话） |
+| 真实 beta.1 → beta.7 | 2/2：版本确认为 beta.1，升级后 7 类快照一致 |
+
+### 构建
+
+本轮没有代码改动，安装包仍是正常流程构建的 `9967457d…`；skills `SNAPSHOT.json` 为上游仓库 + `34f0a1be…`，内容摘要 `c52a8cf7…`，与锁定 commit 一致；服务器文件已核对。
