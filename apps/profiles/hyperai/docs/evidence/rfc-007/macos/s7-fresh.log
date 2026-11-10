@@ -1,0 +1,9 @@
+[2026-11-09T03:23:23Z] HyperAI Harness 内测版安装程序
+[2026-11-09T03:23:23Z]   安装包：$BETA_ROOT/pkg/hyperai-harness-0.2.0-beta.5
+[2026-11-09T03:23:23Z]   HyperAI 目录：$BETA_ROOT/s7fresh/home/.hyperai
+[2026-11-09T03:23:23Z]   Harness home：$BETA_ROOT/s7fresh/dsh
+[2026-11-09T03:23:23Z] 
+[2026-11-09T03:23:23Z] Node.js 26.9.0 检查通过；准备安装 HyperAI Harness 0.2.0-beta.5。
+没有检测到已安装的 HyperAI Harness，这是一次全新安装：0.2.0-beta.5
+[2026-11-09T03:23:24Z] 
+[2026-11-09T03:23:24Z] dry-run：以上是安装场景识别结果，没有写入任何文件。

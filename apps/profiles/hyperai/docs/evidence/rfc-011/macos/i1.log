@@ -1,0 +1,22 @@
+[2026-11-10T07:58:03Z] HyperAI Harness 内测版安装程序
+[2026-11-10T07:58:03Z]   安装包：$BETA_ROOT/rfc011-i1b/pkg/hyperai-harness-0.2.0-beta.6
+[2026-11-10T07:58:03Z]   HyperAI 目录：$BETA_ROOT/rfc011-i1b/home/.hyperai
+[2026-11-10T07:58:03Z]   Harness home：$BETA_ROOT/rfc011-i1b/home/.dsh
+[2026-11-10T07:58:03Z] 
+[2026-11-10T07:58:04Z] Node.js 26.9.0 检查通过；准备安装 HyperAI Harness 0.2.0-beta.6。
+检测到已安装 HyperAI Harness（版本未知），按覆盖升级处理。
+本次安装：HyperAI Harness 0.2.0-beta.6
+从这个版本开始，启动时会提示登录 OpenBayes（可以跳过）。
+配置和对话记录会保留。
+[2026-11-10T07:58:04Z] 安装 dsh@0.2.0-rc.2 与 pnpm@10.28.1 到 $BETA_ROOT/rfc011-i1b/home/.hyperai/runtime（不会改动系统全局环境）……
+
+added 541 packages in 5m
+npm notice
+npm notice New major version of npm available! 11.19.1 -> 12.2.2
+npm notice Changelog: https://github.com/npm/cli/releases/tag/v12.2.2
+npm notice To update run: npm install -g npm@12.2.2
+npm notice
+[2026-11-10T08:02:43Z] 安装 hyperai profile……
+hyperai-tui: refusing to overwrite $BETA_ROOT/rfc011-i1b/home/.dsh/profiles/hyperai/package.json: it was not created by this installer (missing marker ""hyperaiTuiManaged": true"). Re-run with --force to back it up and replace it.
+[2026-11-10T08:02:44Z] 
+[2026-11-10T08:02:44Z] 安装失败：profile 安装失败。请把上面的错误信息发给负责人。

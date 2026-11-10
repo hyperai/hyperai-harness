@@ -1,0 +1,14 @@
+{
+  "$comment": "Pinned hyperai-skills source for the hyperai profile installer. `ref` is a commit, never a branch: the repository has been history-rewritten before, and an unpinned tap would silently change what the profile loads. `verified` lists skills/ (repo-verified area); `unverified` lists inbox/ candidates that install only with --include-unverified and stay labelled unverified in the manifest.",
+  "schema": 1,
+  "repository": "https://github.com/hyperai/hyperai-skills.git",
+  "ref": "24adeeff371290fab0c15691ab2efb7382e2262e",
+  "verified": [
+    { "name": "example-verified-skill", "area": "skills", "validated": true }
+  ],
+  "unverified": [
+    { "name": "mineru-ocr", "area": "inbox", "validated": false, "note": "needs MINERU_API_KEY + network to a self-hosted MinerU endpoint; parsers currently drop <th> header cells" },
+    { "name": "mineru-ocr-to-xlsx", "area": "inbox", "validated": false, "note": "prompt-only walkthrough; offline conversion path exercised in this repo's verification" },
+    { "name": "playwright-browser", "area": "inbox", "validated": false, "note": "needs playwright + chromium (~150 MB) and network; writes outside the workspace" }
+  ]
+}

@@ -1,0 +1,39 @@
+
+
+
+  ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+    OpenBayes   用已经登录 OpenBayes 的浏览器打开下面的链接，确认后把一次性码粘贴到下一步的输入框：
+    登录
+                https://openbayes.com/console/settings/account/cli/authorize?code_challenge=vum2VtmTn5lLL7s9TYQSS2K
+                TGJSqi6qr7uay3NA6J-k&device=$HOST
+
+                令牌有效期按需选择（日常建议 7 天或 30 天）。
+                设备名：$HOST
+
+    ❯ 已确认，输入一次性码
+  ERROR 消ialog.initial is not iterable
+    Enter 选择 · Esc 退出
+ node_modules/@hyperai/hyperai-tui/lib/types/components/ExtensionDialog.js:139:65
+
+ 136: }
+ 137: function InputDialog({ dialog, onDecide, onCancel, }) {
+ 138:     const [value, setValue] = React.useState(dialog.initial);
+ 139:     const [cursor, setCursor] = React.useState(() => [...dialog.initial].length);
+ 140:     // Synchronous source of truth for the handlers (see the module header):
+ 141:     // two Backspaces in one stdin chunk must BOTH delete, each seeing the
+ 142:     // other's result. The cursor counts CODE POINTS, not UTF-16 units — an
+
+ -  (node_modules/@hyperai/hyperai-tui/lib/types/components/ExtensionDialog.js:139:65)
+ - mountStateImpl (node_modules/react-reconciler/cjs/react-reconciler.production.js:3196:22)
+ - Object.useState (node_modules/react-reconciler/cjs/react-reconciler.production.js:12118:24)
+ - exports.useState (node_modules/react/cjs/react.production.js:549:33)
+ - InputDialog (node_modules/@hyperai/hyperai-tui/lib/types/components/ExtensionDialog.js:139:39)
+ - renderWithHooks (node_modules/react-reconciler/cjs/react-reconciler.production.js:2773:23)
+ - updateFunctionComponent (node_modules/react-reconciler/cjs/react-reconciler.production.js:4556:17)
+ - beginWork (node_modules/react-reconciler/cjs/react-reconciler.production.js:5629:16)
+ - performUnitOfWork (node_modules/react-reconciler/cjs/react-reconciler.production.js:10632:16)
+ - workLoopSync (node_modules/react-reconciler/cjs/react-reconciler.production.js:10507:39)
+
+uuu
+
+dsh-tui crashed: dialog.initial is not iterable

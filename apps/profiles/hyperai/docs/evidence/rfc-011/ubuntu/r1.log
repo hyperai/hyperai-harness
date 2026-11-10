@@ -1,0 +1,12 @@
+[2026-11-10T08:54:18Z] HyperAI Harness 内测版安装程序
+[2026-11-10T08:54:18Z]   安装包：$HOME/rfc011/pkg/hyperai-harness-0.2.0-beta.7
+[2026-11-10T08:54:18Z]   HyperAI 目录：$HOME/rfc011/r1/.hyperai
+[2026-11-10T08:54:18Z]   Harness home：$HOME/rfc011/r1/.hyperai/dsh
+[2026-11-10T08:54:18Z] 
+[2026-11-10T08:54:18Z] Node.js 22.23.4 检查通过；准备安装 HyperAI Harness 0.2.0-beta.7。
+检测到旧版安装在 ~/.dsh（HyperAI Harness 0.2.0-beta.6）。
+这次会把配置和 API key 复制到 ~/.hyperai/dsh，原来的 ~/.dsh 不会改动。
+这次不复制对话记录：以前的对话仍然保存在 ~/.dsh 里，没有丢失，只是不会出现在新版本中。
+旧的 home 级 cordis.patch.yml 和共享插件树也不会复制。
+[2026-11-10T08:54:19Z] 
+[2026-11-10T08:54:19Z] dry-run：以上是安装场景识别结果，没有写入任何文件。

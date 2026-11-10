@@ -1,0 +1,29 @@
+# RFC-007 验证运行摘要
+
+安装包：hyperai-harness-0.2.0-beta.5.tar.gz
+sha256：f11393d4523628bc4f745c4c06cc195c3dcb22eaef0d07846578aa78bc9694b6
+构建 commit：e444df1c3559822202493a278d199eb00ff41e0b
+
+## macOS
+
+```
+S1 全新安装：exit=0，显示「这是一次全新安装：0.2.0-beta.5」；完成「已全新安装 0.2.0-beta.5」+ 首次配置提示；铭牌 beta.5
+S2 beta.1 → beta.5：显示「检测到已安装 0.2.0-beta.1 / 本次安装 0.2.0-beta.5 / 覆盖升级 / 保留清单」；完成「已从 … 升级到 …」；7 类哈希不变；旧会话文件仍在（含 pong）
+S3 beta.4 → beta.5：同上；openbayes-user 仍在
+S4 beta.5 → beta.5：显示「版本相同，这次相当于修复/重装」；完成「已重新安装」；7 类哈希不变；计划里 8 个 unchanged
+S5 降级：exit=1，显示「降级不做保证」，目录哈希前后一致；--allow-downgrade 后 exit=0，显示「已允许降级」
+S6 failed 状态：exit=0，显示「上次安装没有完成」；完成后状态 completed
+S7 --dry-run：全新与已安装环境都显示正确版本，退出 0，未创建目录
+```
+
+## Ubuntu（国内镜像）
+
+```
+S1 全新安装：exit=0，全新安装提示 + 完成总结 + 首次配置提示；铭牌 beta.5
+S2 beta.1 → beta.5：识别/总结正常；7 类哈希不变；openbayes-user 存在
+S3 beta.4 → beta.5：识别/总结正常；7 类哈希不变；openbayes-user 存在
+```
+
+## 7 类数据（哈希前后一致）
+
+provider、credential、model、prefs、sessions、userskill、builtinskill 的 before/after 文件逐行相同（见 `*/s2-before.txt`、`*/s2-after.txt`、`*/s3-*`）。

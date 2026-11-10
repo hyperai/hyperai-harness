@@ -1,0 +1,51 @@
+[2026-11-09T03:26:11Z] HyperAI Harness 内测版安装程序
+[2026-11-09T03:26:11Z]   安装包：$BETA_ROOT/pkg/hyperai-harness-0.2.0-beta.5
+[2026-11-09T03:26:11Z]   HyperAI 目录：$BETA_ROOT/home/.hyperai
+[2026-11-09T03:26:11Z]   Harness home：$BETA_ROOT/dsh-home
+[2026-11-09T03:26:11Z] 
+[2026-11-09T03:26:11Z] Node.js 26.9.0 检查通过；准备安装 HyperAI Harness 0.2.0-beta.5。
+检测到上次安装没有完成（版本 0.2.0-beta.5，停在 dependencies 阶段），这次会接着修复。
+本次安装：HyperAI Harness 0.2.0-beta.5
+[2026-11-09T03:26:11Z] 安装 dsh@0.2.0-rc.2 与 pnpm@10.28.1 到 $BETA_ROOT/home/.hyperai/runtime（不会改动系统全局环境）……
+
+up to date in 2s
+[2026-11-09T03:26:13Z] 安装 hyperai profile……
+Lockfile is up to date, resolution step is skipped
+Packages: +79
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+Progress: resolved 0, reused 1, downloaded 0, added 0
+Progress: resolved 0, reused 78, downloaded 0, added 79, done
+
+Done in 1.2s using pnpm v10.28.1
+openbayes-user: 已有 v0.38.1，保留不动（$BETA_ROOT/home/.agents/skills/openbayes-user）
+
+hyperai-tui: profile "hyperai" at $BETA_ROOT/dsh-home/profiles/hyperai
+  unchanged package.json
+  unchanged LICENSE
+  unchanged cordis.patch.yml
+  unchanged pnpm-workspace.yaml
+  unchanged packages/hyperai-tui-0.2.0-beta.5.tgz
+  unchanged scripts/skills-lib.mjs
+  unchanged scripts/skills-update.mjs
+  skills: 0 installed, 2 unchanged, 0 skipped
+
+next steps:
+  dsh --profile hyperai
+  then configure a provider with /provider and pick a model with /model
+  (DSH-native flow; this profile presets no provider, endpoint or model)
+[2026-11-09T03:26:16Z] 
+[2026-11-09T03:26:16Z] 已修复上次未完成的安装，当前版本 0.2.0-beta.5。
+[2026-11-09T03:26:16Z] 
+[2026-11-09T03:26:16Z] 启动：
+[2026-11-09T03:26:16Z]   $BETA_ROOT/home/.hyperai/bin/hyperai
+[2026-11-09T03:26:16Z] 
+[2026-11-09T03:26:16Z] 如果希望直接输入 hyperai 启动，把下面一行加进 shell 配置（~/.zshrc 或 ~/.bashrc）：
+[2026-11-09T03:26:16Z]   export PATH="$BETA_ROOT/home/.hyperai/bin:$PATH"
+[2026-11-09T03:26:16Z] 
+[2026-11-09T03:26:16Z] 首次使用：进入 TUI 后用 /provider 添加模型服务，再用 /model 选择模型。
+[2026-11-09T03:26:16Z] API key 由 DSH 保存在 $BETA_ROOT/dsh-home/.credentials.yaml（权限 0600），不会写进安装包。
+[2026-11-09T03:26:16Z] 
+[2026-11-09T03:26:16Z] 注意：ppt-generation 技能需要 Python 3 和 python-pptx，本脚本不会自动安装：
+[2026-11-09T03:26:16Z]   python3 -m pip install python-pptx
+[2026-11-09T03:26:16Z] 
+[2026-11-09T03:26:16Z] 卸载：见安装包里的 README.md（使用 profile/scripts/manage.mjs uninstall）。

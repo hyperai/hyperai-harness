@@ -1,0 +1,53 @@
+[2026-11-10T08:48:01Z] HyperAI Harness 内测版安装程序
+[2026-11-10T08:48:01Z]   安装包：$BETA_ROOT/rfc011-i1b/pkg2/hyperai-harness-0.2.0-beta.7
+[2026-11-10T08:48:01Z]   HyperAI 目录：$BETA_ROOT/rfc007-mac/s2/home/.hyperai
+[2026-11-10T08:48:01Z]   Harness home：$BETA_ROOT/rfc007-mac/s2/home/.hyperai/dsh
+[2026-11-10T08:48:01Z] 
+[2026-11-10T08:48:01Z] Node.js 26.9.0 检查通过；准备安装 HyperAI Harness 0.2.0-beta.7。
+[2026-11-10T08:48:01Z] 检测到你设置了 DSH_HOME=$HOME/.dsh，HyperAI 不会使用它。
+检测到已安装：HyperAI Harness 0.2.0-beta.7
+本次安装：    HyperAI Harness 0.2.0-beta.7
+版本相同，这次相当于修复/重装；配置和对话记录会保留。
+被替换的程序文件会先备份到 $BETA_ROOT/rfc007-mac/s2/home/.hyperai/dsh/profiles/hyperai/.hyperai-backups/<时间戳>/
+[2026-11-10T08:48:01Z] 安装 dsh@0.2.0-rc.2 与 pnpm@10.28.1 到 $BETA_ROOT/rfc007-mac/s2/home/.hyperai/runtime（不会改动系统全局环境）……
+
+up to date in 2s
+[2026-11-10T08:48:04Z] 安装 hyperai profile……
+Lockfile is up to date, resolution step is skipped
+Packages: +79
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+Progress: resolved 0, reused 1, downloaded 0, added 0
+Progress: resolved 0, reused 78, downloaded 0, added 79, done
+
+Done in 1.1s using pnpm v10.28.1
+openbayes-user: 已有，保留不动（$BETA_ROOT/rfc007-mac/s2/home/.agents/skills/openbayes-user）
+
+hyperai-tui: profile "hyperai" at $BETA_ROOT/rfc007-mac/s2/home/.hyperai/dsh/profiles/hyperai
+  unchanged package.json
+  unchanged LICENSE
+  unchanged cordis.patch.yml
+  unchanged pnpm-workspace.yaml
+  unchanged packages/hyperai-tui-0.2.0-beta.7.tgz
+  unchanged scripts/skills-lib.mjs
+  unchanged scripts/skills-update.mjs
+  skills: 0 installed, 2 unchanged, 0 skipped
+
+next steps:
+  dsh --profile hyperai
+  then configure a provider with /provider and pick a model with /model
+  (DSH-native flow; this profile presets no provider, endpoint or model)
+[2026-11-10T08:48:06Z] 
+[2026-11-10T08:48:06Z] 已重新安装 0.2.0-beta.7。
+[2026-11-10T08:48:06Z] 
+[2026-11-10T08:48:06Z] 启动：
+[2026-11-10T08:48:06Z]   $BETA_ROOT/rfc007-mac/s2/home/.hyperai/bin/hyperai
+[2026-11-10T08:48:06Z] 
+[2026-11-10T08:48:06Z] 如果希望直接输入 hyperai 启动，把下面一行加进 shell 配置（~/.zshrc 或 ~/.bashrc）：
+[2026-11-10T08:48:06Z]   export PATH="$BETA_ROOT/rfc007-mac/s2/home/.hyperai/bin:$PATH"
+[2026-11-10T08:48:06Z] 
+[2026-11-10T08:48:06Z] 你原来的模型配置可以直接使用。
+[2026-11-10T08:48:06Z] 
+[2026-11-10T08:48:06Z] 注意：ppt-generation 技能需要 Python 3 和 python-pptx，本脚本不会自动安装：
+[2026-11-10T08:48:06Z]   python3 -m pip install python-pptx
+[2026-11-10T08:48:06Z] 
+[2026-11-10T08:48:06Z] 卸载：见安装包里的 README.md（使用 profile/scripts/manage.mjs uninstall）。

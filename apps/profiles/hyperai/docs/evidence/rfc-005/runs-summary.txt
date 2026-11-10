@@ -1,0 +1,26 @@
+# RFC-005 验证运行摘要
+
+安装包：hyperai-harness-0.2.0-beta.4.tar.gz
+sha256：795f21aeeec83c61fc231deb13450070841a8275171128e171ad0e631226e30b
+构建 commit：9ec5f6633a903b0bb6bbfdded8b057dad2c1eab9
+
+## macOS
+
+```
+T1 tests: tui verify 15/15, tui tests 36/36; profile verify 12/12, profile tests 91/91
+T2 build1 = build2 = 795f21ae…e30b
+T3 明文=0，遮蔽字符=13，提交后错误提示=1
+T4 上游 /provider 文本字段明文显示=1
+T5 exit=1，英文拒绝=0，安装完成=0，中文说明=1
+T6 --profile alt exit=0，安装完成=1，alt profile=yes，误报=0
+T7 beta.3 exit=0 → beta.4 exit=0；provider=1，lang=zh，session=yes，version=0.2.0-beta.4，skill=yes；doctor=OK；铭牌=beta.4
+```
+
+## Ubuntu（国内镜像）
+
+```
+install exit=0，openbayes-user v0.38.1
+T3 明文=0，输入中明文=0，遮蔽字符=13，提交后错误提示=1
+T5 exit=1，英文拒绝=0，安装完成=0，中文说明=1
+T7 beta.3 exit=0 → beta.4 exit=0；provider=1，lang=zh，session=yes，version=0.2.0-beta.4，skill=yes；doctor=OK；铭牌=beta.4
+```

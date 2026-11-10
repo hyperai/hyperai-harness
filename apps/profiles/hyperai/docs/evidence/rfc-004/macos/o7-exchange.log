@@ -1,0 +1,3 @@
+Logged in as vendor "openbayes" (token name: CLI · $HOST, expires: 2026-11-06T07:56:14.031Z).
+Session saved to $BETA_ROOT/home/.config/openbayes-skills/session.openbayes.json (mode 0600; the token is never printed).
+Verify with: run_graphql --identity --vendor openbayes

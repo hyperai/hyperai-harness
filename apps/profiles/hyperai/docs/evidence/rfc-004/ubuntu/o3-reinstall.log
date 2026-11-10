@@ -1,0 +1,22 @@
+Lockfile is up to date, resolution step is skipped
+Packages: +79
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+Progress: resolved 0, reused 1, downloaded 0, added 0
+Progress: resolved 0, reused 78, downloaded 0, added 79, done
+
+Done in 3.1s using pnpm v10.28.1
+openbayes-user: 已有 v0.38.1，保留不动（$BETA_ROOT/u/home/.agents/skills/openbayes-user）
+
+hyperai-tui: profile "hyperai" at $BETA_ROOT/u/dsh-home/profiles/hyperai
+  unchanged package.json
+  unchanged LICENSE
+  unchanged cordis.patch.yml
+  unchanged pnpm-workspace.yaml
+  unchanged packages/hyperai-tui-0.2.0-beta.3.tgz
+  unchanged scripts/skills-lib.mjs
+  unchanged scripts/skills-update.mjs
+
+next steps:
+  dsh --profile hyperai
+  then configure a provider with /provider and pick a model with /model
+  (DSH-native flow; this profile presets no provider, endpoint or model)

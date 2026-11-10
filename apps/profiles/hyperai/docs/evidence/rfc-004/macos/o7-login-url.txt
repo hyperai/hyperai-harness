@@ -1,0 +1,12 @@
+Vendor: openbayes
+Endpoint: https://openbayes.com/gateway/graphql
+Device: $HOST
+
+1. 在浏览器打开下面的授权页（需已登录该环境控制台）：
+   https://openbayes.com/console/settings/account/cli/authorize?code_challenge=AAAfrwibyvIJFRa3KGFiKltSnx04nFSyT68C-5Okd7k&device=$HOST
+2. 在页面上选择令牌有效期并确认；
+3. 复制页面显示的一次性码（5 分钟内有效），随后用第二段命令完成登录：
+   run_graphql --login --vendor openbayes --code <一次性码>
+（未收到一次性码：授权 URL 与登录状态已保存，5–10 分钟内拿到码后继续：）
+   run_graphql --login --vendor openbayes --code <一次性码>
+（真人终端想在本命令内直接粘贴，可加 --paste 重新发起第一段。）
