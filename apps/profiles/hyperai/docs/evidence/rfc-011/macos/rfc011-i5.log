@@ -1,0 +1,88 @@
+[2026-11-10T08:39:30Z] HyperAI Harness 内测版安装程序
+[2026-11-10T08:39:30Z]   安装包：$BETA_ROOT/rfc011-i1b/pkg2/hyperai-harness-0.2.0-beta.7
+[2026-11-10T08:39:30Z]   HyperAI 目录：$BETA_ROOT/rfc011-i5/home/.hyperai
+[2026-11-10T08:39:30Z]   Harness home：$BETA_ROOT/rfc011-i5/home/.hyperai/dsh
+[2026-11-10T08:39:30Z] 
+[2026-11-10T08:39:30Z] Node.js 26.9.0 检查通过；准备安装 HyperAI Harness 0.2.0-beta.7。
+[2026-11-10T08:39:30Z] 检测到你设置了 DSH_HOME=$HOME/.dsh，HyperAI 不会使用它。
+没有检测到已安装的 HyperAI Harness，这是一次全新安装：0.2.0-beta.7
+[2026-11-10T08:39:30Z] 安装 dsh@0.2.0-rc.2 与 pnpm@10.28.1 到 $BETA_ROOT/rfc011-i5/home/.hyperai/runtime（不会改动系统全局环境）……
+
+up to date in 3s
+npm notice
+npm notice New major version of npm available! 11.19.1 -> 12.2.2
+npm notice Changelog: https://github.com/npm/cli/releases/tag/v12.2.2
+npm notice To update run: npm install -g npm@12.2.2
+npm notice
+[2026-11-10T08:39:33Z] 安装 hyperai profile……
+Progress: resolved 0, reused 0, downloaded 1, added 0
+Progress: resolved 2, reused 0, downloaded 1, added 0
+Progress: resolved 26, reused 0, downloaded 1, added 0
+Progress: resolved 32, reused 0, downloaded 1, added 0
+Progress: resolved 65, reused 0, downloaded 1, added 0
+Progress: resolved 100, reused 0, downloaded 1, added 0
+Progress: resolved 102, reused 0, downloaded 1, added 0
+ WARN  Issues with peer dependencies found
+.
+└─┬ @hyperai/hyperai-tui 0.2.0-beta.7
+  ├── ✕ missing peer @deepseek-ai/cordis@"^4.0.1 || 4.0.5-alpha.2"
+  ├── ✕ missing peer @deepseek-ai/dsh-agent@"^0.1.0-rc.6 || ^0.1.1-rc.1 || 0.1.2-alpha.3 || 0.1.2-alpha.4 || 0.1.2-alpha.5 || 0.1.2-rc.1 || 0.1.3-alpha.2 || 0.1.5-alpha.1 || 0.1.5-alpha.2 || 0.1.5-rc.1 || 0.1.7-rc.1 || 0.1.7-rc.2 || 0.2.0-rc.1 || 0.2.0-rc.2 || 0.2.1-rc.2"
+  ├── ✕ missing peer @deepseek-ai/dsh-session@"^0.1.0-rc.6 || ^0.1.1-rc.1 || 0.1.2-alpha.3 || 0.1.2-alpha.4 || 0.1.2-alpha.5 || 0.1.2-rc.1 || 0.1.3-alpha.2 || 0.1.5-alpha.1 || 0.1.5-alpha.2 || 0.1.5-rc.1 || 0.1.7-rc.1 || 0.1.7-rc.2 || 0.2.0-rc.1 || 0.2.0-rc.2 || 0.2.1-rc.2"
+  ├── ✕ missing peer @deepseek-ai/schemastery@"^3.18.1 || 3.18.5-alpha.2"
+  ├── ✕ missing peer @deepseek-ai/dsh-system-prompt@"^0.1.0-rc.6 || ^0.1.1-rc.1 || 0.1.2-alpha.3 || 0.1.2-alpha.4 || 0.1.2-alpha.5 || 0.1.2-rc.1 || 0.1.3-alpha.2 || 0.1.5-alpha.1 || 0.1.5-alpha.2 || 0.1.5-rc.1 || 0.1.7-rc.1 || 0.1.7-rc.2 || 0.2.0-rc.1 || 0.2.0-rc.2 || 0.2.1-rc.2"
+  └─┬ dsh-working-activity 0.5.1
+    ├── ✕ missing peer @deepseek-ai/cordis@^4.0.1
+    ├── ✕ missing peer @deepseek-ai/dsh-agent@"^0.1.0-rc.6 || ^0.1.1-rc.1 || ^0.1.2-alpha.2 || ^0.1.7-rc.2"
+    ├── ✕ missing peer @deepseek-ai/dsh-session@"^0.1.0-rc.6 || ^0.1.1-rc.1 || ^0.1.2-alpha.2 || ^0.1.7-rc.2"
+    ├── ✕ missing peer @deepseek-ai/schemastery@^3.18.1
+    ├── ✕ missing peer @deepseek-ai/dsh-invariants@"^0.1.0-rc.6 || ^0.1.1-rc.1 || ^0.1.2-alpha.2 || ^0.1.7-rc.2"
+    ├── ✕ missing peer @deepseek-ai/dsh-system-prompt@"^0.1.0-rc.6 || ^0.1.1-rc.1 || ^0.1.2-alpha.2 || ^0.1.7-rc.2"
+    └── ✕ unmet peer react@^18.2.0: found 19.3.1 in @hyperai/hyperai-tui
+Peer dependencies that should be installed:
+  @deepseek-ai/cordis@">=4.0.1 <5.0.0-0"
+  @deepseek-ai/dsh-agent@">=0.1.0-rc.6 <0.2.0-0 || >=0.1.1-rc.1 <0.2.0-0"
+  @deepseek-ai/dsh-invariants@"^0.1.0-rc.6 || ^0.1.1-rc.1 || ^0.1.2-alpha.2 || ^0.1.7-rc.2"
+  @deepseek-ai/dsh-session@">=0.1.0-rc.6 <0.2.0-0 || >=0.1.1-rc.1 <0.2.0-0"
+  @deepseek-ai/dsh-system-prompt@">=0.1.0-rc.6 <0.2.0-0 || >=0.1.1-rc.1 <0.2.0-0"
+  @deepseek-ai/schemastery@">=3.18.1 <4.0.0-0"
+
+Packages: +79
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+Progress: resolved 104, reused 0, downloaded 24, added 22
+Progress: resolved 104, reused 0, downloaded 76, added 77
+Progress: resolved 104, reused 0, downloaded 77, added 78
+Progress: resolved 104, reused 0, downloaded 78, added 78
+Progress: resolved 104, reused 0, downloaded 78, added 79, done
+Done in 17.7s using pnpm v10.28.1
+openbayes-user: 已安装 v0.38.2 → $BETA_ROOT/rfc011-i5/home/.agents/skills/openbayes-user
+
+hyperai-tui: profile "hyperai" at $BETA_ROOT/rfc011-i5/home/.hyperai/dsh/profiles/hyperai
+  create    package.json
+  create    LICENSE
+  create    cordis.patch.yml
+  create    pnpm-workspace.yaml
+  create    packages/hyperai-tui-0.2.0-beta.7.tgz
+  create    scripts/skills-lib.mjs
+  create    scripts/skills-update.mjs
+  skills: 2 installed, 0 unchanged, 0 skipped
+
+next steps:
+  dsh --profile hyperai
+  then configure a provider with /provider and pick a model with /model
+  (DSH-native flow; this profile presets no provider, endpoint or model)
+[2026-11-10T08:39:53Z] 
+[2026-11-10T08:39:53Z] 已全新安装 0.2.0-beta.7。
+[2026-11-10T08:39:53Z] 
+[2026-11-10T08:39:53Z] 启动：
+[2026-11-10T08:39:53Z]   $BETA_ROOT/rfc011-i5/home/.hyperai/bin/hyperai
+[2026-11-10T08:39:53Z] 
+[2026-11-10T08:39:53Z] 如果希望直接输入 hyperai 启动，把下面一行加进 shell 配置（~/.zshrc 或 ~/.bashrc）：
+[2026-11-10T08:39:53Z]   export PATH="$BETA_ROOT/rfc011-i5/home/.hyperai/bin:$PATH"
+[2026-11-10T08:39:53Z] 
+[2026-11-10T08:39:53Z] 首次使用：启动时会提示登录 OpenBayes（推荐，可跳过；以后可用 /openbayes login 登录），再用 /provider 添加模型服务、/model 选择模型。
+[2026-11-10T08:39:53Z] API key 由 DSH 保存在 $BETA_ROOT/rfc011-i5/home/.hyperai/dsh/.credentials.yaml（权限 0600），不会写进安装包。
+[2026-11-10T08:39:53Z] 
+[2026-11-10T08:39:53Z] 注意：ppt-generation 技能需要 Python 3 和 python-pptx，本脚本不会自动安装：
+[2026-11-10T08:39:53Z]   python3 -m pip install python-pptx
+[2026-11-10T08:39:53Z] 
+[2026-11-10T08:39:53Z] 卸载：见安装包里的 README.md（使用 profile/scripts/manage.mjs uninstall）。
