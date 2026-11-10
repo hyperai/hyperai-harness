@@ -171,3 +171,47 @@ macOS 的 beta.5 环境带上一轮的数据，beta.6 是干净环境，绝对�
 - 登录界面的说明放在标题和选项描述里（原因同 K 说明），没有额外渲染区域。
 - K4 的模型侧交互未测，已如实标注。
 - 「退出程序」选项调用 Chat 的 `onExit`（和 `/exit` 同一条路径），不是直接 `process.exit`。
+
+## fix-2：skill 缺失时显示说明与安装命令
+
+### 改了什么
+
+- 新增 `missingSkillGate(vendor, lang)`：skill 缺失时的登录界面标题变成多行正文，包含
+  - 原因：没有找到 OpenBayes 官方 skill（openbayes-user）；
+  - 安装命令：`npx skills add https://openbayes.com/skills/openbayes-user`；
+  - 说明：装好后选「重新检测」，也可以先「跳过」正常使用。
+- 三个选项（重新检测 / 跳过 / 退出程序）和行为不变，默认仍选中「重新检测」。
+- 没有新增补丁点；只改登录界面正文渲染和文案，判断逻辑未动。
+- managed `select` 对话框只渲染标题与选项、不渲染 `message`，所以正文放在标题（多行文本）里；这也是 fix-1 把原因放进标题的同一原因。
+
+### F1～F5
+
+| # | 检查 | macOS | Ubuntu |
+|---|---|---|---|
+| F1 | 测试与构建 | 通过：TUI 45/45、verify 15/15；profile 102/102、verify 12/12；两次构建 `41df9662…` 一致 | — |
+| F2 | 移走 skill 启动：有说明、`npx skills add …` 命令、三个选项 | 通过 | 通过（跑 2 次） |
+| F3 | 放回 skill 选「重新检测」：进入登录流程 | 通过 | 通过（跑 2 次） |
+| F4 | 选「跳过」：进入聊天并显示未登录标识 | 通过 | 通过（跑 2 次） |
+| F5 | 未登录、已过期界面正文正常 | 通过（未登录/过期原因都可见） | 通过（各跑 2 次） |
+
+证据：`docs/evidence/rfc-009/fix2/`。
+
+测试备注：Ubuntu 这次 `install.sh` 的 pnpm 安装在测试服务器上长时间无响应，F2～F5 改为在已有的 beta.6 运行环境里只替换新的 TUI 包（`tui/hyperai-tui-0.2.0-beta.6.tgz`）后运行；安装包本身由 F1 的两次构建校验，stub 只放在测试 HOME。
+
+### 新安装包
+
+| 项 | 值 |
+|---|---|
+| 文件 | `hyperai-harness-0.2.0-beta.6.tar.gz`（版本号不变） |
+| 大小 | 18 482 036 字节 |
+| sha256 | `41df96621f7d89d8b7568887b229a13014caec0f647945c85e9eea72ac94eb4d` |
+| 构建 commit | `b27484b148b109d12d0bb0d8ec77f44625247229` |
+| 构建 | 同 commit 两次构建一致 |
+| 服务器 | 已覆盖开发测试用户 home 下的 beta.6，beta.5 保留 |
+
+### 固定自查
+
+1. `/skills` 截屏 / 内部 Skill 描述：证据 PNG = 0，`Use when` = 0。
+2. 主机名前缀 grep = 0。
+3. 令牌 / 一次性码 / 假 key / `/Users/<名字>` / `/home/<测试用户>` = 0。
+4. stub 不在安装包里：`tar tzf` 无 `openbayes-stub`。
