@@ -104,7 +104,7 @@ M1 的 7 类数据：model、prefs、userskill、builtinskill、credential 与�
 | 项 | macOS | Ubuntu |
 |---|---|---|
 | M2 beta.6 → beta.7 | 通过：迁移、6 类一致（provider 只差 skill 根表达式，sessions 按决定不复制） | 通过（2 次，版本标记 beta.1） |
-| M2 beta.1 → beta.7 | **部分**：beta.1 安装器在临时 `DSH_HOME` 下返回成功却没有生成 profile（写到别处/未创建），只能用 beta.6 profile 把版本标记改成 `0.2.0-beta.1` 验证迁移路径；6 类一致 | 同 macOS，2 次 |
+| M2 beta.1 → beta.7 | **通过（真实 beta.1，2 次）**：解压到非软链目录后装出 beta.1 profile，升级 beta.7 迁移；provider 仅差 skill 根表达式，sessions 按决定不复制，其余 5 类一致 | 通过（真实 beta.1，2 次，7 类快照一致） |
 | M4 旧目录还有其他 profile | 通过：只迁移 hyperai，`dsh-tui` 未复制，`~/.dsh` 哈希不变 | 通过（2 次） |
 | M6 迁移失败回滚 | 通过：把 `~/.hyperai/dsh` 变成普通文件制造失败，安装 exit 1、`~/.dsh` 不变；移除阻塞后重跑成功 | 通过（2 次，fail=1、retry 成功） |
 | R3 回归 | 通过：有效直接进入、跳过有标识、/openbayes status 显示已跳过、2 天提醒、过期门、logout 回门、/skills、/provider、/model、doctor 旧数据提示 | 通过（登录门四项各 2 次；doctor 通过） |
@@ -118,7 +118,6 @@ M1 的 7 类数据：model、prefs、userskill、builtinskill、credential 与�
 ### 仍未完成
 
 - **I1**：同事那条 `is incompatible … 0.1.0-rc.7` 仍未复现；已确认 dsh 只读 `$DSH_HOME` 内部位置。
-- **真实 beta.1 二进制安装**：beta.1 安装器在临时 `DSH_HOME` 下没有生成 profile，未能做“真实 beta.1 → beta.7”；M2 的 beta.1 路径是版本标记模拟。
 - Ubuntu 的 I2、I4 没有在最终构建上重跑（I3、I5 已各 2 次）；M1 的 7 类逐项对比在 Ubuntu 上只核对了迁移记录/storages/哈希。
 
 ## 第三轮补测（负责人指定）
@@ -156,3 +155,31 @@ M1 的 7 类数据：model、prefs、userskill、builtinskill、credential 与�
 ### 构建
 
 本轮没有代码改动，安装包仍是正常流程构建的 `9967457d…`；skills `SNAPSHOT.json` 为上游仓库 + `34f0a1be…`，内容摘要 `c52a8cf7…`，与锁定 commit 一致；服务器文件已核对。
+
+
+## 真实 beta.1 的 macOS 失败原因（已定位）
+
+此前 macOS 上 beta.1 “安装完成但没生成 profile”，根因不是 beta.1 装不上，而是解压位置经过软链接：
+
+- 安装包解压在 `/tmp/b1pkg`；macOS 的 `/tmp` 是指向 `/private/tmp` 的软链接。
+- beta.1 的 `install.mjs` 用 `process.argv[1] === fileURLToPath(import.meta.url)` 判断是否主模块；一边是 `/tmp/...`，一边是 `/private/tmp/...`，字符串不相等，主逻辑没有执行，进程仍然 exit 0，于是 `install.sh` 打印“安装完成”。
+- 后续版本改成 `realpathSync` 比较，所以 beta.6/beta.7 不受影响。
+- 把 beta.1 解压到不经过软链接的目录（`beta-test/…`）后，只设临时 `HOME`、`env -u DSH_HOME`，macOS 上真实 beta.1 安装成功，profile 落在临时 `HOME/.dsh/profiles/hyperai`，版本为 `0.2.0-beta.1`。
+
+### macOS 真实 beta.1 → beta.7（2 次，7 类逐项）
+
+| 类别 | 结果 |
+|---|---|
+| provider 配置 | 仅 skill 根表达式从 `DSH_HOME ?? ~/.dsh` 变为 `HYPERAI_DSH_HOME ?? DSH_HOME ?? ~/.hyperai/dsh`，模型配置未变 |
+| API key | 一致（0600 复制） |
+| 选中模型 | 一致 |
+| 界面偏好 | 一致 |
+| 对话记录 | **预期差异**：按选项 2 不迁移，旧会话完整留在 `~/.dsh`，新目录为空 |
+| 自建 Skill | 一致 |
+| 内置 Skill 目录文件 | 一致 |
+
+`~/.dsh` 前后哈希不变；两次都生成了迁移记录。
+
+## beta.7 install.sh 的安装结果核对
+
+beta.7 的 `install.sh` 第 4 节已经有“确认安装真的成功”：检查 profile 目录存在、`.hyperai-install.json` 存在且 `status === "completed"`，否则 fail，不会生成启动命令。因此不需要改代码；beta.1 缺少这一步，是当时“静默成功”的原因之一。
