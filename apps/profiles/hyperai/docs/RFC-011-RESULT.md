@@ -77,8 +77,8 @@ M1 的 7 类数据：model、prefs、userskill、builtinskill、credential 与�
 | 项 | 值 |
 |---|---|
 | 文件 | `hyperai-harness-0.2.0-beta.7.tar.gz` |
-| 大小 | 18 487 447 字节 |
-| sha256 | `5061edb81f2f18c4563f9818a1b7950844bba674fbf98386884f9bee01f59b2d` |
+| 大小 | 18 487 439 字节 |
+| sha256 | `9967457d26db1451a8bdc0c86399e5466f804262827aa70ea36b2fc173b0328d` |
 | 构建 commit | `27f57c72d64c1e3e7cb7185877611b9980fef64f` |
 | 构建 | 同一 commit 两次构建一致；skills 使用本地快照（GitHub 当时不可达，内容与 beta.6 包内快照一致） |
 | 服务器 | 已放开发测试用户 home，beta.6 保留 |
@@ -95,3 +95,28 @@ M1 的 7 类数据：model、prefs、userskill、builtinskill、credential 与�
 - I1 的具体兼容性拒绝未复现；已确认 dsh 不读 `$DSH_HOME` 之外的位置。
 - M2/M4/M6、R3 的逐项回归、以及 Ubuntu 的部分场景未按 RFC 要求各跑 2 次；上表逐项写明。
 - 迁移后的 profile `cordis.patch.yml` 会被安装器更新 skill 根表达式（内容语义不变）。
+
+
+## 补测（2026-11-10 第二轮）
+
+### M2、M4、M6、R3
+
+| 项 | macOS | Ubuntu |
+|---|---|---|
+| M2 beta.6 → beta.7 | 通过：迁移、6 类一致（provider 只差 skill 根表达式，sessions 按决定不复制） | 通过（2 次，版本标记 beta.1） |
+| M2 beta.1 → beta.7 | **部分**：beta.1 安装器在临时 `DSH_HOME` 下返回成功却没有生成 profile（写到别处/未创建），只能用 beta.6 profile 把版本标记改成 `0.2.0-beta.1` 验证迁移路径；6 类一致 | 同 macOS，2 次 |
+| M4 旧目录还有其他 profile | 通过：只迁移 hyperai，`dsh-tui` 未复制，`~/.dsh` 哈希不变 | 通过（2 次） |
+| M6 迁移失败回滚 | 通过：把 `~/.hyperai/dsh` 变成普通文件制造失败，安装 exit 1、`~/.dsh` 不变；移除阻塞后重跑成功 | 通过（2 次，fail=1、retry 成功） |
+| R3 回归 | 通过：有效直接进入、跳过有标识、/openbayes status 显示已跳过、2 天提醒、过期门、logout 回门、/skills、/provider、/model、doctor 旧数据提示 | 通过（登录门四项各 2 次；doctor 通过） |
+
+### 构建与 skills 快照
+
+- 本地快照的 `contentDigest` = `sha256:c52a8cf76f483cf5ef5836044de9ba5503648f590830450f206464dc79424fa6`，与 beta.6 包（锁定 commit `34f0a1be0c`）完全一致。
+- GitHub 恢复后按正常流程重新构建：`SNAPSHOT.json` 的 repository/ref 恢复为上游地址和 `34f0a1be`，文件内容/内容摘要不变，但元数据变了，因此 sha256 从 `5061edb8…` 变为 `9967457d…`；两次构建一致，服务器已覆盖为 `9967457d…`。
+- 新构建 commit：`157521bd0f8ca286d767720ab647b2fbd0074847`。
+
+### 仍未完成
+
+- **I1**：同事那条 `is incompatible … 0.1.0-rc.7` 仍未复现；已确认 dsh 只读 `$DSH_HOME` 内部位置。
+- **真实 beta.1 二进制安装**：beta.1 安装器在临时 `DSH_HOME` 下没有生成 profile，未能做“真实 beta.1 → beta.7”；M2 的 beta.1 路径是版本标记模拟。
+- Ubuntu 的 I2、I4 没有在最终构建上重跑（I3、I5 已各 2 次）；M1 的 7 类逐项对比在 Ubuntu 上只核对了迁移记录/storages/哈希。
