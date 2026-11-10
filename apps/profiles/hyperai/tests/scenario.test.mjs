@@ -14,7 +14,7 @@ import {
 } from '../scripts/install.mjs'
 
 const TO = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8')).dsh?.tui?.version
-  ?? '0.2.0-beta.6'
+  ?? '0.2.0-beta.7'
 
 function profileDir(home, profile = 'hyperai') {
   return join(home, 'profiles', profile)

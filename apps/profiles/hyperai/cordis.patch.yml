@@ -31,6 +31,6 @@
       - !!js >-
         process.env.DSH_HYPERAI_SKILLS_DIR
           ?? process.getBuiltinModule('node:path').join(
-            process.env.DSH_HOME ?? process.getBuiltinModule('node:path').join(process.getBuiltinModule('node:os').homedir(), '.dsh'),
+            process.env.HYPERAI_DSH_HOME ?? process.env.DSH_HOME ?? process.getBuiltinModule('node:path').join(process.getBuiltinModule('node:os').homedir(), '.hyperai', 'dsh'),
             'profiles', 'hyperai', 'skills')
     watch: true

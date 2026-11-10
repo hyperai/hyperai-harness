@@ -446,7 +446,7 @@ export const DATA_DIR = join(homeDir(), dataDirName());`,
                     return version;
                 }`,
       replace: `                // hyperai-tui: package.json.version is the HyperAI release
-                // (0.2.0-beta.6); the dsh-tui version is recorded in
+                // (0.2.0-beta.7); the dsh-tui version is recorded in
                 // hyperai.upstreamVersion. Every caller of this function means
                 // the upstream TUI package — the dsh-tui half of the version
                 // plate, the version-drift warning and /update target checks —

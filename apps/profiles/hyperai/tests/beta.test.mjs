@@ -85,7 +85,7 @@ test('bundle mode installs a profile from the bundle without the source checkout
       env: {
         ...process.env,
         HOME: home,
-        DSH_HOME: join(home, '.dsh'),
+        HYPERAI_DSH_HOME: join(home, '.dsh'),
         HYPERAI_DIST_ROOT: root,
       },
     })

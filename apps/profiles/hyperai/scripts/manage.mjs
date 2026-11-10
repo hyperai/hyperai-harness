@@ -33,7 +33,7 @@ function readJson(path) {
 function parseArgs(argv) {
   const options = {
     command: undefined,
-    dshHome: process.env.DSH_HOME ?? join(homedir(), '.dsh'),
+    dshHome: process.env.HYPERAI_DSH_HOME ?? join(homedir(), '.hyperai', 'dsh'),
     profile: BRAND.profileName,
     dshBin: process.env.HYPERAI_DSH_BIN ?? 'dsh',
     pnpmBin: process.env.PNPM_BIN ?? 'pnpm',
@@ -183,6 +183,10 @@ export function diagnoseProfile(options) {
   if (status.skillsError !== undefined) issues.push(`skills manifest: ${status.skillsError}`)
   const pending = join(options.profileDir, '.hyperai-skills', 'pending')
   if (existsSync(pending) && readdirSync(pending).length > 0) warnings.push('an interrupted skills transaction has a pending journal; run catalog/update or repair')
+  const legacyProfile = join(homedir(), '.dsh', 'profiles', options.profile)
+  if (resolve(options.profileDir) !== resolve(legacyProfile) && existsSync(legacyProfile)) {
+    warnings.push('旧数据仍然保留在 ~/.dsh，确认新版本没有问题后可以自己删除')
+  }
   const failedNodeModules = join(options.profileDir, '.hyperai-failed-node_modules')
   if (existsSync(failedNodeModules) && readdirSync(failedNodeModules).length > 0) {
     warnings.push(`failed dependency tree quarantine exists at ${failedNodeModules}; a successful repair will remove it after verification`)

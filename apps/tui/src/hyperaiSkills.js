@@ -40,7 +40,7 @@ export function resolveUpdaterContext(env = process.env, argv = process.argv) {
   let profile = resolveDshProfileName(argv)
   profile ??= env.DSH_TUI_PROFILE
   profile ??= 'hyperai'
-  const dshHome = env.DSH_HOME || join(homedir(), '.dsh')
+  const dshHome = env.HYPERAI_DSH_HOME || join(homedir(), '.hyperai', 'dsh')
   const script = join(dshHome, 'profiles', profile, 'scripts', 'skills-update.mjs')
   return {
     profile,

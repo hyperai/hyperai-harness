@@ -1,4 +1,4 @@
-# HyperAI Harness 内测版使用说明（v0.2.0-beta.6）
+# HyperAI Harness 内测版使用说明（v0.2.0-beta.7）
 
 这份说明写给第一次接触 HyperAI Harness 的同事。照着做就能装好，不需要 GitHub 权限，也不需要 clone 任何源码仓库。
 
@@ -44,19 +44,19 @@ HYPERAI_NPM_REGISTRY=https://registry.npmmirror.com ./install.sh
 
 ### 2.1 获取安装包
 
-从分发人处获取安装包和 `.sha256` 文件：`hyperai-harness-0.2.0-beta.6.tar.gz` 与 `hyperai-harness-0.2.0-beta.6.tar.gz.sha256`。
+从分发人处获取安装包和 `.sha256` 文件：`hyperai-harness-0.2.0-beta.7.tar.gz` 与 `hyperai-harness-0.2.0-beta.7.tar.gz.sha256`。
 
 ### 2.2 校验并解压
 
 ```sh
 # 校验（macOS）
-shasum -a 256 -c hyperai-harness-0.2.0-beta.6.tar.gz.sha256
+shasum -a 256 -c hyperai-harness-0.2.0-beta.7.tar.gz.sha256
 # 校验（Ubuntu）
-sha256sum -c hyperai-harness-0.2.0-beta.6.tar.gz.sha256
+sha256sum -c hyperai-harness-0.2.0-beta.7.tar.gz.sha256
 
 # 解压
-tar xzf hyperai-harness-0.2.0-beta.6.tar.gz
-cd hyperai-harness-0.2.0-beta.6
+tar xzf hyperai-harness-0.2.0-beta.7.tar.gz
+cd hyperai-harness-0.2.0-beta.7
 ```
 
 ### 2.3 安装包放在哪里、HyperAI 装在哪里
@@ -64,7 +64,12 @@ cd hyperai-harness-0.2.0-beta.6
 这是两件不同的事：
 
 - **这次下载的压缩包**放在你下载/解压的地方（例如 `~/Downloads`）。校验、解压、运行 `./install.sh` 都在那个目录里完成。
-- **HyperAI 本身**总是装到固定位置：启动命令和运行时在 `~/.hyperai/`，profile 在 `$DSH_HOME/profiles/hyperai/`（默认 `~/.dsh/profiles/hyperai/`）。安装完成后，下载的安装包目录可以删除，不影响使用。
+- **HyperAI 本身**总是装到固定位置：启动命令和运行时在 `~/.hyperai/`，profile 在 **`~/.hyperai/dsh/profiles/hyperai/`**。安装完成后，下载的安装包目录可以删除，不影响使用。
+
+HyperAI 使用**自己独立的 dsh 目录** `~/.hyperai/dsh`，不会读取、也不会修改你电脑上已有的 `~/.dsh`（包括里面的插件、profile、配置和对话）。因此已有 dsh 环境不会让 HyperAI 安装失败，HyperAI 也不会影响它。
+
+- 如果你的 dsh 目录不想放在默认位置，安装时设置 `HYPERAI_DSH_HOME=/你的/目录`；启动时也认这个变量。
+- 你在 shell 里 `export` 的 `DSH_HOME` 会被忽略；安装输出会提示“HyperAI 不会使用它”。
 
 所以你不需要记得上次装在哪里，安装器会自己找到旧版本。
 
@@ -95,7 +100,7 @@ HYPERAI_NPM_REGISTRY=https://registry.npmmirror.com ./install.sh
 |---|---|
 | 启动命令 | `~/.hyperai/bin/hyperai` |
 | dsh / pnpm | `~/.hyperai/runtime/` |
-| profile | `~/.dsh/profiles/hyperai/` |
+| profile | `~/.hyperai/dsh/profiles/hyperai/` |
 | 界面偏好 | `~/.dsh-tui-hyperai/` |
 
 如果 Node 版本不对，脚本会打印中文安装指引并退出，**不会写任何文件**。
@@ -114,7 +119,7 @@ HYPERAI_NPM_REGISTRY=https://registry.npmmirror.com ./install.sh
 export PATH="$HOME/.hyperai/bin:$PATH"
 ```
 
-进去以后看到粉色 `HYPERAI HARNESS` 像素字、右下角铭牌 `hyperai-tui v0.2.0-beta.6 · dsh-tui v0.16.1` 就说明装好了。
+进去以后看到粉色 `HYPERAI HARNESS` 像素字、右下角铭牌 `hyperai-tui v0.2.0-beta.7 · dsh-tui v0.16.1` 就说明装好了。
 
 ---
 
@@ -190,7 +195,7 @@ HyperAI 不预置任何模型服务，用 DSH 原生命令配置：
 1. 输入 `/provider`：添加一个 OpenAI 兼容的服务（填路由名、Base URL、API key）；
 2. 输入 `/model`：选择要用的模型。
 
-API key 由 DSH 保存在 `~/.dsh/.credentials.yaml`（权限 0600），不会进入安装包，也不会写进日志。provider 和模型选择保存在 profile 的 `cordis.patch.yml` 与 `~/.dsh-tui-hyperai/model.json`，重新运行 `install.sh` 不会清掉。
+API key 由 DSH 保存在 `~/.hyperai/dsh/.credentials.yaml`（权限 0600），不会进入安装包，也不会写进日志。provider 和模型选择保存在 profile 的 `cordis.patch.yml` 与 `~/.dsh-tui-hyperai/model.json`，重新运行 `install.sh` 不会清掉。
 
 ---
 
@@ -205,9 +210,9 @@ API key 由 DSH 保存在 `~/.dsh/.credentials.yaml`（权限 0600），不会�
 3. 看文件：
 
 ```sh
-ls ~/.dsh/profiles/hyperai/skills/
+ls ~/.hyperai/dsh/profiles/hyperai/skills/
 ls ~/.agents/skills/openbayes-user/
-cat ~/.dsh/profiles/hyperai/.hyperai-skills/manifest.json
+cat ~/.hyperai/dsh/profiles/hyperai/.hyperai-skills/manifest.json
 ```
 
 `ppt-generation` 需要 Python 3 和 `python-pptx`（安装器不会自动装）：
@@ -227,7 +232,7 @@ python3 -m venv ~/hyperai-ppt && ~/hyperai-ppt/bin/pip install python-pptx
 
 ```text
 检测到已安装：HyperAI Harness 0.2.0-beta.1
-本次安装：    HyperAI Harness 0.2.0-beta.6
+本次安装：    HyperAI Harness 0.2.0-beta.7
 这是一次覆盖升级，不需要先卸载。以下内容会保留：
   - 模型服务配置和 API key
   - 选中的模型和界面偏好
@@ -235,9 +240,19 @@ python3 -m venv ~/hyperai-ppt && ~/hyperai-ppt/bin/pip install python-pptx
   - 你自己添加的 Skills 和文件
 ```
 
-结束时会再总结一次，例如「已从 0.2.0-beta.1 升级到 0.2.0-beta.6，你的配置和对话记录已保留。」。
+结束时会再总结一次，例如「已从 0.2.0-beta.1 升级到 0.2.0-beta.7，你的配置和对话记录已保留。」。
 
-### 7.1 查看自己装的是什么版本
+### 7.1 从旧版本升级（`~/.dsh` → `~/.hyperai/dsh`）
+
+从 beta.6 及更早版本升级时，安装器发现 `~/.dsh/profiles/hyperai` 是本安装器创建的，会自动把 **profile（模型配置、Skills、自建 Skill）和 API key** 复制到 `~/.hyperai/dsh`，然后照常安装。
+
+- **只复制，不改动**：`~/.dsh` 里的文件一个都不会删除或修改，安装前后哈希一致。
+- **不复制对话记录**：`~/.dsh` 里的会话和 storages 可能被其他 dsh profile 共用，分不清归属。以前的对话仍然保存在 `~/.dsh` 里，**没有丢失，只是不会出现在新版本中**。
+- **不复制** `~/.dsh/cordis.patch.yml`（home 级 patch 会叠加到所有 profile）和共享插件树，避免把旧插件带进来。
+- 迁移只做一次，之后以新目录为准。确认新版本没问题后，你可以自己删除 `~/.dsh` 里的 HyperAI 数据（比如 `~/.dsh/profiles/hyperai`）；安装器不会替你删。
+- `--dry-run` 会显示“是否会迁移”，但不会写任何文件。
+
+### 7.2 查看自己装的是什么版本
 
 推荐在解压后的安装包目录里运行：
 
@@ -247,7 +262,7 @@ python3 -m venv ~/hyperai-ppt && ~/hyperai-ppt/bin/pip install python-pptx
 
 它只做识别、不写任何文件，会显示当前版本、目标版本和这次是全新安装还是升级。
 
-### 7.2 降级
+### 7.3 降级
 
 如果这个安装包比已安装的版本旧，安装器默认会停止，并说明「你已经装了更新的版本 X，这个安装包是 Y，降级不做保证」，**不会写入任何文件**。确认要降级时，加 `--allow-downgrade`：
 
@@ -257,12 +272,12 @@ python3 -m venv ~/hyperai-ppt && ~/hyperai-ppt/bin/pip install python-pptx
 
 降级不做数据兼容保证，请先备份重要对话。
 
-### 7.3 升级细节
+### 7.4 升级细节
 
 安装器是幂等的：
 
 - 你的 provider/model 配置、API key、会话记录、`~/.dsh-tui-hyperai` 里的偏好都会保留；
-- 被替换的受管文件会先备份到 `~/.dsh/profiles/hyperai/.hyperai-backups/<时间戳>/`；
+- 被替换的受管文件会先备份到 `~/.hyperai/dsh/profiles/hyperai/.hyperai-backups/<时间戳>/`；
 - 旧版本的 `~/.hyperai/runtime` 会被新版覆盖，启动命令不变；
 - **从旧版（补丁方式）可以直接覆盖安装**，不需要先卸载：安装器会把依赖换成 `file:packages/…tgz`、去掉 `patchedDependencies`，并清理不再使用的 `patches/hyperai-tui.patch`；
 - 安装日志会显示 `replace` / `create` / `unchanged` / `remove`，可以据此确认哪些文件变了。
@@ -279,7 +294,7 @@ node profile/scripts/manage.mjs uninstall --yes
 
 它会：
 
-- 把 profile 归档到 `~/.dsh/profiles/.hyperai-uninstall-backups/<时间戳>/`（包含 Skills、`cordis.patch.yml`、`.hyperai-skills`、`cordis.yml`、`pnpm-lock.yaml` 等用户数据，不含 `node_modules`）；
+- 把 profile 归档到 `~/.hyperai/dsh/profiles/.hyperai-uninstall-backups/<时间戳>/`（包含 Skills、`cordis.patch.yml`、`.hyperai-skills`、`cordis.yml`、`pnpm-lock.yaml` 等用户数据，不含 `node_modules`）；
 - 删除安装器写入的受管文件（`package.json`、`pnpm-workspace.yaml`、`packages/`、`node_modules/`、`.hyperai-install.json` 等）；
 - 删除启动命令 `~/.hyperai/bin/hyperai`。
 
@@ -296,7 +311,7 @@ node profile/scripts/manage.mjs uninstall --yes --purge
 rm -rf ~/.hyperai
 ```
 
-`~/.dsh/.credentials.yaml` 是 DSH 共享凭据，任何卸载命令都不会删它。
+`~/.hyperai/dsh/.credentials.yaml` 是 DSH 共享凭据，任何卸载命令都不会删它。
 
 ---
 
@@ -340,4 +355,4 @@ node profile/scripts/manage.mjs doctor
 
 内测期间请直接联系分发安装包给你的同事。
 
-反馈时请附上：操作系统与版本、`node -v`、安装包文件名、报错截图或文本、以及 `~/.dsh/profiles/hyperai/.hyperai-install.json` 的内容（不含密钥）。
+反馈时请附上：操作系统与版本、`node -v`、安装包文件名、报错截图或文本、以及 `~/.hyperai/dsh/profiles/hyperai/.hyperai-install.json` 的内容（不含密钥）。

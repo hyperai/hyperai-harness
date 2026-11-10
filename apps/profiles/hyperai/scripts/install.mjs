@@ -10,7 +10,7 @@
  *
  *   node scripts/install.mjs [options]
  *
- *   --dsh-home <dir>     Harness home to install into (default: $DSH_HOME or ~/.dsh)
+ *   --dsh-home <dir>     Harness home to install into (default: $HYPERAI_DSH_HOME or ~/.hyperai/dsh)
  *   --profile <name>     Profile name (default: hyperai)
  *   --dsh-bin <path>     dsh executable (default: $HYPERAI_DSH_BIN or `dsh` on PATH)
  *   --no-skills          Skip the hyperai-skills install step
@@ -35,7 +35,7 @@
  * no absolute paths or references back to the checkout.
  */
 import { execFileSync, spawnSync } from 'node:child_process'
-import { createWriteStream, cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, renameSync, rmSync, writeFileSync, realpathSync } from 'node:fs'
+import { chmodSync, createWriteStream, cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, renameSync, rmSync, writeFileSync, realpathSync } from 'node:fs'
 import { homedir, tmpdir } from 'node:os'
 import { basename, dirname, join, resolve } from 'node:path'
 import { get as httpGet } from 'node:http'
@@ -255,12 +255,104 @@ export function compareVersions(a, b) {
  * @param {{ profileDir: string, allowDowngrade?: boolean }} options
  * @returns {{ mode: string, fromVersion?: string, toVersion: string, archive?: string, phase?: string, state?: string, blocked?: boolean }}
  */
+/** The user's own dsh home; only read during migration, never written. */
+export function legacyDshHome(env = process.env) {
+  return join(env.HOME || homedir(), '.dsh')
+}
+
+/** Legacy HyperAI profile created by this installer, if any. */
+export function legacyProfileDir(options = {}, env = process.env) {
+  return options.legacyProfileDir ?? join(legacyDshHome(env), 'profiles', options.profile ?? BRAND.profileName)
+}
+
+function managedProfileAt(dir) {
+  try {
+    return readJson(join(dir, 'package.json'))?.hyperaiTuiManaged === true
+  } catch {
+    return false
+  }
+}
+
+/**
+ * Decide whether the new home should inherit an old ~/.dsh HyperAI install.
+ * Only a profile created by this installer is migrated; a foreign profile is
+ * ignored (and never touched).
+ * @returns {{kind:'migrate'|'foreign', from:string, fromVersion?:string} | undefined}
+ */
+export function detectMigration(options = {}, env = process.env) {
+  const home = options.home ?? env.HOME
+  const defaultHome = join(home, '.hyperai', 'dsh')
+  // Tests and ad-hoc installs pass a throwaway --dsh-home; migration only
+  // applies to the real default home (or an explicit HYPERAI_DSH_HOME).
+  if (options.migrate !== true && resolve(options.dshHome ?? defaultHome) !== resolve(defaultHome) && env.HYPERAI_DSH_HOME === undefined) return undefined
+  const from = legacyProfileDir(options, { HOME: home })
+  const target = join(options.dshHome ?? join(env.HOME || homedir(), '.hyperai', 'dsh'), 'profiles', options.profile ?? BRAND.profileName)
+  if (existsSync(target)) return undefined
+  const record = readJson(join(options.dshHome ?? '', '.hyperai-migration.json'))
+  if (record !== undefined) return undefined
+  if (!existsSync(from)) return undefined
+  const manifest = readJson(join(from, 'package.json'))
+  if (manifest?.hyperaiTuiManaged !== true) return { kind: 'foreign', from }
+  return { kind: 'migrate', from, fromVersion: typeof manifest?.hyperaiTui?.version === 'string' ? manifest.hyperaiTui.version : undefined }
+}
+
+/**
+ * Copy the profile (without node_modules) and the credentials file. Sessions,
+ * storages, the home-level cordis.patch.yml and shared dependency trees stay in
+ * ~/.dsh untouched. On failure the copied pieces are removed again.
+ */
+export function performMigration(options, migration) {
+  const newHome = options.dshHome
+  const target = join(newHome, 'profiles', options.profile ?? BRAND.profileName)
+  const oldCredentials = join(legacyDshHome({ HOME: options.home ?? process.env.HOME }), '.credentials.yaml')
+  const newCredentials = join(newHome, '.credentials.yaml')
+  const homeExisted = existsSync(newHome)
+  let copiedCredentials = false
+  try {
+    mkdirSync(dirname(target), { recursive: true })
+    cpSync(migration.from, target, {
+      recursive: true,
+      filter: source => {
+        const name = basename(source)
+        return name !== 'node_modules' && name !== '.hyperai-failed-node_modules'
+      },
+    })
+    if (existsSync(oldCredentials)) {
+      cpSync(oldCredentials, newCredentials)
+      copiedCredentials = true
+      try { chmodSync(newCredentials, 0o600) } catch { /* chmod best-effort */ }
+    }
+    writeFileSync(join(newHome, '.hyperai-migration.json'), `${JSON.stringify({
+      version: 1,
+      migratedAt: new Date().toISOString(),
+      from: migration.from,
+      fromVersion: migration.fromVersion,
+      copied: ['profile', ...(copiedCredentials ? ['credentials'] : [])],
+      notCopied: ['sessions', 'storages', 'cordis.patch.yml', 'shared node_modules'],
+      sessions: 'left in ~/.dsh',
+    }, undefined, 2)}\n`)
+    return { from: migration.from, copiedCredentials, sessionsCopied: false }
+  } catch (error) {
+    rmSync(target, { recursive: true, force: true })
+    if (copiedCredentials) rmSync(newCredentials, { force: true })
+    if (!homeExisted) rmSync(newHome, { recursive: true, force: true })
+    throw new Error(`迁移失败，已回滚新目录中的复制内容；~/.dsh 没有被改动：${error instanceof Error ? error.message : String(error)}`)
+  }
+}
+
 export function detectInstallScenario(options) {
   const profileDir = options.profileDir
   const toVersion = TUI_PACKAGE.version
   const exists = existsSync(profileDir)
   const entries = exists ? readdirSync(profileDir) : []
-  if (!exists || entries.length === 0) return { mode: 'fresh', toVersion }
+  if (!exists || entries.length === 0) {
+    const migration = options.dshHome === undefined ? undefined : detectMigration(options)
+    if (migration?.kind === 'migrate') {
+      return { mode: 'migrate', toVersion, fromVersion: migration.fromVersion, legacyProfileDir: migration.from }
+    }
+    if (migration?.kind === 'foreign') return { mode: 'fresh', toVersion, ignoredLegacyProfile: migration.from }
+    return { mode: 'fresh', toVersion }
+  }
   const uninstall = readJson(join(profileDir, '.hyperai-uninstall.json'))
   if (uninstall?.status === 'uninstalled') {
     return {
@@ -303,7 +395,17 @@ export function describeScenario(scenario, profileDir) {
   const backup = join(profileDir, '.hyperai-backups', '<时间戳>/')
   const target = `HyperAI Harness ${scenario.toVersion}`
   switch (scenario.mode) {
+    case 'migrate':
+      return [
+        `检测到旧版安装在 ~/.dsh（HyperAI Harness ${scenario.fromVersion ?? '未知版本'}）。`,
+        `这次会把配置和 API key 复制到 ${scenario.toVersion ? '~/.hyperai/dsh' : '~/.hyperai/dsh'}，原来的 ~/.dsh 不会改动。`,
+        '这次不复制对话记录：以前的对话仍然保存在 ~/.dsh 里，没有丢失，只是不会出现在新版本中。',
+        '旧的 home 级 cordis.patch.yml 和共享插件树也不会复制。',
+      ].join('\n')
     case 'fresh':
+      if (scenario.ignoredLegacyProfile !== undefined) {
+        return `没有检测到已安装的 HyperAI Harness，这是一次全新安装：${scenario.toVersion}\n检测到 ~/.dsh 里有一个不是本安装器创建的 hyperai profile，已忽略，没有改动它。`
+      }
       return `没有检测到已安装的 HyperAI Harness，这是一次全新安装：${scenario.toVersion}`
     case 'upgrade':
       return [
@@ -361,7 +463,7 @@ export function describeScenario(scenario, profileDir) {
 /** Parse CLI arguments into an options object. */
 export function parseArgs(argv) {
   const options = {
-    dshHome: process.env.DSH_HOME ?? join(homedir(), '.dsh'),
+    dshHome: process.env.HYPERAI_DSH_HOME ?? join(homedir(), '.hyperai', 'dsh'),
     profile: BRAND.profileName,
     dshBin: process.env.HYPERAI_DSH_BIN ?? 'dsh',
     pnpmBin: process.env.PNPM_BIN ?? 'pnpm',
@@ -828,6 +930,12 @@ export async function install(options = parseArgs([])) {
       `目标目录已存在，并且不是 HyperAI 安装器创建的：${options.profileDir}。` +
         '请先备份该目录；确认要覆盖时，加 --force 重新运行安装。',
     )
+  }
+  const migration = detectMigration(options)
+  if (migration?.kind === 'migrate') {
+    result.migration = { from: migration.from, fromVersion: migration.fromVersion, sessionsCopied: false }
+    plan.push({ file: join(options.dshHome, '.hyperai-migration.json'), action: 'migrate' })
+    if (!options.dryRun) result.migration = { ...result.migration, ...performMigration(options, migration) }
   }
   if (!options.dryRun) mkdirSync(options.profileDir, { recursive: true })
   const startedAt = new Date().toISOString()

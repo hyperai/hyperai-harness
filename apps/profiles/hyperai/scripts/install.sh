@@ -17,7 +17,12 @@ set -eu
 
 HERE=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 HYPERAI_HOME=${HYPERAI_HOME:-"$HOME/.hyperai"}
-DSH_HOME=${DSH_HOME:-"$HOME/.dsh"}
+SHELL_DSH_HOME=${DSH_HOME:-}
+if [ -n "${HYPERAI_DSH_HOME:-}" ]; then
+  DSH_HOME=$HYPERAI_DSH_HOME
+else
+  DSH_HOME="$HOME/.hyperai/dsh"
+fi
 REGISTRY=${HYPERAI_NPM_REGISTRY:-https://registry.npmjs.org}
 PROFILE_NAME=hyperai
 ALLOW_DOWNGRADE=0
@@ -82,6 +87,9 @@ PNPM_VERSION=${HYPERAI_PNPM_VERSION:-$(node -p 'require(process.argv[1]).compone
 PRODUCT_VERSION=$(node -p 'require(process.argv[1]).version' "$HERE/MANIFEST.json")
 
 say "Node.js ${NODE_VERSION} 检查通过；准备安装 HyperAI Harness ${PRODUCT_VERSION}。"
+if [ -n "$SHELL_DSH_HOME" ] && [ "$SHELL_DSH_HOME" != "$DSH_HOME" ]; then
+  say "检测到你设置了 DSH_HOME=${SHELL_DSH_HOME}，HyperAI 不会使用它。"
+fi
 
 # ── 1.5 识别安装场景（只读，先于任何写入） ───────────────────────────────────
 SCENARIO_FLAGS=""
@@ -168,7 +176,7 @@ cat > "$LAUNCHER" <<EOF
 # HyperAI Harness 启动命令（由 install.sh 生成）。
 set -eu
 HYPERAI_HOME="\$(CDPATH= cd -- "\$(dirname -- "\$0")/.." && pwd)"
-DSH_HOME="\${DSH_HOME:-$DSH_HOME}"
+DSH_HOME="\${HYPERAI_DSH_HOME:-$DSH_HOME}"
 export DSH_HOME
 # 内测版默认关闭 Skills 自动检查：同事通常没有 hyperai-skills 仓库权限。
 export HYPERAI_SKILLS_TUI_AUTO="\${HYPERAI_SKILLS_TUI_AUTO:-0}"
@@ -195,6 +203,8 @@ finish_report() {
     interrupted) say "已修复上次未完成的安装，当前版本 ${SCENARIO_TO}。" ;;
     uninstalled) say "已重新安装 ${SCENARIO_TO}（之前的卸载归档不会自动恢复）。" ;;
     upgrade-unknown) say "已从旧版本（未知）升级到 ${SCENARIO_TO}。" ;;
+  migrate) say "已把旧版配置和 API key 复制到新目录，当前版本 ${SCENARIO_TO}。"
+           say "以前的对话仍然保存在 ~/.dsh 里，没有丢失，只是不会出现在新版本中。" ;;
     downgrade) say "已降级到 ${SCENARIO_TO}（降级不做保证）。" ;;
     *) say "已安装 HyperAI Harness ${SCENARIO_TO}。" ;;
   esac

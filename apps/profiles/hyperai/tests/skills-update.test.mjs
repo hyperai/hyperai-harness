@@ -102,7 +102,7 @@ function run(home, args, env = {}) {
   return spawnSync(process.execPath, [CLI, ...args], {
     encoding: 'utf8',
     timeout: 60_000,
-    env: { ...process.env, DSH_HOME: home.root, ...env },
+    env: { ...process.env, HYPERAI_DSH_HOME: home.root, ...env },
   })
 }
 
