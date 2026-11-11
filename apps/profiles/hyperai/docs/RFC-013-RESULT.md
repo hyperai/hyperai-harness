@@ -129,3 +129,23 @@ A6 采用新定义：不检查 `~/.hyperai/profiles/hyperai` 是否删除（unin
 ### A7（2 次）
 
 删除临时 HOME 下的 `prefix`、`~/.dsh`、`~/.dsh-tui*` 后启动 `hyperai`：两次都正常渲染（`dsh-core v0.2.0-rc.2`），`~/.hyperai/dsh/profiles/hyperai`、`~/.hyperai/tui`、`.credentials.yaml` 都在；没有重新创建 `~/.dsh`。
+
+## 第 3 批（macOS）
+
+### A2 修正后重跑（2 次）
+
+用修正后的 `make-real-dsh-env.sh` 重建：`dsh` 0.2.2-rc.1、`dsh-tui` 0.19.0，`command -v dsh` 指向临时 prefix。
+
+| 轮次 | 结果 |
+|---|---|
+| 1 | install exit 0，铭牌 `0.2.0-beta.2.1`，DeepSeek 一侧哈希一致 |
+| 2 | install exit 0，铭牌 `0.2.0-beta.2.1`，DeepSeek 一侧哈希一致 |
+
+### 0.1.0-rc.7 环境
+
+- `npm install @deepseek-ai/dsh@0.1.0-rc.7 @deepseek-harness-tui/dsh-tui@0.16.1` 直接报 peer 冲突；加 `--legacy-peer-deps` 能装完。
+- 但 `<prefix>/node_modules/.bin/dsh --version` 启动即 `ERR_MODULE_NOT_FOUND`（缺少运行时模块），旧版自身起不来；按 RFC“旧版本身装不上/起不来，写明原因并跳过”，A2/A5/A6 的旧版组跳过，不算 HyperAI 问题。
+
+### A3
+
+未完成。需要分别进两个 TUI 改 `/model`、界面设置、装插件并逐步哈希；本轮没有可靠的 TUI 操作脚本，不能把“只改配置文件”写成 A3 通过。
