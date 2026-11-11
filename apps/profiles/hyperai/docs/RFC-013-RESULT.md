@@ -251,3 +251,13 @@ U6 修复后提交 `6f81a7d…`；因 GitHub 再次不可达，测试包用 beta
 HOME 下 `.hyperai` 以外：安装包目录（`rfc013b5/pkg/...`）、测试辅助 `pty-capture.py`、Node/Python 的 `.local` 与 prefix `.bin` 链接、`flow.sh`。没有读写 `~/.dsh`、`~/.dsh-tui*`、DeepSeek prefix；没有访问上游地址。
 
 环境变量：HyperAI 只认 `HYPERAI_HOME`、`HYPERAI_DSH_HOME`；启动器清空 `DSH_*`、`DSH_TUI_*`；安装时检测到 `DSH_HOME` 只提示不使用。`NODE_*`/`npm_config_*` 由安装器改写到 `~/.hyperai/cache`。
+
+## 第 6 批（R2 与剩余项）
+
+### R2 干净环境测试（正式）
+
+命令：`env -i HOME=<空临时目录> PATH=/usr/bin:/bin:<node>:/Users/<user>/.local/bin:/opt/homebrew/bin node --test tests/*.test.mjs`
+
+连续 3 次：85 个测试，83 通过，0 失败，2 跳过（本机缺 `dsh-skill-filesystem`）。结果稳定。
+
+之前 shell 内 3 次 84/1 的 bundle 失败**未能复现**：单独设置 `DSH_PROFILE`、`DSH_PROFILE_DIR`、`DSH_SESSION_ID`、`DSH_SHELL`、`NODE_COMPILE_CACHE` 均通过；随后当前 shell 全量 85/0 通过。判断为并行测试/模拟服务残留导致的测试环境问题，不是产品缺陷；安装器没有读取这些 `DSH_*` 变量。
