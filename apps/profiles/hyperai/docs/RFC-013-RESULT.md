@@ -171,3 +171,50 @@ A6 采用新定义：不检查 `~/.hyperai/profiles/hyperai` 是否删除（unin
 - 因此没有拿到“每一侧只看到自己的模型/设置/插件，且每一步文件只在自己被使用时变化”的可信证据。
 
 结论：**A3 不算通过**，标记为“交给验收和负责人真机检查”；第 3 批的 A2 已完成、rc.7 已按规则跳过。
+
+## 第 4 批（macOS）
+
+### M2 真实 beta.1 → beta.2.1（2 次）
+
+beta.1 包解压到 `beta-test/rfc013-batch4/pkg1`（不走 `/tmp`），只设临时 HOME、`env -u DSH_HOME`。
+
+| 轮次 | 结果 |
+|---|---|
+| 1 | beta.1 profile 版本 `0.2.0-beta.1`；升级 exit 0、有迁移记录；provider 仅 skill 根表达式不同，sessions 不复制，credential/model/prefs/userskill/builtin 一致 |
+| 2 | 同上 |
+
+### M3（2 次）
+
+迁移记录哈希不变（不重复迁移）；在新目录写入 `~/.hyperai/tui/settings.json` 后再安装，修改保持。
+
+### U2（逻辑）
+
+无更高版本、只有更低、只有 draft、附件不全：`checkForUpdate` 均返回 `undefined`（不提示）。
+
+### U3（逻辑）
+
+网络不通、超时、403、乱码：均静默返回 `undefined`，不抛错。
+
+### U6（五类失败）
+
+用模拟 Release 服务在 beta.2.1 环境上跑 `hyperai update --yes`：
+
+| 场景 | 结果 |
+|---|---|
+| sha256 不对 | exit 1，`sha256 校验失败`；版本仍 2.1，设置不变，临时目录 0 |
+| 包里有 `../evil` | exit 1，`安装包包含非法路径`；同上 |
+| 符号链接指向 `/etc/passwd` | exit 1，`安装包包含指向外部的链接`；同上 |
+| 新包 install.sh 退出 7 | exit 1，`新版本安装失败`；同上 |
+| 下载中断 | **首次发现未报错且留下临时目录**；修复为校验 Content-Length/aborted 后，exit 1、`下载中断`，临时目录 0 |
+
+### U7
+
+`--check` 显示 `0.2.0-beta.2.1 → 0.2.0-beta.2.2`；`--yes` 升级成功；再次 `update` 显示“已经是最新版本（0.2.0-beta.2.2）”。
+
+### U8
+
+`--check` 的模拟服务请求日志只有 `GET /repos/hyperai/hyperai-harness/releases`，主机只有 mock；更新相关源码里没有 `npmjs`、`@hyperai/hyperai-tui`、上游 GitHub 仓库引用。
+
+### 构建
+
+U6 修复后提交 `6f81a7d…`；因 GitHub 再次不可达，测试包用 beta.2 技能快照构建，sha256 `8fec9b69…`、18 471 065 字节。正式发布前仍需联网按锁定 commit 重建并更新包/服务器。
