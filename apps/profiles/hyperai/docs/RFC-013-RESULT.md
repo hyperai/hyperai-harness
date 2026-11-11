@@ -38,11 +38,28 @@
 | 项 | 值 |
 |---|---|
 | 文件 | `hyperai-harness-0.2.0-beta.2.1.tar.gz` |
-| 大小 | 18 470 883 字节 |
-| sha256 | `ed42d7de5e5e618fdef77812054af15df4dec10b2db9ac7554c2d853a47145fe` |
-| 构建 commit | `9f2524591fb82cf1cd81afa28fe53f1eb90a1614` |
+| 大小 | 18 470 885 字节 |
+| sha256 | `849409f9fbdc3f8f51fdddd115ff291f4e7ca329e6dfbe4d36498022bd47b752` |
+| 构建 commit | `644c23d2723e2454d44e14840734b610dc3e930a` |
 | 构建 | 同 commit 两次构建一致 |
 
 ## 结论
 
 代码主体已落地，但 RFC-013 的测试矩阵远未跑完（尤其 Ubuntu、A1 清单、U 系列和 A3～A9/M2～M5），现在不能按“已完成”交付。
+
+
+## 第四轮：最终构建与 A6/A7 更正
+
+- GitHub 恢复后按正常流程重建：skills 为上游 `34f0a1be0c`，`contentDigest` 与 beta.2 完全一致（`sha256:c52a8cf7…`）；同一 commit 两次构建 sha 相同。
+- 最终包：`849409f9…`，18 470 885 字节，构建 commit `644c23d…`；已上传服务器并校验，beta.2 保留。
+- A8、A4 最终包各 2 次通过；M4、M5 各 2 次通过；U1 最终包确认启动时显示中文提示（缓存、单次请求）；U4 关闭后 0 请求；A9 自定义 `HYPERAI_HOME` 2 次通过；A7 删除手写 DSH 目录后 HyperAI 启动、配置在，2 次通过。
+- **A6/A7 第一版测法不成立**：负责人指出必须用 npm 装出的真实 DeepSeek Harness（独立 prefix、`~/.dsh` 里 dsh-tui profile 和插件、`~/.dsh-tui*`），不能用拷贝 dsh 二进制或手写文件代替。第一版结果作废，未计入。需要按此重测。
+
+## 仍未完成
+
+- A1 清单（beta.2 / beta.2.1）没有实际 `fs_usage`/`strace` 采集；macOS 本机无 sudo，`fs_usage` 无法运行。
+- A2 真实 npm 安装 DeepSeek Harness 环境未搭；A3、A5 未测；A6/A7 需按负责人定义重测。
+- M2（真实 beta.1）未测；M3 未单独测。
+- U2、U3、U6、U7、U8 未测。
+- Ubuntu 全部场景未跑；macOS 多数项未达到每项 2 次。
+- 因此 RFC-013 仍不能按“已完成”交付。
