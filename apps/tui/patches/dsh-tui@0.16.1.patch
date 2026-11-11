@@ -252,10 +252,10 @@ index 71e32df..4f233d0 100644
      setActiveBrand(resolveBrand(config.brand, backendChoice));
 diff --git a/lib/types/hyperaiSkills.js b/lib/types/hyperaiSkills.js
 new file mode 100644
-index 0000000..359ac8a
+index 0000000..357e36d
 --- /dev/null
 +++ b/lib/types/hyperaiSkills.js
-@@ -0,0 +1,310 @@
+@@ -0,0 +1,313 @@
 +/**
 + * HyperAI skills updater bridge for the TUI.
 + *
@@ -558,11 +558,14 @@ index 0000000..359ac8a
 +    let alive = true
 +    const timer = setTimeout(() => {
 +      void checkForUpdate().then(result => {
-+        if (alive && result !== undefined) setUpdateNotice(updateNoticeText(result.latest, lang()))
++        if (!alive || result === undefined) return
++        const message = updateNoticeText(result.latest, lang())
++        setUpdateNotice(message)
++        try { channel.notify(message, { color: 'info', timeoutMs: 60_000 }) } catch { /* notification is best-effort */ }
 +      }).catch(() => {})
 +    }, 1500)
 +    return () => { alive = false; clearTimeout(timer) }
-+  }, [])
++  }, [channel])
 +
 +  return { notice: updateNotice ?? notice, open }
 +}
