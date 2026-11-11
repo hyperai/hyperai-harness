@@ -20,6 +20,7 @@ import { existsSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { join } from 'node:path'
 import { getLang } from './i18n.js'
+import { checkForUpdate, updateNoticeText } from './hyperaiUpdate.js'
 import { resolveDshProfileName } from './update.js'
 import {
   checkingText, choices, confirmMessage, currentText, detailOptions, dialogTitle, errorText, errorTitle,
@@ -38,9 +39,9 @@ function lang() {
 /** Locate the installed updater for this profile; undefined when unavailable. */
 export function resolveUpdaterContext(env = process.env, argv = process.argv) {
   let profile = resolveDshProfileName(argv)
-  profile ??= env.DSH_TUI_PROFILE
+  profile ??= env.HYPERAI_PROFILE ?? 'hyperai'
   profile ??= 'hyperai'
-  const dshHome = env.DSH_HOME || join(homedir(), '.dsh')
+  const dshHome = env.HYPERAI_DSH_HOME || (env.HYPERAI_HOME === undefined ? join(homedir(), '.hyperai', 'dsh') : join(env.HYPERAI_HOME, 'dsh'))
   const script = join(dshHome, 'profiles', profile, 'scripts', 'skills-update.mjs')
   return {
     profile,
@@ -149,6 +150,7 @@ export function useSkillsUpdate({ channel, dialogs }) {
   if (contextRef.current === undefined) contextRef.current = resolveUpdaterContext()
   const context = contextRef.current
   const [notice, setNotice] = React.useState(null)
+  const [updateNotice, setUpdateNotice] = React.useState(null)
   const notifiedRef = React.useRef(null)
   const busyRef = React.useRef(false)
   const aliveRef = React.useRef(true)
@@ -294,5 +296,15 @@ export function useSkillsUpdate({ channel, dialogs }) {
     return () => { cancelled = true; clearTimeout(timer) }
   }, [context, notify])
 
-  return { notice, open }
+  React.useEffect(() => {
+    let alive = true
+    const timer = setTimeout(() => {
+      void checkForUpdate().then(result => {
+        if (alive && result !== undefined) setUpdateNotice(updateNoticeText(result.latest, lang()))
+      }).catch(() => {})
+    }, 1500)
+    return () => { alive = false; clearTimeout(timer) }
+  }, [])
+
+  return { notice: updateNotice ?? notice, open }
 }

@@ -56,7 +56,7 @@ normal upstream session/chat/tool features remain available.
 `/settings` retains a few upstream compatibility toggles (header art, maid
 portrait, welcome animation, splash font). They are explicitly labelled as not
 used by HyperAI; the branded splash is always the solid pixel wordmark. The
-version plate distinguishes the HyperAI product version (`hyperai-tui v0.2.0-beta.2`)
+version plate distinguishes the HyperAI product version (`hyperai-tui v0.2.0-beta.2.1`)
 from the pinned upstream TUI version (`dsh-tui v0.16.1`), and the terminal title
 carries no upstream whale glyph. Very narrow terminal windows keep upstream's
 plain-title fallback rather than a cropped pixel wordmark.
@@ -82,7 +82,7 @@ Two guarantees are enforced by assertions, not convention:
 
 `upstream.json` pins the input by size, sha256 and npm integrity; the builder
 refuses any other bytes before unpacking. The product `version` is the HyperAI
-release (`0.2.0-beta.2`), while `hyperai.upstreamVersion` keeps `0.16.1` for the
+release (`0.2.0-beta.2.1`), while `hyperai.upstreamVersion` keeps `0.16.1` for the
 `dsh-tui v…` half of the plate and for update/version-drift logic.
 
 ## Commands
@@ -183,7 +183,7 @@ as a follow-up, not part of this distribution.
   into collision; the checked-in 120/110/80/56-column PTY captures under
   [`docs/screenshots/real/`](docs/screenshots/real/) show the product version
   remains readable. At 56 columns the footer intentionally shows the compact
-  `hyperai v0.2.0-beta.2` product label and omits the upstream `dsh-tui` version rather
+  `hyperai v0.2.0-beta.2.1` product label and omits the upstream `dsh-tui` version rather
   than squeezing or overlapping text; 80 columns is the comfortable minimum for
   the full pair. Exact terminal certificates remain QA-owned.
 

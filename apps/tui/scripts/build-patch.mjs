@@ -387,28 +387,11 @@ export const HYPERAI_PALETTE = Object.freeze({
       find: `/** Data directory all preferences/history live in (\`~/.dsh-tui\`). */
 export const DATA_DIR = join(homeDir(), '.dsh-tui');`,
       replace: `/**
- * hyperai-tui: keep a second dsh profile from reading and writing the dsh-tui
- * profile's UI state. Upstream keeps every preference (model route, workspace,
- * history, onboarding) under one \`~/.dsh-tui\`; that would let a \`/model\` pick
- * in the hyperai profile overwrite the dsh-tui profile's persisted route. The
- * dsh-tui profile keeps the legacy path; any other profile gets its own
- * \`~/.dsh-tui-<profile>\` root.
- * @returns The directory name for the current profile's UI state.
+ * hyperai-tui: all UI state lives inside HyperAI's own directory, never in
+ * ~/.dsh-tui* (which belongs to DeepSeek Harness). HYPERAI_TUI_DIR is set by
+ * the generated launcher; the fallback keeps direct runs isolated too.
  */
-function dataDirName() {
-    const argv = process.argv;
-    let profile;
-    for (let index = 0; index < argv.length; index++) {
-        if (argv[index] === '--profile' && typeof argv[index + 1] === 'string')
-            profile = argv[index + 1];
-        else if (argv[index].startsWith('--profile='))
-            profile = argv[index].slice('--profile='.length);
-    }
-    profile ??= process.env.DSH_TUI_PROFILE;
-    return profile === undefined || profile === '' || profile === 'dsh-tui' ? '.dsh-tui' : \`.dsh-tui-\${profile}\`;
-}
-/** Data directory all preferences/history live in (\`~/.dsh-tui\`). */
-export const DATA_DIR = join(homeDir(), dataDirName());`,
+export const DATA_DIR = process.env.HYPERAI_TUI_DIR || join(homeDir(), '.hyperai', 'tui');`,
     },
     {
       file: 'lib/types/components/LogoV2.js',
@@ -446,7 +429,7 @@ export const DATA_DIR = join(homeDir(), dataDirName());`,
                     return version;
                 }`,
       replace: `                // hyperai-tui: package.json.version is the HyperAI release
-                // (0.2.0-beta.2); the dsh-tui version is recorded in
+                // (0.2.0-beta.2.1); the dsh-tui version is recorded in
                 // hyperai.upstreamVersion. Every caller of this function means
                 // the upstream TUI package — the dsh-tui half of the version
                 // plate, the version-drift warning and /update target checks —

@@ -10,7 +10,7 @@
  *
  *   node scripts/install.mjs [options]
  *
- *   --dsh-home <dir>     Harness home to install into (default: $DSH_HOME or ~/.dsh)
+ *   --dsh-home <dir>     Harness home to install into (default: $HYPERAI_DSH_HOME or ~/.hyperai/dsh)
  *   --profile <name>     Profile name (default: hyperai)
  *   --dsh-bin <path>     dsh executable (default: $HYPERAI_DSH_BIN or `dsh` on PATH)
  *   --no-skills          Skip the hyperai-skills install step
@@ -34,9 +34,9 @@
  * no absolute paths or references back to the checkout.
  */
 import { execFileSync, spawnSync } from 'node:child_process'
-import { cpSync, existsSync, mkdirSync, readFileSync, readdirSync, renameSync, rmSync, writeFileSync, realpathSync } from 'node:fs'
+import { chmodSync, cpSync, existsSync, mkdirSync, readFileSync, readdirSync, renameSync, rmSync, writeFileSync, realpathSync } from 'node:fs'
 import { homedir } from 'node:os'
-import { basename, dirname, join, resolve } from 'node:path'
+import { basename, dirname, join, resolve, sep } from 'node:path'
 import { preflight as runPreflight } from './preflight.mjs'
 import { brand, isBundled, profileTemplateDir, skillsLockPath, skillsSnapshotDir, tuiPackage, tuiTarballPath } from './distribution.mjs'
 import { fileURLToPath } from 'node:url'
@@ -57,7 +57,7 @@ const INSTALL_STATE = '.hyperai-install.json'
 /** Parse CLI arguments into an options object. */
 export function parseArgs(argv) {
   const options = {
-    dshHome: process.env.DSH_HOME ?? join(homedir(), '.dsh'),
+    dshHome: process.env.HYPERAI_DSH_HOME ?? join(process.env.HYPERAI_HOME ?? join(homedir(), '.hyperai'), 'dsh'),
     profile: BRAND.profileName,
     dshBin: process.env.HYPERAI_DSH_BIN ?? 'dsh',
     pnpmBin: process.env.PNPM_BIN ?? 'pnpm',
@@ -468,6 +468,92 @@ function verifyInstall(options) {
  * @param options - Parsed CLI options.
  * @returns A summary object for the CLI and tests.
  */
+/** The user's own dsh home; migration only reads it, never writes it. */
+export function legacyDshHome(env = process.env, home) {
+  return join(home ?? env.HOME ?? homedir(), '.dsh')
+}
+
+/** Legacy HyperAI profile created by this installer, if any. */
+export function legacyProfileDir(options = {}, env = process.env) {
+  return join(legacyDshHome(env, options.home), 'profiles', options.profile ?? BRAND.profileName)
+}
+
+/**
+ * Decide whether the new home should inherit an old ~/.dsh HyperAI install.
+ * Only a profile created by this installer is migrated; a foreign profile is
+ * ignored and never touched.
+ */
+export function detectMigration(options = {}, env = process.env) {
+  const home = options.home ?? env.HOME
+  const defaultHome = join(process.env.HYPERAI_HOME ?? join(home ?? homedir(), '.hyperai'), 'dsh')
+  if (options.migrate !== true && resolve(options.dshHome) !== resolve(defaultHome)) return undefined
+  const from = legacyProfileDir(options, env)
+  const target = join(options.dshHome, 'profiles', options.profile ?? BRAND.profileName)
+  if (existsSync(target) || existsSync(join(options.dshHome, '.hyperai-migration.json'))) return undefined
+  if (!existsSync(from)) return undefined
+  const manifest = readJson(join(from, 'package.json'))
+  if (manifest?.hyperaiTuiManaged !== true) return { kind: 'foreign', from }
+  return {
+    kind: 'migrate',
+    from,
+    fromVersion: typeof manifest?.hyperaiTui?.version === 'string' ? manifest.hyperaiTui.version : undefined,
+    legacyTuiDir: join(home ?? env.HOME ?? homedir(), '.dsh-tui-hyperai'),
+  }
+}
+
+/**
+ * Copy the managed profile (without node_modules), the credentials file and the
+ * TUI state. Sessions, the home-level cordis.patch.yml, shared node_modules and
+ * other profiles stay untouched in ~/.dsh.
+ */
+export function performMigration(options, migration) {
+  const newHome = options.dshHome
+  const target = join(newHome, 'profiles', options.profile ?? BRAND.profileName)
+  const oldDsh = migration.from.split(`${sep}profiles${sep}`)[0]
+  const oldCredentials = join(oldDsh, '.credentials.yaml')
+  const newCredentials = join(newHome, '.credentials.yaml')
+  const newTui = options.tuiDir ?? join(options.HYPERAI_HOME ?? process.env.HYPERAI_HOME ?? join(options.home ?? homedir(), '.hyperai'), 'tui')
+  const homeExisted = existsSync(newHome)
+  let copiedCredentials = false
+  let copiedTui = false
+  try {
+    mkdirSync(dirname(target), { recursive: true })
+    cpSync(migration.from, target, {
+      recursive: true,
+      filter: source => {
+        const name = basename(source)
+        return name !== 'node_modules' && name !== '.hyperai-failed-node_modules'
+      },
+    })
+    if (existsSync(oldCredentials)) {
+      cpSync(oldCredentials, newCredentials)
+      copiedCredentials = true
+      try { chmodSync(newCredentials, 0o600) } catch { /* best-effort */ }
+    }
+    if (migration.legacyTuiDir !== undefined && existsSync(migration.legacyTuiDir)) {
+      mkdirSync(newTui, { recursive: true })
+      cpSync(migration.legacyTuiDir, newTui, { recursive: true })
+      copiedTui = true
+    }
+    writeFileSync(join(newHome, '.hyperai-migration.json'), `${JSON.stringify({
+      version: 1,
+      migratedAt: new Date().toISOString(),
+      from: migration.from,
+      fromVersion: migration.fromVersion,
+      copied: ['profile', ...(copiedCredentials ? ['credentials'] : []), ...(copiedTui ? ['tui-state'] : [])],
+      notCopied: ['sessions', 'cordis.patch.yml', 'shared node_modules', 'other profiles'],
+      sessions: 'left in ~/.dsh',
+    }, undefined, 2)}\n`)
+    return { from: migration.from, copiedCredentials, copiedTui, sessionsCopied: false }
+  } catch (error) {
+    rmSync(target, { recursive: true, force: true })
+    if (copiedCredentials) rmSync(newCredentials, { force: true })
+    if (copiedTui) rmSync(newTui, { recursive: true, force: true })
+    if (!homeExisted) rmSync(newHome, { recursive: true, force: true })
+    throw new Error(`迁移失败，已回滚复制内容；旧目录没有被改动：${error instanceof Error ? error.message : String(error)}`)
+  }
+}
+
 export async function install(options = parseArgs([])) {
   const plan = []
   const result = { profileDir: options.profileDir, plan, skills: undefined, warnings: [] }
@@ -503,6 +589,12 @@ export async function install(options = parseArgs([])) {
       `refusing to touch ${options.profileDir}: it exists but was not created by this installer. ` +
         'Use --force to back it up and replace the managed files.',
     )
+  }
+  const migration = detectMigration(options)
+  if (migration?.kind === 'migrate') {
+    result.migration = { from: migration.from, fromVersion: migration.fromVersion, sessionsCopied: false }
+    plan.push({ file: join(options.dshHome, '.hyperai-migration.json'), action: 'migrate' })
+    if (!options.dryRun) result.migration = { ...result.migration, ...performMigration(options, migration) }
   }
   if (!options.dryRun) mkdirSync(options.profileDir, { recursive: true })
   const startedAt = new Date().toISOString()

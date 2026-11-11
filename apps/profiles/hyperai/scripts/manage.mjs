@@ -33,7 +33,7 @@ function readJson(path) {
 function parseArgs(argv) {
   const options = {
     command: undefined,
-    dshHome: process.env.DSH_HOME ?? join(homedir(), '.dsh'),
+    dshHome: process.env.HYPERAI_DSH_HOME ?? join(process.env.HYPERAI_HOME ?? join(homedir(), '.hyperai'), 'dsh'),
     profile: BRAND.profileName,
     dshBin: process.env.HYPERAI_DSH_BIN ?? 'dsh',
     pnpmBin: process.env.PNPM_BIN ?? 'pnpm',

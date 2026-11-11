@@ -91,7 +91,7 @@ test('profile isolation, version plate and branded links stay wired', () => {
   for (const marker of [
     `hyperai-tui v${tuiPackage.version}`,
     ' · dsh-tui v${tuiVersion}',
-    '.dsh-tui-${profile}',
+    'HYPERAI_TUI_DIR',
     'https://github.com/hyperai/hyperai-harness',
     'const onboardingOnBoot = false;',
     'const uniformBrand = true;',

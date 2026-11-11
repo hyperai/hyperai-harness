@@ -33,7 +33,7 @@ const HERE = dirname(fileURLToPath(import.meta.url))
 export function parseArgs(argv) {
   const options = {
     command: undefined,
-    dshHome: process.env.DSH_HOME ?? join(homedir(), '.dsh'),
+    dshHome: process.env.HYPERAI_DSH_HOME ?? join(process.env.HYPERAI_HOME ?? join(homedir(), '.hyperai'), 'dsh'),
     profile: 'hyperai',
     repo: process.env.HYPERAI_SKILLS_REPO ?? DEFAULT_REPO,
     ref: STABLE_REF,

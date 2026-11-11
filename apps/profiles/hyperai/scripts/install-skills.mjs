@@ -50,7 +50,7 @@ const MANIFEST_SCHEMA = 1
 /** Parse CLI arguments. */
 export function parseArgs(argv) {
   const options = {
-    dshHome: process.env.DSH_HOME ?? '',
+    dshHome: '',
     profile: BRAND.profileName,
     lockPath: DEFAULT_LOCK,
     ref: undefined,
@@ -93,13 +93,13 @@ export function parseArgs(argv) {
  * @param {{requireDshHome?: boolean}} [requirements]
  */
 export function normalizeSkillOptions(options = {}, requirements = {}) {
-  const dshHome = options.dshHome ?? process.env.DSH_HOME
+  const dshHome = options.dshHome ?? process.env.HYPERAI_DSH_HOME ?? (process.env.HYPERAI_HOME === undefined ? undefined : join(process.env.HYPERAI_HOME, 'dsh'))
   if ((requirements.requireDshHome ?? true) && (dshHome === undefined || dshHome === '')) {
-    throw new Error('a Harness home is required: pass --dsh-home or export DSH_HOME')
+    throw new Error('a Harness home is required: pass --dsh-home or set HYPERAI_DSH_HOME')
   }
   const profile = options.profile ?? BRAND.profileName
   const profileDir = options.profileDir ?? (dshHome === undefined || dshHome === '' ? undefined : join(resolve(dshHome), 'profiles', profile))
-  if (profileDir === undefined) throw new Error('a Harness home is required: pass --dsh-home or export DSH_HOME')
+  if (profileDir === undefined) throw new Error('a Harness home is required: pass --dsh-home or set HYPERAI_DSH_HOME')
   const stateDir = options.stateDir ?? join(profileDir, '.hyperai-skills')
   return {
     ...options,

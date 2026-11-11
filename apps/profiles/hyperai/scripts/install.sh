@@ -9,7 +9,7 @@
 #
 # 可用环境变量：
 #   HYPERAI_HOME         HyperAI 自己的安装目录（默认 ~/.hyperai）
-#   DSH_HOME             Harness home（默认 ~/.dsh）
+#   HYPERAI_DSH_HOME     HyperAI 自己的 dsh 目录（默认 $HYPERAI_HOME/dsh）
 #   HYPERAI_NPM_REGISTRY npm 源（默认官方源；国内可换成镜像）
 #   HYPERAI_DSH_VERSION  仅测试用，覆盖固定的 dsh 版本
 #   HYPERAI_PNPM_VERSION 仅测试用，覆盖固定的 pnpm 版本
@@ -17,7 +17,17 @@ set -eu
 
 HERE=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 HYPERAI_HOME=${HYPERAI_HOME:-"$HOME/.hyperai"}
-DSH_HOME=${DSH_HOME:-"$HOME/.dsh"}
+SHELL_DSH_HOME=${DSH_HOME:-}
+if [ -n "${HYPERAI_DSH_HOME:-}" ]; then
+  DSH_HOME=$HYPERAI_DSH_HOME
+else
+  DSH_HOME="$HYPERAI_HOME/dsh"
+fi
+export HYPERAI_HOME
+mkdir -p "$HYPERAI_HOME/cache/npm" "$HYPERAI_HOME/cache/pnpm"
+export npm_config_cache="$HYPERAI_HOME/cache/npm"
+export PNPM_HOME="$HYPERAI_HOME/cache/pnpm"
+export HYPERAI_TUI_DIR="${HYPERAI_TUI_DIR:-$HYPERAI_HOME/tui}"
 REGISTRY=${HYPERAI_NPM_REGISTRY:-https://registry.npmjs.org}
 
 say() { printf '[%s] %s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$*" >&2; }
@@ -27,6 +37,9 @@ say "HyperAI Harness 内测版安装程序"
 say "  安装包：$HERE"
 say "  HyperAI 目录：$HYPERAI_HOME"
 say "  Harness home：$DSH_HOME"
+if [ -n "$SHELL_DSH_HOME" ] && [ "$SHELL_DSH_HOME" != "$DSH_HOME" ]; then
+  say "检测到你设置了 DSH_HOME=$SHELL_DSH_HOME，HyperAI 不会使用它。"
+fi
 say ""
 
 # ── 1. Node.js 检查（任何写入之前） ───────────────────────────────────────────
@@ -71,6 +84,16 @@ PNPM_VERSION=${HYPERAI_PNPM_VERSION:-$(node -p 'require(process.argv[1]).compone
 PRODUCT_VERSION=$(node -p 'require(process.argv[1]).version' "$HERE/MANIFEST.json")
 
 say "Node.js ${NODE_VERSION} 检查通过；准备安装 HyperAI Harness ${PRODUCT_VERSION}。"
+
+# ── 1.5 旧版本迁移提示 ───────────────────────────────────────────────────────
+OLD_PROFILE="$HOME/.dsh/profiles/hyperai"
+MIGRATING=0
+if [ ! -e "$DSH_HOME/profiles/hyperai/package.json" ] && [ ! -e "$DSH_HOME/.hyperai-migration.json" ] && [ -f "$OLD_PROFILE/package.json" ] && grep -q '"hyperaiTuiManaged": true' "$OLD_PROFILE/package.json"; then
+  MIGRATING=1
+  say "检测到旧版安装在 ~/.dsh，这次会把配置、API key 和界面设置复制到 $HYPERAI_HOME。"
+  say "原来的 ~/.dsh 不会改动；以前的对话仍然保存在 ~/.dsh 里，没有丢失，只是不会出现在新版本中。"
+fi
+export HYPERAI_TUI_MIGRATING="$MIGRATING"
 
 # ── 2. 隔离的运行时（dsh + pnpm） ───────────────────────────────────────────
 RUNTIME="$HYPERAI_HOME/runtime"
@@ -123,15 +146,34 @@ esac
 
 # ── 5. 启动命令 ─────────────────────────────────────────────────────────────
 LAUNCHER="$BIN_DIR/hyperai"
+mkdir -p "$HYPERAI_HOME/lib"
+if [ -f "$HERE/profile/scripts/update.mjs" ]; then
+  cp "$HERE/profile/scripts/update.mjs" "$HYPERAI_HOME/lib/update.mjs"
+  cp "$HERE/profile/scripts/update-lib.mjs" "$HYPERAI_HOME/lib/update-lib.mjs"
+fi
 cat > "$LAUNCHER" <<EOF
 #!/bin/sh
 # HyperAI Harness 启动命令（由 install.sh 生成）。
 set -eu
-HYPERAI_HOME="\$(CDPATH= cd -- "\$(dirname -- "\$0")/.." && pwd)"
-DSH_HOME="\${DSH_HOME:-$DSH_HOME}"
+HYPERAI_HOME="\${HYPERAI_HOME:-\$(CDPATH= cd -- "\$(dirname -- "\$0")/.." && pwd)}"
+export HYPERAI_HOME
+# 只认 HyperAI 自己的变量；清掉用户 shell 里会影响 dsh/TUI 的外部配置。
+for name in \$(env | sed -n 's/^\(DSH_[A-Za-z0-9_]*\)=.*/\1/p'); do unset "\$name"; done
+unset DSH_TUI_PROFILE DSH_TUI_HOME DSH_CONFIG_HOME DSH_STATE_HOME DSH_CACHE_HOME
+export HYPERAI_DSH_HOME="\${HYPERAI_DSH_HOME:-$DSH_HOME}"
+DSH_HOME="\$HYPERAI_DSH_HOME"
 export DSH_HOME
+export HYPERAI_TUI_DIR="\${HYPERAI_TUI_DIR:-\$HYPERAI_HOME/tui}"
+export npm_config_cache="\$HYPERAI_HOME/cache/npm"
+export PNPM_HOME="\$HYPERAI_HOME/cache/pnpm"
 # 内测版默认关闭 Skills 自动检查：同事通常没有 hyperai-skills 仓库权限。
 export HYPERAI_SKILLS_TUI_AUTO="\${HYPERAI_SKILLS_TUI_AUTO:-0}"
+case "\${1:-}" in
+  update)
+    shift
+    exec node "\$HYPERAI_HOME/lib/update.mjs" "\$@"
+    ;;
+esac
 exec "\$HYPERAI_HOME/runtime/node_modules/.bin/dsh" --profile hyperai "\$@"
 EOF
 chmod +x "$LAUNCHER"
@@ -156,6 +198,9 @@ if ! printf '%s' ":$PATH:" | grep -q ":$BIN_DIR:"; then
   say "如果希望直接输入 hyperai 启动，把下面一行加进 shell 配置（~/.zshrc 或 ~/.bashrc）："
   say "  export PATH=\"$BIN_DIR:\$PATH\""
   say ""
+fi
+if [ "$MIGRATING" = "1" ]; then
+  say "迁移完成：配置、API key 和界面设置已复制到 $HYPERAI_HOME；旧对话仍然在 ~/.dsh，不会出现在新版本中。"
 fi
 say "首次使用：进入 TUI 后用 /provider 添加模型服务，再用 /model 选择模型。"
 say "API key 由 DSH 保存在 $DSH_HOME/.credentials.yaml（权限 0600），不会写进安装包。"

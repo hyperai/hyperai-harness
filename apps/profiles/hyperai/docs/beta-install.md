@@ -1,4 +1,4 @@
-# HyperAI Harness 内测版使用说明（v0.2.0-beta.2）
+# HyperAI Harness 内测版使用说明（v0.2.0-beta.2.1）
 
 这份说明写给第一次接触 HyperAI Harness 的同事。照着做就能装好，不需要 GitHub 权限，也不需要 clone 任何源码仓库。
 
@@ -44,19 +44,19 @@ HYPERAI_NPM_REGISTRY=https://registry.npmmirror.com ./install.sh
 
 ### 2.1 获取安装包
 
-从分发人处获取安装包和 `.sha256` 文件：`hyperai-harness-0.2.0-beta.2.tar.gz` 与 `hyperai-harness-0.2.0-beta.2.tar.gz.sha256`。
+从分发人处获取安装包和 `.sha256` 文件：`hyperai-harness-0.2.0-beta.2.1.tar.gz` 与 `hyperai-harness-0.2.0-beta.2.1.tar.gz.sha256`。
 
 ### 2.2 校验并解压
 
 ```sh
 # 校验（macOS）
-shasum -a 256 -c hyperai-harness-0.2.0-beta.2.tar.gz.sha256
+shasum -a 256 -c hyperai-harness-0.2.0-beta.2.1.tar.gz.sha256
 # 校验（Ubuntu）
-sha256sum -c hyperai-harness-0.2.0-beta.2.tar.gz.sha256
+sha256sum -c hyperai-harness-0.2.0-beta.2.1.tar.gz.sha256
 
 # 解压
-tar xzf hyperai-harness-0.2.0-beta.2.tar.gz
-cd hyperai-harness-0.2.0-beta.2
+tar xzf hyperai-harness-0.2.0-beta.2.1.tar.gz
+cd hyperai-harness-0.2.0-beta.2.1
 ```
 
 ### 2.3 安装
@@ -86,8 +86,8 @@ HYPERAI_NPM_REGISTRY=https://registry.npmmirror.com ./install.sh
 |---|---|
 | 启动命令 | `~/.hyperai/bin/hyperai` |
 | dsh / pnpm | `~/.hyperai/runtime/` |
-| profile | `~/.dsh/profiles/hyperai/` |
-| 界面偏好 | `~/.dsh-tui-hyperai/` |
+| profile | `~/.hyperai/dsh/profiles/hyperai/` |
+| 界面偏好 | `~/.hyperai/tui/` |
 
 如果 Node 版本不对，脚本会打印中文安装指引并退出，**不会写任何文件**。
 
@@ -105,7 +105,7 @@ HYPERAI_NPM_REGISTRY=https://registry.npmmirror.com ./install.sh
 export PATH="$HOME/.hyperai/bin:$PATH"
 ```
 
-进去以后看到粉色 `HYPERAI HARNESS` 像素字、右下角铭牌 `hyperai-tui v0.2.0-beta.2 · dsh-tui v0.16.1` 就说明装好了。
+进去以后看到粉色 `HYPERAI HARNESS` 像素字、右下角铭牌 `hyperai-tui v0.2.0-beta.2.1 · dsh-tui v0.16.1` 就说明装好了。
 
 ---
 
@@ -116,7 +116,7 @@ HyperAI 不预置任何模型服务，用 DSH 原生命令配置：
 1. 输入 `/provider`：添加一个 OpenAI 兼容的服务（填路由名、Base URL、API key）；
 2. 输入 `/model`：选择要用的模型。
 
-API key 由 DSH 保存在 `~/.dsh/.credentials.yaml`（权限 0600），不会进入安装包，也不会写进日志。provider 和模型选择保存在 profile 的 `cordis.patch.yml` 与 `~/.dsh-tui-hyperai/model.json`，重新运行 `install.sh` 不会清掉。
+API key 由 DSH 保存在 `~/.hyperai/dsh/.credentials.yaml`（权限 0600），不会进入安装包，也不会写进日志。provider 和模型选择保存在 profile 的 `cordis.patch.yml` 与 `~/.dsh-tui-hyperai/model.json`，重新运行 `install.sh` 不会清掉。
 
 ---
 
@@ -150,13 +150,34 @@ python3 -m venv ~/hyperai-ppt && ~/hyperai-ppt/bin/pip install python-pptx
 
 拿到新安装包后重复第 2 节（校验、解压、`./install.sh`）。安装器是幂等的：
 
-- 你的 provider/model 配置、API key、会话记录、`~/.dsh-tui-hyperai` 里的偏好都会保留；
+- 你的 provider/model 配置、API key、`~/.hyperai/tui` 里的偏好都会保留；旧对话按迁移规则留在 `~/.dsh`；
 - 被替换的受管文件会先备份到 `~/.dsh/profiles/hyperai/.hyperai-backups/<时间戳>/`；
 - 旧版本的 `~/.hyperai/runtime` 会被新版覆盖，启动命令不变；
 - **从旧版（补丁方式）可以直接覆盖安装**，不需要先卸载：安装器会把依赖换成 `file:packages/…tgz`、去掉 `patchedDependencies`，并清理不再使用的 `patches/hyperai-tui.patch`；
 - 安装日志会显示 `replace` / `create` / `unchanged` / `remove`，可以据此确认哪些文件变了。
 
 ---
+
+### 6.1 从 beta.1 / beta.2 升级（迁移）
+
+旧版本的 HyperAI 数据在 `~/.dsh/profiles/hyperai` 和 `~/.dsh-tui-hyperai`。安装 beta.2.1 时，如果新目录还没有 profile，安装器会自动把 **profile、API key、TUI 偏好**复制到 `~/.hyperai`：
+
+- 只复制，不改动；`~/.dsh` 和 `~/.dsh-tui*` 在安装前后哈希一致。
+- **不复制对话**：旧对话仍然保存在 `~/.dsh`，没有丢失，只是不会出现在新版本中。
+- 不复制 `~/.dsh/cordis.patch.yml`、共享插件树和别的 profile。
+- 只迁移一次，写迁移记录；确认新版本没问题后，可以自己删除 `~/.dsh/profiles/hyperai` 和 `~/.dsh-tui-hyperai`。
+
+### 6.2 新版本提示与 `hyperai update`
+
+启动时会在后台检查 hyperai/hyperai-harness 的 GitHub Releases（最多 24 小时一次，失败静默跳过）。有新版本时 TUI 显示一行提示；退出后运行：
+
+```sh
+hyperai update          # 显示版本并确认，然后下载、校验、安装
+hyperai update --check  # 只看有没有新版本
+hyperai update --yes    # 跳过确认
+```
+
+只从 GitHub Releases 下载，校验 sha256，失败不会动旧版本和用户数据。`HYPERAI_UPDATE_CHECK=off` 可以关闭检查。
 
 ## 7. 卸载
 
@@ -185,7 +206,7 @@ node profile/scripts/manage.mjs uninstall --yes --purge
 rm -rf ~/.hyperai
 ```
 
-`~/.dsh/.credentials.yaml` 是 DSH 共享凭据，任何卸载命令都不会删它。
+`~/.hyperai/dsh/.credentials.yaml` 是 DSH 共享凭据，任何卸载命令都不会删它。
 
 ---
 

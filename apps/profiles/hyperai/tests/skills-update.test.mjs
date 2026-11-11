@@ -102,7 +102,7 @@ function run(home, args, env = {}) {
   return spawnSync(process.execPath, [CLI, ...args], {
     encoding: 'utf8',
     timeout: 60_000,
-    env: { ...process.env, DSH_HOME: home.root, ...env },
+    env: { ...process.env, HYPERAI_DSH_HOME: home.root, ...env },
   })
 }
 
@@ -287,7 +287,7 @@ test('the legacy installer still reads the updater manifest', async () => {
   const legacy = spawnSync(process.execPath, [
     join(PKG, 'scripts', 'install-skills.mjs'),
     '--dsh-home', home.root, '--source', repo, '--ref', sha, '--lock', lockPath, '--dry-run', '--json',
-  ], { encoding: 'utf8', timeout: 60_000, env: { ...process.env, DSH_HOME: home.root } })
+  ], { encoding: 'utf8', timeout: 60_000, env: { ...process.env, HYPERAI_DSH_HOME: home.root } })
   assert.equal(legacy.status, 0, legacy.stderr)
   const result = JSON.parse(legacy.stdout)
   assert.deepEqual(result.unchanged, ['example'])

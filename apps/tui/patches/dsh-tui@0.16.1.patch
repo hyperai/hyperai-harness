@@ -68,7 +68,7 @@ index 0806732..7973530 100644
      // A local entry of the same name would win the collision filter.
      // Misc / not applicable on this leaf
 diff --git a/lib/types/components/LogoV2.js b/lib/types/components/LogoV2.js
-index ed2f7f3..51d0cab 100644
+index ed2f7f3..b906173 100644
 --- a/lib/types/components/LogoV2.js
 +++ b/lib/types/components/LogoV2.js
 @@ -8,7 +8,7 @@ import { dirname, join } from 'node:path';
@@ -177,7 +177,7 @@ index ed2f7f3..51d0cab 100644
                                  setHeartKey(k => k + 1);
                              }
 -                        }, children: _jsx(Box, { width: WHALE_BOX_WIDTH, flexDirection: "column", alignItems: "center", children: brand === 'deepseek' && mascotSkin !== undefined ? (_jsx(SplashMascot, { skin: mascotSkin, active: !whaleFrozen && whaleIdle, imageBox: imageBox })) : portraitMode ? (_jsx(Box, { width: WHALE_BOX_WIDTH, height: textColumnRows, flexDirection: "row", justifyContent: "center", alignItems: "center", children: maidImageActive ? (_jsx(MaidPortrait, { source: maidHappy ? (portraits?.happy ?? maidSource) : maidSource, maxColumns: WHALE_BOX_WIDTH, maxRows: textColumnRows, presentation: "transcript" })) : (claudeArt ? _jsx(ClaudeGirlArt, { width: WHALE_BOX_WIDTH }) : _jsx(WhaleGirlArt, { width: WHALE_BOX_WIDTH })) })) : (_jsx(WhaleArt, { frameIndex: frameIndex, pose: settled && whaleIdle && !whaleFrozen ? (idlePose ?? RESTING_POSE) : undefined, width: WHALE_BOX_WIDTH })) }) })), (showBigTitle || showPlainTitle) && (_jsxs(Box, { flexDirection: "column", flexShrink: 1, children: [chrome !== 'minimal' && (_jsxs(Text, { wrap: "truncate-end", children: [sweep('✦ dsh-TUI', t, wordmarkRGB, wordmarkShimmerRGB, 60), _jsx(Text, { dimColor: true, children: '  v' + VERSION })] })), showBigTitle ? (_jsxs(_Fragment, { children: [bigDeepSeek.map((row, index) => (_jsx(Text, { wrap: "truncate-end", children: row.replace(/\s+$/u, '') }, `ds-${index}`))), _jsx(Box, { height: 1 }), bigHarness.map((row, index) => (_jsx(Text, { wrap: "truncate-end", children: row.replace(/\s+$/u, '') }, `h-${index}`)))] })) : (showPlainTitle && (_jsx(Text, { color: "accent", bold: true, wrap: "truncate-end", children: words.plain }))), chrome !== 'minimal' && (_jsxs(_Fragment, { children: [_jsxs(Text, { wrap: "truncate-end", children: [model, effort !== undefined && _jsx(Text, { dimColor: true, children: ' · ' + capitalize(effort) + ' effort' })] }), _jsx(Text, { dimColor: true, wrap: "truncate-end", children: cwd }), _jsxs(Text, { wrap: "truncate-end", children: [_jsx(Text, { dimColor: true, children: tr('logo-tip-prefix') }), getLang() === 'zh' ? randomTip.zh : randomTip.en, _jsx(Text, { dimColor: true, children: ' · /tips ' + tr('logo-tip-more') })] })] })), chrome !== 'minimal' && driftLine != null && (_jsxs(Text, { color: "warning", wrap: "wrap", children: ["\u26A0", ' ', tOr(`logo-drift-${driftLine.kind}`, `The dsh engine (${driftLine.versions.join(' / ')}) does not match the validated ${UPSTREAM_VALIDATED_VERSION}; reinstall via npm i -g @deepseek-ai/dsh@${UPSTREAM_VALIDATED_VERSION}.`, {
-+                        }, children: _jsx(Box, { width: WHALE_BOX_WIDTH, flexDirection: "column", alignItems: "center", children: brand === 'deepseek' && mascotSkin !== undefined ? (_jsx(SplashMascot, { skin: mascotSkin, active: !whaleFrozen && whaleIdle, imageBox: imageBox })) : portraitMode ? (_jsx(Box, { width: WHALE_BOX_WIDTH, height: textColumnRows, flexDirection: "row", justifyContent: "center", alignItems: "center", children: maidImageActive ? (_jsx(MaidPortrait, { source: maidHappy ? (portraits?.happy ?? maidSource) : maidSource, maxColumns: WHALE_BOX_WIDTH, maxRows: textColumnRows, presentation: "transcript" })) : (claudeArt ? _jsx(ClaudeGirlArt, { width: WHALE_BOX_WIDTH }) : _jsx(WhaleGirlArt, { width: WHALE_BOX_WIDTH })) })) : (_jsx(WhaleArt, { frameIndex: frameIndex, pose: settled && whaleIdle && !whaleFrozen ? (idlePose ?? RESTING_POSE) : undefined, width: WHALE_BOX_WIDTH })) }) })), (showBigTitle || showPlainTitle) && (_jsxs(Box, { flexDirection: "column", flexShrink: 1, children: [chrome !== 'minimal' && (_jsxs(Text, { wrap: "truncate-end", children: [sweep('✦ hyperai-tui', t, wordmarkRGB, wordmarkShimmerRGB, 60), _jsx(Text, { dimColor: true, children: '  v0.2.0-beta.2' })] })), showBigTitle ? (_jsxs(_Fragment, { children: [bigDeepSeek.map((row, index) => (_jsx(Text, { wrap: "truncate-end", children: row.replace(/\s+$/u, '') }, `ds-${index}`))), _jsx(Box, { height: 1 }), bigHarness.map((row, index) => (_jsx(Text, { wrap: "truncate-end", children: row.replace(/\s+$/u, '') }, `h-${index}`)))] })) : (showPlainTitle && (_jsx(Text, { bold: true, wrap: "truncate-end", children: sweep(words.plain, t, HYPERAI_PALETTE.accent, HYPERAI_PALETTE.accent, 60) }))), chrome !== 'minimal' && (_jsxs(_Fragment, { children: [_jsxs(Text, { wrap: "truncate-end", children: [model, effort !== undefined && _jsx(Text, { dimColor: true, children: ' · ' + capitalize(effort) + ' effort' })] }), _jsx(Text, { dimColor: true, wrap: "truncate-end", children: cwd }), _jsxs(Text, { wrap: "truncate-end", children: [_jsx(Text, { dimColor: true, children: tr('logo-tip-prefix') }), getLang() === 'zh' ? randomTip.zh : randomTip.en, _jsx(Text, { dimColor: true, children: ' · /tips ' + tr('logo-tip-more') })] })] })), chrome !== 'minimal' && driftLine != null && (_jsxs(Text, { color: "warning", wrap: "wrap", children: ["\u26A0", ' ', tOr(`logo-drift-${driftLine.kind}`, `The dsh engine (${driftLine.versions.join(' / ')}) does not match the validated ${UPSTREAM_VALIDATED_VERSION}; reinstall via npm i -g @deepseek-ai/dsh@${UPSTREAM_VALIDATED_VERSION}.`, {
++                        }, children: _jsx(Box, { width: WHALE_BOX_WIDTH, flexDirection: "column", alignItems: "center", children: brand === 'deepseek' && mascotSkin !== undefined ? (_jsx(SplashMascot, { skin: mascotSkin, active: !whaleFrozen && whaleIdle, imageBox: imageBox })) : portraitMode ? (_jsx(Box, { width: WHALE_BOX_WIDTH, height: textColumnRows, flexDirection: "row", justifyContent: "center", alignItems: "center", children: maidImageActive ? (_jsx(MaidPortrait, { source: maidHappy ? (portraits?.happy ?? maidSource) : maidSource, maxColumns: WHALE_BOX_WIDTH, maxRows: textColumnRows, presentation: "transcript" })) : (claudeArt ? _jsx(ClaudeGirlArt, { width: WHALE_BOX_WIDTH }) : _jsx(WhaleGirlArt, { width: WHALE_BOX_WIDTH })) })) : (_jsx(WhaleArt, { frameIndex: frameIndex, pose: settled && whaleIdle && !whaleFrozen ? (idlePose ?? RESTING_POSE) : undefined, width: WHALE_BOX_WIDTH })) }) })), (showBigTitle || showPlainTitle) && (_jsxs(Box, { flexDirection: "column", flexShrink: 1, children: [chrome !== 'minimal' && (_jsxs(Text, { wrap: "truncate-end", children: [sweep('✦ hyperai-tui', t, wordmarkRGB, wordmarkShimmerRGB, 60), _jsx(Text, { dimColor: true, children: '  v0.2.0-beta.2.1' })] })), showBigTitle ? (_jsxs(_Fragment, { children: [bigDeepSeek.map((row, index) => (_jsx(Text, { wrap: "truncate-end", children: row.replace(/\s+$/u, '') }, `ds-${index}`))), _jsx(Box, { height: 1 }), bigHarness.map((row, index) => (_jsx(Text, { wrap: "truncate-end", children: row.replace(/\s+$/u, '') }, `h-${index}`)))] })) : (showPlainTitle && (_jsx(Text, { bold: true, wrap: "truncate-end", children: sweep(words.plain, t, HYPERAI_PALETTE.accent, HYPERAI_PALETTE.accent, 60) }))), chrome !== 'minimal' && (_jsxs(_Fragment, { children: [_jsxs(Text, { wrap: "truncate-end", children: [model, effort !== undefined && _jsx(Text, { dimColor: true, children: ' · ' + capitalize(effort) + ' effort' })] }), _jsx(Text, { dimColor: true, wrap: "truncate-end", children: cwd }), _jsxs(Text, { wrap: "truncate-end", children: [_jsx(Text, { dimColor: true, children: tr('logo-tip-prefix') }), getLang() === 'zh' ? randomTip.zh : randomTip.en, _jsx(Text, { dimColor: true, children: ' · /tips ' + tr('logo-tip-more') })] })] })), chrome !== 'minimal' && driftLine != null && (_jsxs(Text, { color: "warning", wrap: "wrap", children: ["\u26A0", ' ', tOr(`logo-drift-${driftLine.kind}`, `The dsh engine (${driftLine.versions.join(' / ')}) does not match the validated ${UPSTREAM_VALIDATED_VERSION}; reinstall via npm i -g @deepseek-ai/dsh@${UPSTREAM_VALIDATED_VERSION}.`, {
                                          installed: driftLine.versions.join(' / '),
                                          validated: UPSTREAM_VALIDATED_VERSION,
                                          primary: UPSTREAM_VALIDATED_VERSION,
@@ -252,10 +252,10 @@ index 71e32df..4f233d0 100644
      setActiveBrand(resolveBrand(config.brand, backendChoice));
 diff --git a/lib/types/hyperaiSkills.js b/lib/types/hyperaiSkills.js
 new file mode 100644
-index 0000000..e452bf7
+index 0000000..359ac8a
 --- /dev/null
 +++ b/lib/types/hyperaiSkills.js
-@@ -0,0 +1,298 @@
+@@ -0,0 +1,310 @@
 +/**
 + * HyperAI skills updater bridge for the TUI.
 + *
@@ -278,6 +278,7 @@ index 0000000..e452bf7
 +import { homedir } from 'node:os'
 +import { join } from 'node:path'
 +import { getLang } from './i18n.js'
++import { checkForUpdate, updateNoticeText } from './hyperaiUpdate.js'
 +import { resolveDshProfileName } from './update.js'
 +import {
 +  checkingText, choices, confirmMessage, currentText, detailOptions, dialogTitle, errorText, errorTitle,
@@ -296,9 +297,9 @@ index 0000000..e452bf7
 +/** Locate the installed updater for this profile; undefined when unavailable. */
 +export function resolveUpdaterContext(env = process.env, argv = process.argv) {
 +  let profile = resolveDshProfileName(argv)
-+  profile ??= env.DSH_TUI_PROFILE
++  profile ??= env.HYPERAI_PROFILE ?? 'hyperai'
 +  profile ??= 'hyperai'
-+  const dshHome = env.DSH_HOME || join(homedir(), '.dsh')
++  const dshHome = env.HYPERAI_DSH_HOME || (env.HYPERAI_HOME === undefined ? join(homedir(), '.hyperai', 'dsh') : join(env.HYPERAI_HOME, 'dsh'))
 +  const script = join(dshHome, 'profiles', profile, 'scripts', 'skills-update.mjs')
 +  return {
 +    profile,
@@ -407,6 +408,7 @@ index 0000000..e452bf7
 +  if (contextRef.current === undefined) contextRef.current = resolveUpdaterContext()
 +  const context = contextRef.current
 +  const [notice, setNotice] = React.useState(null)
++  const [updateNotice, setUpdateNotice] = React.useState(null)
 +  const notifiedRef = React.useRef(null)
 +  const busyRef = React.useRef(false)
 +  const aliveRef = React.useRef(true)
@@ -552,7 +554,17 @@ index 0000000..e452bf7
 +    return () => { cancelled = true; clearTimeout(timer) }
 +  }, [context, notify])
 +
-+  return { notice, open }
++  React.useEffect(() => {
++    let alive = true
++    const timer = setTimeout(() => {
++      void checkForUpdate().then(result => {
++        if (alive && result !== undefined) setUpdateNotice(updateNoticeText(result.latest, lang()))
++      }).catch(() => {})
++    }, 1500)
++    return () => { alive = false; clearTimeout(timer) }
++  }, [])
++
++  return { notice: updateNotice ?? notice, open }
 +}
 diff --git a/lib/types/hyperaiSkillsCore.js b/lib/types/hyperaiSkillsCore.js
 new file mode 100644
@@ -895,7 +907,7 @@ index 050c07c..a48e9f6 100644
                                              ui: STATUS_VIEW_UI,
                                          }) }) }) }, `${view.key}:${view.registrationId}`))), _jsxs(Box, { flexDirection: "column", flexShrink: 0, children: [approvalPanelNode !== null ? (approvalPanelNode) : dialogSnapshot !== null ? (_jsx(ExtensionDialog, { dialog: dialogSnapshot, onDecide: value => dialogs.decide(dialogSnapshot.key, value), onCancel: () => dialogs.cancel(dialogSnapshot.key) }, dialogSnapshot.key)) : overlay.kind === 'tips' ? (_jsx(Box, { flexDirection: "column", marginTop: 1, children: _jsx(TipsPanel, { onClose: () => dispatchOverlay({ type: 'close-if', kind: 'tips' }) }) })) : recap !== null && (!recap.auto || recap.expanded) ? (_jsx(Box, { flexDirection: "column", marginTop: 1, children: _jsx(RecapPanel, { summary: recap.summary, title: recap.title, error: recap.error, streaming: !recap.done, titleApplied: recap.titleApplied, onClose: () => {
 diff --git a/lib/types/screens/Launchpad.js b/lib/types/screens/Launchpad.js
-index d8a8835..018f22d 100644
+index d8a8835..8311c92 100644
 --- a/lib/types/screens/Launchpad.js
 +++ b/lib/types/screens/Launchpad.js
 @@ -479,7 +479,11 @@ onKernelPick, cwd, branch, tuiVersion, onFocusChange, onAction, onQueryChange, o
@@ -907,7 +919,7 @@ index d8a8835..018f22d 100644
 +    // product+upstream pair is used only when there is room for it.
 +    const tuiPart = tuiVersion === undefined || tuiVersion === ''
 +        ? undefined
-+        : (columns < 72 ? `hyperai v0.2.0-beta.2` : `hyperai-tui v0.2.0-beta.2 · dsh-tui v${tuiVersion}`);
++        : (columns < 72 ? `hyperai v0.2.0-beta.2.1` : `hyperai-tui v0.2.0-beta.2.1 · dsh-tui v${tuiVersion}`);
      // 名字用**短品牌名**（option.shortLabel，来自 manifest：DSH / Claude，与启动页
      // 「内核 · DSH」那个 chip 同源）：这一格与左下角的 `工作目录:分支` 共用底边，
      // 全名（DeepSeek Harness · … = 40 列）在窄终端里会把左边的目录铭牌挤掉。
@@ -1064,7 +1076,7 @@ index f6d3e1c..fa86ce0 100644
          id: 'disp-smooth',
          group: 'display',
 diff --git a/lib/types/update.js b/lib/types/update.js
-index 8efb701..b2a0109 100644
+index 8efb701..08ca30d 100644
 --- a/lib/types/update.js
 +++ b/lib/types/update.js
 @@ -219,6 +219,16 @@ export function installedTuiVersion() {
@@ -1072,7 +1084,7 @@ index 8efb701..b2a0109 100644
                  const packageJson = parsed;
                  const version = packageJson.version;
 +                // hyperai-tui: package.json.version is the HyperAI release
-+                // (0.2.0-beta.2); the dsh-tui version is recorded in
++                // (0.2.0-beta.2.1); the dsh-tui version is recorded in
 +                // hyperai.upstreamVersion. Every caller of this function means
 +                // the upstream TUI package — the dsh-tui half of the version
 +                // plate, the version-drift warning and /update target checks —
@@ -1106,37 +1118,21 @@ index 8efb701..b2a0109 100644
      // undici synchronously, so yield first and let that cost land after the frame.
      await new Promise(resolve => setImmediate(resolve));
 diff --git a/lib/types/utils/paths.js b/lib/types/utils/paths.js
-index cdef174..e315699 100644
+index cdef174..74fbd84 100644
 --- a/lib/types/utils/paths.js
 +++ b/lib/types/utils/paths.js
-@@ -15,8 +15,29 @@ import { join } from 'node:path';
+@@ -15,8 +15,12 @@ import { join } from 'node:path';
  export function homeDir() {
      return homedir() || process.env.USERPROFILE || process.env.HOME || '';
  }
-+/**
-+ * hyperai-tui: keep a second dsh profile from reading and writing the dsh-tui
-+ * profile's UI state. Upstream keeps every preference (model route, workspace,
-+ * history, onboarding) under one `~/.dsh-tui`; that would let a `/model` pick
-+ * in the hyperai profile overwrite the dsh-tui profile's persisted route. The
-+ * dsh-tui profile keeps the legacy path; any other profile gets its own
-+ * `~/.dsh-tui-<profile>` root.
-+ * @returns The directory name for the current profile's UI state.
-+ */
-+function dataDirName() {
-+    const argv = process.argv;
-+    let profile;
-+    for (let index = 0; index < argv.length; index++) {
-+        if (argv[index] === '--profile' && typeof argv[index + 1] === 'string')
-+            profile = argv[index + 1];
-+        else if (argv[index].startsWith('--profile='))
-+            profile = argv[index].slice('--profile='.length);
-+    }
-+    profile ??= process.env.DSH_TUI_PROFILE;
-+    return profile === undefined || profile === '' || profile === 'dsh-tui' ? '.dsh-tui' : `.dsh-tui-${profile}`;
-+}
- /** Data directory all preferences/history live in (`~/.dsh-tui`). */
+-/** Data directory all preferences/history live in (`~/.dsh-tui`). */
 -export const DATA_DIR = join(homeDir(), '.dsh-tui');
-+export const DATA_DIR = join(homeDir(), dataDirName());
++/**
++ * hyperai-tui: all UI state lives inside HyperAI's own directory, never in
++ * ~/.dsh-tui* (which belongs to DeepSeek Harness). HYPERAI_TUI_DIR is set by
++ * the generated launcher; the fallback keeps direct runs isolated too.
++ */
++export const DATA_DIR = process.env.HYPERAI_TUI_DIR || join(homeDir(), '.hyperai', 'tui');
  /**
   * Where one backend keeps its own files: `<dataRoot>/backends/<id>`, keyed by
   * the backend's declared id (the `x-dsh-tui` Backend entry's `spec.id` field).

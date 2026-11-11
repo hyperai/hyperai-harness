@@ -126,7 +126,7 @@ check('brand strings and profile isolation remain wired', () => {
     'HyperAI Harness',
     `hyperai-tui v${tuiPackage.version}`,
     ' · dsh-tui v${tuiVersion}',
-    '.dsh-tui-${profile}',
+    'HYPERAI_TUI_DIR',
     'https://github.com/hyperai/hyperai-harness',
     'const onboardingOnBoot = false;',
     'const uniformBrand = true;',

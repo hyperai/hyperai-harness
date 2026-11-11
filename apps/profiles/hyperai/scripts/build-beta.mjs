@@ -54,6 +54,8 @@ const PROFILE_FILES = [
   'cordis.patch.yml',
   'pnpm-workspace.yaml',
   'scripts/install.mjs',
+  'scripts/update-lib.mjs',
+  'scripts/update.mjs',
   'scripts/install-skills.mjs',
   'scripts/manage.mjs',
   'scripts/preflight.mjs',
