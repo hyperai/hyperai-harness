@@ -18,6 +18,12 @@ import { compareVersions, fetchLatest } from './update-lib.mjs'
 
 const HOME_DIR = process.env.HYPERAI_HOME || join(homedir(), '.hyperai')
 
+/** Node range required by the bundled dsh (see install.sh). */
+export function nodeSupported(version = process.versions.node) {
+  const [major, minor] = version.split('.').map(Number)
+  return (major === 22 && minor >= 19) || major >= 24
+}
+
 function currentVersion() {
   const launcher = join(HOME_DIR, '.hyperai-launcher.json')
   try { return JSON.parse(readFileSync(launcher, 'utf8')).productVersion } catch { /* fall through */ }
@@ -107,6 +113,11 @@ async function main(argv) {
   }
   const current = currentVersion()
   if (current === undefined) throw new Error('无法确定当前 HyperAI 版本；请重新安装')
+  if (!checkOnly && !nodeSupported()) {
+    console.error(`升级失败：当前 Node.js v${process.versions.node} 不受支持（需要 ^22.19 或 >=24）。`)
+    console.error('请先升级 Node.js，再运行 hyperai update；旧版本和用户数据没有改动。')
+    return 1
+  }
   const latest = await fetchLatest(process.env)
   if (compareVersions(latest.version, current) <= 0) {
     console.log(`已经是最新版本（${current}）`)
