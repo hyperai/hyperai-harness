@@ -124,8 +124,6 @@ export async function checkForUpdate({ env = process.env, now = Date.now(), fetc
 }
 
 /** One-line, non-blocking notice shown in the TUI. */
-export function updateNoticeText(latest, lang = 'zh') {
-  return lang === 'zh'
-    ? `HyperAI Harness 有新版本 ${latest}，退出后运行 hyperai update 升级`
-    : `HyperAI Harness ${latest} is available; run hyperai update after quitting`
+export function updateNoticeText(latest) {
+  return `HyperAI Harness 有新版本 ${latest}，退出后运行 hyperai update 升级`
 }

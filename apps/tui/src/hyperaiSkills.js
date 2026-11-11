@@ -301,7 +301,7 @@ export function useSkillsUpdate({ channel, dialogs }) {
     const timer = setTimeout(() => {
       void checkForUpdate().then(result => {
         if (!alive || result === undefined) return
-        const message = updateNoticeText(result.latest, lang())
+        const message = updateNoticeText(result.latest)
         setUpdateNotice(message)
         try { channel.notify(message, { color: 'info', timeoutMs: 60_000 }) } catch { /* notification is best-effort */ }
       }).catch(() => {})
