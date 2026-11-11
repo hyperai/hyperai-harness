@@ -149,3 +149,9 @@ A6 采用新定义：不检查 `~/.hyperai/profiles/hyperai` 是否删除（unin
 ### A3
 
 未完成。需要分别进两个 TUI 改 `/model`、界面设置、装插件并逐步哈希；本轮没有可靠的 TUI 操作脚本，不能把“只改配置文件”写成 A3 通过。
+
+### A3 进展（未完成）
+
+- 新增 `beta-test/tools/pty-script.py`：JSON 步骤（wait/send/sleep/snapshot）+ pyte 屏幕渲染，可驱动 TUI。
+- 已能跳过 dsh-tui 的 4 步引导并进入聊天界面；但 `/model` 打开后的面板在 pyte 的 alt-screen 快照里不稳定，尚未形成可重复的“改模型/改设置/装插件”步骤文件。
+- 因此 A3 没有按 RFC 标准跑完 2 次，不记为通过。
