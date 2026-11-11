@@ -42,10 +42,22 @@ function download(url, destination, redirects = 0) {
         response.resume()
         return reject(new Error(`下载失败：HTTP ${response.statusCode}`))
       }
+      const expected = Number(response.headers['content-length'])
+      let received = 0
+      let finished = false
+      response.on('data', chunk => { received += chunk.length })
+      response.on('aborted', () => { if (!finished) reject(new Error('下载中断')) })
+      response.on('error', error => { if (!finished) reject(error) })
       const file = createWriteStream(destination, { mode: 0o600 })
       response.pipe(file)
-      file.on('finish', () => file.close(() => resolvePromise()))
-      file.on('error', reject)
+      file.on('finish', () => {
+        finished = true
+        file.close(() => {
+          if (Number.isFinite(expected) && expected >= 0 && received !== expected) reject(new Error('下载不完整'))
+          else resolvePromise()
+        })
+      })
+      file.on('error', error => { if (!finished) reject(error) })
     })
     request.on('error', reject)
     request.setTimeout(60_000, () => request.destroy(new Error('下载超时')))
