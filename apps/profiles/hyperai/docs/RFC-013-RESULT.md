@@ -218,3 +218,12 @@ beta.1 包解压到 `beta-test/rfc013-batch4/pkg1`（不走 `/tmp`），只设�
 ### 构建
 
 U6 修复后提交 `6f81a7d…`；因 GitHub 再次不可达，测试包用 beta.2 技能快照构建，sha256 `8fec9b69…`、18 471 065 字节。正式发布前仍需联网按锁定 commit 重建并更新包/服务器。
+
+## 第 5 批（Ubuntu，进行中）
+
+- GitHub 恢复后按锁定 commit 正常重建两次：sha256 `a2283552…` 一致，18 471 064 字节，构建 commit `da6df983…`；skills ref `34f0a1be0c`、contentDigest `c52a8cf7…` 与 beta.2 一致；已上传服务器并校验，旧包保留。
+- 用真实 npm DSH 环境（`dsh 0.2.2-rc.1`、`dsh-tui 0.19.0`，`npm install` 首次因版本解析失败，显式版本重试 10 分钟成功）：
+  - A2 2/2：安装 exit 0、铭牌 `0.2.0-beta.2.1`、DeepSeek 一侧哈希一致。
+  - A6 2/2：卸载 exit 0、一侧哈希一致、`dsh --version` = `0.2.2-rc.1`。
+- A4/A5/A7/A8/A9 批量脚本已启动，但服务器 SSH 在运行中途超时，未取回结果；A1 的 `strace -f -e trace=%file` 尚未执行。
+- 因此第 5 批未完成，不能按“全部做完”交付。
