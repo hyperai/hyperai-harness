@@ -287,3 +287,11 @@ HOME 下 `.hyperai` 以外：安装包目录（`rfc013b5/pkg/...`）、测试辅
 - 实测（Node 18.20.4，2 次）：均 exit 1，版本仍 `0.2.0-beta.2.1`，设置哈希不变，`~/.hyperai/update-*` 为 0，中文提示“当前 Node.js v18.20.4 不受支持（需要 ^22.19 或 >=24）…旧版本和用户数据没有改动”。
 
 未完成：新包上的 U5/U6/U7 重跑，以及 U2/U3/U4/R1。
+
+## 新包自带 preflight（第二轮修复）
+
+- `update.mjs` 在下载、校验、解压之后、运行新包 `install.sh` 之前，`import` 新包的 `profile/scripts/preflight.mjs`，调用它的 `nodeVersionSupported(process.versions.node)`；不通过则中文报错、清理临时目录、不动旧版本。
+- 新增 `tests/update-preflight.test.mjs`：构造一个 `SUPPORTED_NODE_RANGE = '>=99'`、`nodeVersionSupported()` 返回 false 的新包，`checkNewPackagePreflight` 必须拒绝并通过。
+- 新构建：commit `a24a00bab8…`，两次构建 sha256 均为 `b58acfaafe3eae24f059bb32a8dfc7c2f8681925b16b333504038cdea20d7a53`，18 471 528 字节；已上传服务器并校验。
+
+未完成：新包上的 Ubuntu U2/U3/U4/U5/U6/U7/R1 各 2 次批量复测。
