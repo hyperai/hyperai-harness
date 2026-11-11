@@ -69,3 +69,34 @@
 - macOS 本机 `fs_usage` 需要管理员权限（`sudo -n` 不可用），改用 `sandbox-exec`：允许写临时 HOME 和系统路径，拒绝写真实 HOME，拒绝读写临时 HOME 下的 `.dsh`、`.dsh-tui*`、DSH prefix。
 - 在这个沙盒里 `install.sh` 完整通过（exit 0），启动 TUI 也能渲染；没有出现与 HyperAI 路径相关的 deny。
 - 但 `log show --predicate 'sender=="Sandbox"'` 输出的是系统全局日志，无法按本次进程过滤，不能据此给出“零 deny”的严格结论；A1 仍未形成逐条分类清单。
+
+## 第 1 批（macOS，真实 npm DSH 环境）
+
+环境脚本：`beta-test/tools/make-real-dsh-env.sh`。每次都在临时 HOME 下：
+
+- `npm install --prefix <HOME>/prefix @deepseek-ai/dsh @deepseek-harness-tui/dsh-tui@0.19.0`
+- 首次 PTY 运行 `dsh-tui`，自动生成 `~/.dsh/profiles/dsh-tui`，bundles 为 `@deepseek-ai/dsh-base` + `@deepseek-harness-tui/dsh-tui`
+- `dsh --profile hyperai --from-default-profile web` 生成同名的非本安装器 profile
+- 手写 `~/.dsh/cordis.patch.yml`
+- `dsh plugin --profile dsh-tui add @deepseek-ai/dsh-experimental-plugin-market-bundle` 真装插件（先对 market 版本做精确豁免）
+- 造 `~/.dsh-tui`、`~/.dsh-tui-hyperai`；`PATH` 前置 prefix，shell 里 export `DSH_HOME`
+
+### A2：安装 HyperAI 前后 DeepSeek 一侧哈希
+
+哈希范围：`<HOME>/prefix`、`<HOME>/.dsh`、`<HOME>/.dsh-tui`、`<HOME>/.dsh-tui-hyperai` 的全部文件。
+
+| 轮次 | 结果 |
+|---|---|
+| 1 | 安装 exit 0，铭牌 `0.2.0-beta.2.1`，一侧哈希一致 |
+| 2 | 安装 exit 0，铭牌 `0.2.0-beta.2.1`，一侧哈希一致 |
+
+### A6：卸载 HyperAI 后 DeepSeek 一侧
+
+| 轮次 | 结果 |
+|---|---|
+| 1 | uninstall exit 0，一侧哈希与安装前一致；`dsh --version` = `0.2.0-rc.2` |
+| 2 | uninstall exit 0，一侧哈希与安装前一致；`dsh --version` = `0.2.0-rc.2`，`dsh --profile dsh-tui --dump-config` exit 0（609 行） |
+
+A6 采用新定义：不检查 `~/.hyperai/profiles/hyperai` 是否删除（uninstall 按设计保留归档标记），只检查 DeepSeek 一侧哈希不变、它的 dsh 仍可用。
+
+批内未覆盖：A2 要求里的 shell 配置、`~/.npm`、pnpm store 不在哈希范围内（本环境用工作区 npm cache 和 prefix 内 pnpm store）；见后续批次补齐。
