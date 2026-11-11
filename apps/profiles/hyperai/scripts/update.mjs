@@ -11,6 +11,7 @@ import { createWriteStream, existsSync, lstatSync, mkdirSync, mkdtempSync, readF
 import { get as httpGet } from 'node:http'
 import { get as httpsGet } from 'node:https'
 import { homedir, tmpdir } from 'node:os'
+import { pathToFileURL } from 'node:url'
 import { basename, dirname, isAbsolute, join, relative, resolve, sep } from 'node:path'
 import { createInterface } from 'node:readline'
 import { spawnSync } from 'node:child_process'
@@ -104,6 +105,17 @@ async function confirm(question) {
   return /^y(es)?$/iu.test(answer.trim())
 }
 
+/** Run the new package's own Node preflight before touching the install. */
+export async function checkNewPackagePreflight(packageRoot) {
+  const modulePath = join(packageRoot, 'profile', 'scripts', 'preflight.mjs')
+  if (!existsSync(modulePath)) return
+  const module = await import(pathToFileURL(modulePath).href)
+  if (typeof module.nodeVersionSupported !== 'function') return
+  if (!module.nodeVersionSupported(process.versions.node)) {
+    throw new Error(`新版本要求 Node.js ${module.SUPPORTED_NODE_RANGE ?? '更高版本'}，当前是 v${process.versions.node}；请先升级 Node，旧版本没有改动`)
+  }
+}
+
 async function main(argv) {
   const yes = argv.includes('--yes')
   const checkOnly = argv.includes('--check')
@@ -145,6 +157,7 @@ async function main(argv) {
     const packageRoot = join(root, `hyperai-harness-${latest.version}`)
     const installer = join(packageRoot, 'install.sh')
     if (!existsSync(installer)) throw new Error('安装包里没有 install.sh')
+    await checkNewPackagePreflight(packageRoot)
     const result = spawnSync('sh', [installer], { stdio: 'inherit', env: { ...process.env, HYPERAI_HOME: HOME_DIR } })
     if (result.status !== 0) throw new Error(`新版本安装失败（退出码 ${result.status}），旧版本仍可继续使用`)
     console.log(`已升级到 ${latest.version}`)
