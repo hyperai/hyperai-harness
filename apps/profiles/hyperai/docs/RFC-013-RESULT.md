@@ -155,3 +155,19 @@ A6 采用新定义：不检查 `~/.hyperai/profiles/hyperai` 是否删除（unin
 - 新增 `beta-test/tools/pty-script.py`：JSON 步骤（wait/send/sleep/snapshot）+ pyte 屏幕渲染，可驱动 TUI。
 - 已能跳过 dsh-tui 的 4 步引导并进入聊天界面；但 `/model` 打开后的面板在 pyte 的 alt-screen 快照里不稳定，尚未形成可重复的“改模型/改设置/装插件”步骤文件。
 - 因此 A3 没有按 RFC 标准跑完 2 次，不记为通过。
+
+### A3 最终处理：交给验收和负责人真机检查（不算通过，也不算失败）
+
+限时内试过的办法：
+
+1. 新增 `beta-test/tools/pty-script.py`（JSON 步骤 + pyte 快照），能稳定跳过 dsh-tui 的 4 步引导并进入聊天界面。
+2. 用 `--rows 50 --cols 160` 重试，并在 `/model`、方向键、回车、Esc 之间 sleep 1～2 秒。
+3. 不依赖屏幕判定，改为操作后直接对比文件：`~/.dsh-tui*` / `~/.hyperai/tui` 下的 `model.json`、`settings.json`、`model-recents.json`。
+
+结果：
+
+- dsh-tui 0.19.0 的 `/model` 面板和 `/settings` 面板在 pyte 的 alt-screen 快照里不稳定，无法可靠判断“面板已打开、选中项已移动”，按键序列可能落在聊天输入框里。
+- 当前测试环境没有可用的 provider/模型列表，`/model` 下箭头+回车不会产生可验证的模型选择变化。
+- 因此没有拿到“每一侧只看到自己的模型/设置/插件，且每一步文件只在自己被使用时变化”的可信证据。
+
+结论：**A3 不算通过**，标记为“交给验收和负责人真机检查”；第 3 批的 A2 已完成、rc.7 已按规则跳过。
