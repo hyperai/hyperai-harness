@@ -295,3 +295,24 @@ HOME 下 `.hyperai` 以外：安装包目录（`rfc013b5/pkg/...`）、测试辅
 - 新构建：commit `a24a00bab8…`，两次构建 sha256 均为 `b58acfaafe3eae24f059bb32a8dfc7c2f8681925b16b333504038cdea20d7a53`，18 471 528 字节；已上传服务器并校验。
 
 未完成：新包上的 Ubuntu U2/U3/U4/U5/U6/U7/R1 各 2 次批量复测。
+
+## 第 6a 批最终复测（Ubuntu，b58acfaa 包）
+
+批量脚本后台一次跑完，结果：
+
+| 项 | 结果 |
+|---|---|
+| U2 | lower / draft / incomplete 各 2 次：6/6 无新版本提示（notice=0） |
+| U3 | 403 / 乱码 / 连接失败 各 2 次：6/6 静默、无提示 |
+| U4 | `HYPERAI_UPDATE_CHECK=off` 2/2：请求日志 0 条 |
+| U5 | 2/2：`update --yes` 升级到 `0.2.0-beta.2.2` |
+| U6 Node 18 | 2/2：exit 1、版本仍 2.1、设置不变、临时目录 0、中文提示升级 Node |
+| U6 Node >=99 | 2/2：exit 1，`新版本要求 Node.js >=99…旧版本没有改动`，临时目录 0 |
+| U6 sha256 错 | 2/2：exit 1，`sha256 校验失败`，临时目录 0 |
+| U6 `../evil` | 2/2：exit 1，`安装包包含非法路径`，临时目录 0 |
+| U6 外部符号链接 | 2/2：exit 1，`安装包包含指向外部的链接`，临时目录 0 |
+| U6 install.sh 失败 | 2/2：exit 1，退出码 7，旧版本仍可用，临时目录 0 |
+| U6 下载中断 | 2/2：exit 1，`下载中断`，临时目录 0 |
+| U7 | 2/2：`--check` 显示当前 2.1 → 最新 2.2 |
+| R1 面板 | `/skills`、`/provider`、`/model` 各 2 次：PTY 里都出现对应面板/列表 |
+| R1 skills-update | `check` 2 次因服务器无 GitHub 凭据返回 `GIT_AUTH`（命令本身正常运行）；`catalog` 2 次 exit 0 |
