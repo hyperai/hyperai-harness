@@ -100,3 +100,32 @@
 A6 采用新定义：不检查 `~/.hyperai/profiles/hyperai` 是否删除（uninstall 按设计保留归档标记），只检查 DeepSeek 一侧哈希不变、它的 dsh 仍可用。
 
 批内未覆盖：A2 要求里的 shell 配置、`~/.npm`、pnpm store 不在哈希范围内（本环境用工作区 npm cache 和 prefix 内 pnpm store）；见后续批次补齐。
+
+## 第 2 批（macOS，真实 DSH 环境）
+
+### A6 版本疑点：测试脚本 PATH 写错，不是产品问题
+
+- 第 1 批把 PATH 写成了 `<HOME>/prefix/bin`，但 `npm install --prefix` 的二进制在 `<HOME>/prefix/node_modules/.bin`；`prefix/bin` 不存在，于是 `command -v dsh` 落到了真实机器的 `/Users/<user>/.local/bin/dsh`（0.2.0-rc.2）。
+- 对照：`<prefix>/node_modules/.bin/dsh --version` 返回 `0.2.2-rc.1`；`<prefix>/bin/dsh` 不存在。
+- 不是 HyperAI 把自己的 dsh 放到用户 PATH 前面：HyperAI 只写自己的 `~/.hyperai/bin`，没有改 shell 配置或用户 prefix。
+- 环境脚本已改为 `prefix/node_modules/.bin`，并补了 `dsh-tui` profile 从引导默认的 0.16.1 升到 0.19.0 的步骤。
+
+### 重跑 A6（2 次）
+
+哈希范围同第 1 批（prefix、`~/.dsh`、`~/.dsh-tui*`）：
+
+| 轮次 | 结果 |
+|---|---|
+| 1 | 安装/卸载 exit 0，哈希一致；`command -v dsh` = 临时 HOME 的 prefix，`dsh --version` = `0.2.2-rc.1`，绝对路径同版本 |
+| 2 | 安装/卸载 exit 0，哈希一致；`command -v dsh` 指向临时 prefix，`dsh --version` = `0.2.2-rc.1`；`dsh-tui` 启动到 “Welcome to dsh-TUI Step 1 of 4” |
+
+### A5（同一 shell，两侧各 2 次）
+
+| 轮次 | HyperAI | 用户 dsh |
+|---|---|---|
+| 1 | 启动正常，`dsh-core v0.2.0-rc.2` | `dsh-tui` 启动到引导界面，`dsh --version` = `0.2.2-rc.1` |
+| 2 | 启动正常，`dsh-core v0.2.0-rc.2` | `dsh-tui` 启动到引导界面，`dsh --version` = `0.2.2-rc.1` |
+
+### A7（2 次）
+
+删除临时 HOME 下的 `prefix`、`~/.dsh`、`~/.dsh-tui*` 后启动 `hyperai`：两次都正常渲染（`dsh-core v0.2.0-rc.2`），`~/.hyperai/dsh/profiles/hyperai`、`~/.hyperai/tui`、`.credentials.yaml` 都在；没有重新创建 `~/.dsh`。
