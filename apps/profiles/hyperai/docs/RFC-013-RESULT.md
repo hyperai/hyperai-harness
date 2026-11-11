@@ -63,3 +63,9 @@
 - U2、U3、U6、U7、U8 未测。
 - Ubuntu 全部场景未跑；macOS 多数项未达到每项 2 次。
 - 因此 RFC-013 仍不能按“已完成”交付。
+
+## 第五轮：A1 sandbox-exec
+
+- macOS 本机 `fs_usage` 需要管理员权限（`sudo -n` 不可用），改用 `sandbox-exec`：允许写临时 HOME 和系统路径，拒绝写真实 HOME，拒绝读写临时 HOME 下的 `.dsh`、`.dsh-tui*`、DSH prefix。
+- 在这个沙盒里 `install.sh` 完整通过（exit 0），启动 TUI 也能渲染；没有出现与 HyperAI 路径相关的 deny。
+- 但 `log show --predicate 'sender=="Sandbox"'` 输出的是系统全局日志，无法按本次进程过滤，不能据此给出“零 deny”的严格结论；A1 仍未形成逐条分类清单。
