@@ -261,3 +261,20 @@ HOME 下 `.hyperai` 以外：安装包目录（`rfc013b5/pkg/...`）、测试辅
 连续 3 次：85 个测试，83 通过，0 失败，2 跳过（本机缺 `dsh-skill-filesystem`）。结果稳定。
 
 之前 shell 内 3 次 84/1 的 bundle 失败**未能复现**：单独设置 `DSH_PROFILE`、`DSH_PROFILE_DIR`、`DSH_SESSION_ID`、`DSH_SHELL`、`NODE_COMPILE_CACHE` 均通过；随后当前 shell 全量 85/0 通过。判断为并行测试/模拟服务残留导致的测试环境问题，不是产品缺陷；安装器没有读取这些 `DSH_*` 变量。
+
+## 第 6a 批（Ubuntu，最终包 a2283552）
+
+| 项 | 结果 |
+|---|---|
+| M1 | 2/2：beta.2 profile 版本正确；迁移 exit 0、有记录；provider 仅 skill 根写法不同、sessions 不复制，credential/model/prefs/userskill/builtin 一致 |
+| M2 | 2/2：beta.1 版本 `0.2.0-beta.1`；同上 |
+| M3 | 2/2：迁移记录不变；新目录 settings 修改保留 |
+| M4 | 2/2：foreign profile 未迁移、未改动，新 profile 正常 |
+| M5 | 2/2：第一次 exit 1、旧目录不变；移除阻塞后重试成功 |
+| U1 | 2/2：启动显示中文新版本提示，缓存写入，单次请求 |
+| U5 | 通过：Node 22 下 `update --yes` 升级到 `0.2.0-beta.2.2`（首次因 node 18 被新包 preflight 拒绝，属测试环境） |
+| U7 | `--check` 正常显示当前版本和最新版本 |
+| U8 | 请求日志只出现 mock 地址和安装包路径 |
+| R1 | 品牌/核心版本、`manage status`、`manage doctor` 通过 |
+
+未完成：U2/U3/U4/U6 的 Ubuntu 2 次、R1 的 `/skills`/`/provider`/`/model`/`skills-update` 逐项。
