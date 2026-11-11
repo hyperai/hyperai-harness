@@ -714,6 +714,7 @@ import { useSkillsUpdate } from '../hyperaiSkills.js';`,
 const EXTRA_FILES = [
   ['hyperaiSkillsCore.js', 'lib/types/hyperaiSkillsCore.js'],
   ['hyperaiSkills.js', 'lib/types/hyperaiSkills.js'],
+  ['hyperaiUpdate.js', 'lib/types/hyperaiUpdate.js'],
 ]
 
 /** Copy the HyperAI-owned UI modules into the patched package source. */
@@ -741,6 +742,7 @@ const EXPECTED_FILES = [
   'lib/types/screens/Chat.js',
   'lib/types/hyperaiSkills.js',
   'lib/types/hyperaiSkillsCore.js',
+  'lib/types/hyperaiUpdate.js',
 ]
 
 /** Build the patch text from the pinned upstream package. */

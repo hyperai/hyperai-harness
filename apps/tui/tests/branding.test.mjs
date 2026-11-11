@@ -75,6 +75,7 @@ test('the patch touches only the documented upstream files and stays small', () 
     'lib/types/dsh-adapter/plugin.js',
     'lib/types/hyperaiSkills.js',
     'lib/types/hyperaiSkillsCore.js',
+    'lib/types/hyperaiUpdate.js',
     'lib/types/i18n.js',
     'lib/types/screens/Chat.js',
     'lib/types/screens/Launchpad.js',

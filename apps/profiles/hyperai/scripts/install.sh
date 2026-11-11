@@ -38,7 +38,7 @@ say "  安装包：$HERE"
 say "  HyperAI 目录：$HYPERAI_HOME"
 say "  Harness home：$DSH_HOME"
 if [ -n "$SHELL_DSH_HOME" ] && [ "$SHELL_DSH_HOME" != "$DSH_HOME" ]; then
-  say "检测到你设置了 DSH_HOME=$SHELL_DSH_HOME，HyperAI 不会使用它。"
+  say "检测到你设置了 DSH_HOME=${SHELL_DSH_HOME}，HyperAI 不会使用它。"
 fi
 say ""
 
@@ -90,7 +90,7 @@ OLD_PROFILE="$HOME/.dsh/profiles/hyperai"
 MIGRATING=0
 if [ ! -e "$DSH_HOME/profiles/hyperai/package.json" ] && [ ! -e "$DSH_HOME/.hyperai-migration.json" ] && [ -f "$OLD_PROFILE/package.json" ] && grep -q '"hyperaiTuiManaged": true' "$OLD_PROFILE/package.json"; then
   MIGRATING=1
-  say "检测到旧版安装在 ~/.dsh，这次会把配置、API key 和界面设置复制到 $HYPERAI_HOME。"
+  say "检测到旧版安装在 ~/.dsh，这次会把配置、API key 和界面设置复制到 ${HYPERAI_HOME}。"
   say "原来的 ~/.dsh 不会改动；以前的对话仍然保存在 ~/.dsh 里，没有丢失，只是不会出现在新版本中。"
 fi
 export HYPERAI_TUI_MIGRATING="$MIGRATING"
@@ -200,7 +200,7 @@ if ! printf '%s' ":$PATH:" | grep -q ":$BIN_DIR:"; then
   say ""
 fi
 if [ "$MIGRATING" = "1" ]; then
-  say "迁移完成：配置、API key 和界面设置已复制到 $HYPERAI_HOME；旧对话仍然在 ~/.dsh，不会出现在新版本中。"
+  say "迁移完成：配置、API key 和界面设置已复制到 ${HYPERAI_HOME}；旧对话仍然在 ~/.dsh，不会出现在新版本中。"
 fi
 say "首次使用：进入 TUI 后用 /provider 添加模型服务，再用 /model 选择模型。"
 say "API key 由 DSH 保存在 $DSH_HOME/.credentials.yaml（权限 0600），不会写进安装包。"

@@ -109,6 +109,7 @@ check('patch touches only the documented upstream files', () => {
     'lib/types/screens/Chat.js',
     'lib/types/hyperaiSkills.js',
     'lib/types/hyperaiSkillsCore.js',
+    'lib/types/hyperaiUpdate.js',
   ]
   const unexpected = changed.filter(file => !expected.includes(file))
   const missing = expected.filter(file => !changed.includes(file))
