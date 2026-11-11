@@ -227,3 +227,27 @@ U6 修复后提交 `6f81a7d…`；因 GitHub 再次不可达，测试包用 beta
   - A6 2/2：卸载 exit 0、一侧哈希一致、`dsh --version` = `0.2.2-rc.1`。
 - A4/A5/A7/A8/A9 批量脚本已启动，但服务器 SSH 在运行中途超时，未取回结果；A1 的 `strace -f -e trace=%file` 尚未执行。
 - 因此第 5 批未完成，不能按“全部做完”交付。
+
+## 第 5 批（Ubuntu，完成）
+
+最终包按锁定 commit 正常重建：sha256 `a2283552…`，18 471 064 字节，commit `da6df983…`；skills `34f0a1be0c`、contentDigest `c52a8cf7…` 与 beta.2 一致；两次构建一致，已上传服务器并校验。
+
+真实 DSH 环境：`dsh 0.2.2-rc.1` + `dsh-tui 0.19.0`（npm 首次版本解析失败，显式版本重试成功；dsh-tui 引导需 Node 22 和 pnpm，测试机另装 Node 22.23.4 + pnpm 10.28.1）。
+
+| 场景 | 结果 |
+|---|---|
+| A2 | 2/2：安装 exit 0、铭牌 `0.2.0-beta.2.1`、DeepSeek 一侧哈希一致 |
+| A4 | 2/2：外部 `DSH_HOME`/`DSH_TUI_*` 下安装 exit 0，有“不会使用它”提示，旧 `~/.dsh` 哈希不变，铭牌正确 |
+| A5 | 2/2：HyperAI 显示 `dsh-core v0.2.0-rc.2`；用户 `dsh-tui` 启动（画面出现 `dsh-TUI`），`dsh --version` = `0.2.2-rc.1` |
+| A6 | 2/2：卸载 exit 0，DeepSeek 一侧哈希不变，`dsh --version` = `0.2.2-rc.1` |
+| A7 | 2/2：删除 prefix、`~/.dsh`、`~/.dsh-tui*` 后 HyperAI 正常启动，profile 在，`~/.dsh` 未重建 |
+| A8 | 2/2：exit 0，未创建 `~/.dsh`、`~/.dsh-tui-hyperai` |
+| A9 | 2/2：`HYPERAI_HOME` 指向自定义目录，profile 在 custom，默认 `~/.hyperai/dsh` 未创建 |
+
+### A1（strace -f -e trace=%file）
+
+在测试用户下用 strace 跑安装、启动+`/skills`、`manage status/doctor/uninstall`、`hyperai update --check`。共 284 个路径：`.hyperai` 内 101，系统路径 158，测试辅助/安装包 18，HOME 下其他 7。
+
+HOME 下 `.hyperai` 以外：安装包目录（`rfc013b5/pkg/...`）、测试辅助 `pty-capture.py`、Node/Python 的 `.local` 与 prefix `.bin` 链接、`flow.sh`。没有读写 `~/.dsh`、`~/.dsh-tui*`、DeepSeek prefix；没有访问上游地址。
+
+环境变量：HyperAI 只认 `HYPERAI_HOME`、`HYPERAI_DSH_HOME`；启动器清空 `DSH_*`、`DSH_TUI_*`；安装时检测到 `DSH_HOME` 只提示不使用。`NODE_*`/`npm_config_*` 由安装器改写到 `~/.hyperai/cache`。
