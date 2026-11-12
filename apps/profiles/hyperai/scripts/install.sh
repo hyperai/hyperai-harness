@@ -26,6 +26,7 @@ fi
 export HYPERAI_HOME
 mkdir -p "$HYPERAI_HOME/cache/npm" "$HYPERAI_HOME/cache/pnpm"
 export npm_config_cache="$HYPERAI_HOME/cache/npm"
+export XDG_CACHE_HOME="$HYPERAI_HOME/cache"
 export PNPM_HOME="$HYPERAI_HOME/cache/pnpm"
 export HYPERAI_TUI_DIR="${HYPERAI_TUI_DIR:-$HYPERAI_HOME/tui}"
 REGISTRY=${HYPERAI_NPM_REGISTRY:-https://registry.npmjs.org}
@@ -165,6 +166,7 @@ DSH_HOME="\$HYPERAI_DSH_HOME"
 export DSH_HOME
 export HYPERAI_TUI_DIR="\${HYPERAI_TUI_DIR:-\$HYPERAI_HOME/tui}"
 export npm_config_cache="\$HYPERAI_HOME/cache/npm"
+export XDG_CACHE_HOME="\$HYPERAI_HOME/cache"
 export PNPM_HOME="\$HYPERAI_HOME/cache/pnpm"
 # 内测版默认关闭 Skills 自动检查：同事通常没有 hyperai-skills 仓库权限。
 export HYPERAI_SKILLS_TUI_AUTO="\${HYPERAI_SKILLS_TUI_AUTO:-0}"
