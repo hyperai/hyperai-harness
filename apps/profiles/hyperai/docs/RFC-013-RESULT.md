@@ -348,3 +348,28 @@ HOME 下 `.hyperai` 以外：安装包目录（`rfc013b5/pkg/...`）、测试辅
 | U7 | 2/2：`--check` 显示当前 2.1 → 最新 2.2 |
 | R1 面板 | `/skills`、`/provider`、`/model` 各 2 次：PTY 里都出现对应面板/列表 |
 | R1 skills-update | `check` 2 次因服务器无 GitHub 凭据返回 `GIT_AUTH`（命令本身正常运行）；`catalog` 2 次 exit 0 |
+
+## fix-1（beta.2.1 验收问题修复）
+
+### F1：foreign profile 提示
+
+- `install.sh` 在 `~/.dsh/profiles/hyperai` 存在、没有 `hyperaiTuiManaged` 标记、且新目录还没有 profile 时，输出：“检测到 ~/.dsh 里有一个不是本安装器创建的 hyperai profile，已忽略，没有改动它。”
+- `install.mjs` 同时写入 `result.foreignProfile` 和 warning；`--dry-run` 也会显示。
+- 新增 `tests/isolation.test.mjs` 用例，真正调用 `install()` 断言 warning，并验证旧 profile 哈希不变。
+- 实测：macOS 2/2、Ubuntu 2/2，`--dry-run` 有提示、旧目录哈希不变；正常带标记的老用户 dry-run 显示迁移提示、不出现 foreign 提示。
+
+### F2：旧路径
+
+- `beta-install.md` 第 119 行改为 `~/.hyperai/tui/model.json`；全文剩余的 `~/.dsh-tui-hyperai` 只出现在“老用户迁移”说明旧位置处。
+
+### F3：/update 描述与上游常量
+
+- 补丁中 `/update` 描述改为 `HyperAI: quit and run hyperai update to upgrade`。
+- 上游 `lib/types/update.js` 的 npm/GitHub 常量未改：现有补丁已把 `resolveTuiUpdateTarget()` 改成直接返回 `unknown`、`checkForTuiUpdate()` 短路，相关代码不可达，不需要新增补丁点；`resolveDshProfileName` 未改动。
+- `/update` 仍被现有补丁拦截，不会触发 npm/上游请求。macOS 屏幕证据交负责人真机检查。
+
+### 测试与构建
+
+- 干净环境连续 3 次：88 个测试，86 通过、0 失败、2 跳过。过程中在系统高负载时 `bundle mode` 偶发 30s 超时，空闲后连续 3 次全部通过；该测试与本次改动无关，未改其逻辑。
+- 同一 commit 两次构建：sha256 `ffdb9e353dfb8ca457b2d1b614de9239b6d3141e9fd5485a087a4aeec14bc37c`，18 471 695 字节，commit `aae24efae9…`。
+- 新包已上传测试服务器并校验，旧包保留。
