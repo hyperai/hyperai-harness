@@ -4,7 +4,7 @@
 
 | 项 | macOS | Ubuntu |
 |---|---|---|
-| A1 | 通过 2 次：安装/manage/update --check 前后 HOME（除 .hyperai）哈希一致 | 通过 1 次：strace，7 条 .hyperai 外路径均测试辅助/安装包 |
+| A1 | 通过 2 次：安装/manage/update --check 前后 HOME（除 .hyperai）哈希一致 | 通过 2 次：strace；第二次只剩安装包/测试辅助路径 |
 | A2 | 通过 2 次 | 通过 2 次 |
 | A3 | 交负责人真机检查 | — |
 | A4 | 通过 2 次 | 通过 2 次 |
