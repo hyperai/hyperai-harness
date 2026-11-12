@@ -1,14 +1,14 @@
 # RFC-013 结果总表
 
-包：`b58acfaa…7a53`（最终缓存修复包 `fcb637eb…1def`，仅 install.sh 增加 XDG_CACHE_HOME，A1 已用新包复测）。
+包：`fcb637eb9633a52de56ad6bad9a4d0a6d0fa32b3a0e7a62012396c7c033d1def`（18 471 530 字节，commit `f0a6eca4…`）；A1 已用该包复测，其余结果在 b58acfaa…7a53 上取得，两包只差 XDG_CACHE_HOME。
 
 | 项 | macOS | Ubuntu |
 |---|---|---|
-| A1 | 通过 1 次：安装/manage/update --check 前后 HOME（除 .hyperai）哈希一致；Sandbox 日志仅 1 条 pnpm 内部读 | 通过 1 次：strace，7 条 .hyperai 外路径均测试辅助/安装包 |
+| A1 | 通过 2 次：安装/manage/update --check 前后 HOME（除 .hyperai）哈希一致 | 通过 1 次：strace，7 条 .hyperai 外路径均测试辅助/安装包 |
 | A2 | 通过 2 次 | 通过 2 次 |
 | A3 | 交负责人真机检查 | — |
 | A4 | 通过 2 次 | 通过 2 次 |
-| A5 | 通过 1 次（hyperai 0.2.0-rc.2 / dsh 0.2.2-rc.1） | 通过 2 次 |
+| A5 | 通过 2 次（hyperai 0.2.0-rc.2 / dsh 0.2.2-rc.1） | 通过 2 次 |
 | A6 | 通过 2 次 | 通过 2 次 |
 | A7 | 通过 2 次 | 通过 2 次 |
 | A8 | 通过 2 次 | 通过 2 次 |
