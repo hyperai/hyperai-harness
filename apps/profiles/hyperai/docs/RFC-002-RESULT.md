@@ -203,7 +203,7 @@ if (packageJson.name === PACKAGE_NAME && typeof version === 'string' && valid(ve
 | `apps/tui` verify / tests | 14/14、20/20 |
 | `apps/profiles/hyperai` verify / tests | 12/12、72/72 |
 | macOS 全新临时 HOME 安装并启动 | 通过：安装 exit 0、profile 与 Skills 生成、启动画面铭牌 `hyperai-tui v0.2.0-beta.1 · dsh-tui v0.16.1`、`--dump-config` 611 行 / stderr 0 字节 |
-| 服务器上安装包 | 已覆盖 `/home/hyperai-beta/hyperai-harness-0.2.0-beta.1.tar.gz`，大小 18 461 159 字节，`sha256sum -c` 通过 |
+| 服务器上安装包 | 已覆盖 `/home/<测试用户>/hyperai-harness-0.2.0-beta.1.tar.gz`，大小 18 461 159 字节，`sha256sum -c` 通过 |
 
 两个平台的完整回归按 RFC 由验收 agent 执行，本轮没有重跑。
 

@@ -322,7 +322,7 @@ HOME 下 `.hyperai` 以外：安装包目录（`rfc013b5/pkg/...`）、测试辅
 
 ## Node 18 升级缺陷与修复
 
-- 原因：第一次失败时 shell 的 `node` 是 18.20.4；第二次“成功”的命令把 `/home/hyperai-beta/node-v22.23.4/bin` 放到了 PATH 前面，实际用的是 Node 22。`update.mjs` 只按 PATH 的 `node` 执行，和新包 preflight 用的不是同一个保证；旧实现又没有在下载/安装前检查 Node，因此 Node 18 时可能升级到打不开的版本。
+- 原因：第一次失败时 shell 的 `node` 是 18.20.4；第二次“成功”的命令把 `/home/<测试用户>/node-v22.23.4/bin` 放到了 PATH 前面，实际用的是 Node 22。`update.mjs` 只按 PATH 的 `node` 执行，和新包 preflight 用的不是同一个保证；旧实现又没有在下载/安装前检查 Node，因此 Node 18 时可能升级到打不开的版本。
 - 修复：`update.mjs` 在解析版本后、下载前检查 `process.versions.node`（^22.19 或 >=24），不满足时中文报错并退出 1，不改任何文件；新增 `update-node.test.mjs` 真实运行版本判断。
 - 构建：提交 `6207540069…`，两次构建 sha256 均为 `e37c75951d6ab21ae07c24be4f0dfa356ab46f22ba83bf328ff604d12b5991c4`，18 471 300 字节；已上传服务器并校验。
 - 实测（Node 18.20.4，2 次）：均 exit 1，版本仍 `0.2.0-beta.2.1`，设置哈希不变，`~/.hyperai/update-*` 为 0，中文提示“当前 Node.js v18.20.4 不受支持（需要 ^22.19 或 >=24）…旧版本和用户数据没有改动”。
