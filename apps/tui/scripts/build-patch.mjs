@@ -612,7 +612,7 @@ export const DATA_DIR = process.env.HYPERAI_TUI_DIR || join(homeDir(), '.hyperai
       file: 'lib/types/commands.js',
       why: 'the upstream /update entry must not replace the branded package',
       find: "    { name: 'update', description: 'Update dsh-tui and restart' },",
-      replace: "    { name: 'update', description: 'HyperAI: updates are managed by the profile installer' },",
+      replace: "    { name: 'update', description: 'HyperAI: quit and run hyperai update to upgrade' },",
     },
     {
       file: 'lib/types/screens/Chat.js',

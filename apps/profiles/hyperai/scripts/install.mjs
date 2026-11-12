@@ -591,6 +591,10 @@ export async function install(options = parseArgs([])) {
     )
   }
   const migration = detectMigration(options)
+  if (migration?.kind === 'foreign') {
+    result.foreignProfile = migration.from
+    result.warnings.push({ phase: 'migration', message: `检测到 ${migration.from} 不是本安装器创建的 hyperai profile，已忽略，没有改动它。` })
+  }
   if (migration?.kind === 'migrate') {
     result.migration = { from: migration.from, fromVersion: migration.fromVersion, sessionsCopied: false }
     plan.push({ file: join(options.dshHome, '.hyperai-migration.json'), action: 'migrate' })

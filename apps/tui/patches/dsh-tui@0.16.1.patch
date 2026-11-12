@@ -53,7 +53,7 @@ index e20c590..bfb6f7b 100644
      { value: 'codex', label: 'Codex (lavender)', descriptions: { zh: 'Codex（薰衣草紫）' } },
  ];
 diff --git a/lib/types/commands.js b/lib/types/commands.js
-index 0806732..7973530 100644
+index 0806732..d3181df 100644
 --- a/lib/types/commands.js
 +++ b/lib/types/commands.js
 @@ -84,8 +84,9 @@ export const LOCAL_COMMANDS = [
@@ -63,7 +63,7 @@ index 0806732..7973530 100644
 +    { name: 'skills-update', description: 'Check for HyperAI Skills updates and install them' },
      { name: 'plugin', description: 'Show plugin diagnostics, and the plugins this profile added' },
 -    { name: 'update', description: 'Update dsh-tui and restart' },
-+    { name: 'update', description: 'HyperAI: updates are managed by the profile installer' },
++    { name: 'update', description: 'HyperAI: quit and run hyperai update to upgrade' },
      // Skills are discovered through the DSH registry and added at runtime.
      // A local entry of the same name would win the collision filter.
      // Misc / not applicable on this leaf
@@ -252,7 +252,7 @@ index 71e32df..4f233d0 100644
      setActiveBrand(resolveBrand(config.brand, backendChoice));
 diff --git a/lib/types/hyperaiSkills.js b/lib/types/hyperaiSkills.js
 new file mode 100644
-index 0000000..357e36d
+index 0000000..91487c8
 --- /dev/null
 +++ b/lib/types/hyperaiSkills.js
 @@ -0,0 +1,313 @@
@@ -559,7 +559,7 @@ index 0000000..357e36d
 +    const timer = setTimeout(() => {
 +      void checkForUpdate().then(result => {
 +        if (!alive || result === undefined) return
-+        const message = updateNoticeText(result.latest, lang())
++        const message = updateNoticeText(result.latest)
 +        setUpdateNotice(message)
 +        try { channel.notify(message, { color: 'info', timeoutMs: 60_000 }) } catch { /* notification is best-effort */ }
 +      }).catch(() => {})
@@ -719,10 +719,10 @@ index 0000000..a05f30d
 +}
 diff --git a/lib/types/hyperaiUpdate.js b/lib/types/hyperaiUpdate.js
 new file mode 100644
-index 0000000..ade32ab
+index 0000000..ba71da7
 --- /dev/null
 +++ b/lib/types/hyperaiUpdate.js
-@@ -0,0 +1,131 @@
+@@ -0,0 +1,129 @@
 +/**
 + * HyperAI release check (GitHub Releases, never npm and never the upstream
 + * repository). The TUI calls this in the background; a cached answer is used
@@ -849,10 +849,8 @@ index 0000000..ade32ab
 +}
 +
 +/** One-line, non-blocking notice shown in the TUI. */
-+export function updateNoticeText(latest, lang = 'zh') {
-+  return lang === 'zh'
-+    ? `HyperAI Harness 有新版本 ${latest}，退出后运行 hyperai update 升级`
-+    : `HyperAI Harness ${latest} is available; run hyperai update after quitting`
++export function updateNoticeText(latest) {
++  return `HyperAI Harness 有新版本 ${latest}，退出后运行 hyperai update 升级`
 +}
 diff --git a/lib/types/i18n.js b/lib/types/i18n.js
 index d7db9d3..ae0cba4 100644

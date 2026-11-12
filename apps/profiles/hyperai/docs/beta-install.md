@@ -116,7 +116,7 @@ HyperAI 不预置任何模型服务，用 DSH 原生命令配置：
 1. 输入 `/provider`：添加一个 OpenAI 兼容的服务（填路由名、Base URL、API key）；
 2. 输入 `/model`：选择要用的模型。
 
-API key 由 DSH 保存在 `~/.hyperai/dsh/.credentials.yaml`（权限 0600），不会进入安装包，也不会写进日志。provider 和模型选择保存在 profile 的 `cordis.patch.yml` 与 `~/.dsh-tui-hyperai/model.json`，重新运行 `install.sh` 不会清掉。
+API key 由 DSH 保存在 `~/.hyperai/dsh/.credentials.yaml`（权限 0600），不会进入安装包，也不会写进日志。provider 和模型选择保存在 profile 的 `cordis.patch.yml` 与 `~/.hyperai/tui/model.json`，重新运行 `install.sh` 不会清掉。
 
 ---
 

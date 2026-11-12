@@ -93,6 +93,8 @@ if [ ! -e "$DSH_HOME/profiles/hyperai/package.json" ] && [ ! -e "$DSH_HOME/.hype
   MIGRATING=1
   say "检测到旧版安装在 ~/.dsh，这次会把配置、API key 和界面设置复制到 ${HYPERAI_HOME}。"
   say "原来的 ~/.dsh 不会改动；以前的对话仍然保存在 ~/.dsh 里，没有丢失，只是不会出现在新版本中。"
+elif [ ! -e "$DSH_HOME/profiles/hyperai/package.json" ] && [ -f "$OLD_PROFILE/package.json" ] && ! grep -q '"hyperaiTuiManaged": true' "$OLD_PROFILE/package.json"; then
+  say "检测到 ~/.dsh 里有一个不是本安装器创建的 hyperai profile，已忽略，没有改动它。"
 fi
 export HYPERAI_TUI_MIGRATING="$MIGRATING"
 

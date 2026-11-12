@@ -67,3 +67,20 @@ test('failed migration rolls back and keeps the old home intact', () => {
     assert.equal(hashTree(old), before)
   } finally { rmSync(h, { recursive: true, force: true }) }
 })
+
+test('foreign ~/.dsh profile is reported and left untouched', async () => {
+  const h = home()
+  try {
+    mkdirSync(join(h, '.dsh', 'profiles', 'hyperai'), { recursive: true })
+    writeFileSync(join(h, '.dsh', 'profiles', 'hyperai', 'package.json'), '{"name":"foreign"}\n')
+    const before = hashTree(join(h, '.dsh'))
+    const { install } = await import('../scripts/install.mjs')
+    const result = await install({
+      home: h, dshHome: join(h, '.hyperai', 'dsh'), profileDir: join(h, '.hyperai', 'dsh', 'profiles', 'hyperai'), profile: 'hyperai', dryRun: true,
+      preflight: false, skills: false, verifiedOnly: false, migrate: true, dshBin: 'dsh', pnpmBin: 'pnpm', force: false, frozenLockfile: false,
+    })
+    assert.equal(result.foreignProfile, join(h, '.dsh', 'profiles', 'hyperai'))
+    assert.match(result.warnings.map(w => w.message).join('\n'), /不是本安装器创建的 hyperai profile/u)
+    assert.equal(hashTree(join(h, '.dsh')), before)
+  } finally { rmSync(h, { recursive: true, force: true }) }
+})
