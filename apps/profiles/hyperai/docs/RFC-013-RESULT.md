@@ -1,3 +1,44 @@
+# RFC-013 结果总表
+
+包：`b58acfaa…7a53`（最终缓存修复包 `fcb637eb…1def`，仅 install.sh 增加 XDG_CACHE_HOME，A1 已用新包复测）。
+
+| 项 | macOS | Ubuntu |
+|---|---|---|
+| A1 | 通过 1 次：安装/manage/update --check 前后 HOME（除 .hyperai）哈希一致；Sandbox 日志仅 1 条 pnpm 内部读 | 通过 1 次：strace，7 条 .hyperai 外路径均测试辅助/安装包 |
+| A2 | 通过 2 次 | 通过 2 次 |
+| A3 | 交负责人真机检查 | — |
+| A4 | 通过 2 次 | 通过 2 次 |
+| A5 | 通过 1 次（hyperai 0.2.0-rc.2 / dsh 0.2.2-rc.1） | 通过 2 次 |
+| A6 | 通过 2 次 | 通过 2 次 |
+| A7 | 通过 2 次 | 通过 2 次 |
+| A8 | 通过 2 次 | 通过 2 次 |
+| A9 | 通过 2 次 | 通过 2 次 |
+| M1 | 通过 2 次（5 类同，provider/sessions 预期差异） | 通过 2 次 |
+| M2 | 通过 2 次（同上） | 通过 2 次 |
+| M3 | 通过 2 次 | 通过 2 次 |
+| M4 | 通过 2 次 | 通过 2 次 |
+| M5 | 通过 2 次 | 通过 2 次 |
+| U1 | 交负责人真机检查（提示文案） | 通过 2 次 |
+| U2 | 交负责人真机检查 | 通过 6 次（3 变体 ×2） |
+| U3 | 交负责人真机检查 | 通过 6 次（3 变体 ×2） |
+| U4 | 交负责人真机检查 | 通过 2 次 |
+| U5 | 通过 2 次 | 通过 2 次 |
+| U6 | 通过 2 次 × 6 类（含真截断） | 通过 2 次 × 6 类 |
+| U7 | 通过 2 次 | 通过 2 次 |
+| R1 | 命令行 status/doctor/catalog 2 次；面板交负责人真机检查 | 面板 2 次、status/doctor 2 次、skills-update catalog 2 次（check 因无 GitHub 凭据 GIT_AUTH） |
+| R2 | 干净环境 3 次：87 测试，85 过/0 败/2 跳过；同 commit 构建两次 sha 一致 | 同 |
+
+**A1 Ubuntu 的 7 条 `.hyperai` 外路径**：
+1. `/home/<test>/rfc013b5/pkg/...`（安装包解压目录）
+2. `/home/<test>/rfc013b5/pty-capture.py`（测试辅助）
+3. `/home/<test>/rfc013b5/flow.sh`（测试脚本）
+4. `/home/<test>/rfc013b5/env/.local/lib/python3.10/site-packages`（PTY 测试依赖）
+5. `/home/<test>/rfc013b5/env/prefix/node_modules/.bin/bash`（Node/npm 链接）
+6. `/home/<test>/rfc013b5/env/prefix/node_modules/.bin/node`
+7. `/home/<test>/rfc013b5/env/prefix/node_modules/.bin/python3`
+
+结论：除 macOS A5 只有 1 次、A1 只有 1 次外，其余自测项均达到 2 次；截屏相关按负责人决定交真机检查。
+
 # RFC-013 结果报告（进行中）
 
 > 分支 `hyperai/main`（从 tag `v0.2.0-beta.2`）。本报告如实记录已完成与未完成项，**尚未达到 RFC 的全部验收标准**。
