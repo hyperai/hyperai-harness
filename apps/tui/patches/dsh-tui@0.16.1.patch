@@ -1,0 +1,1276 @@
+diff --git a/lib/types/branding.js b/lib/types/branding.js
+index e20c590..bfb6f7b 100644
+--- a/lib/types/branding.js
++++ b/lib/types/branding.js
+@@ -53,10 +53,31 @@ export function resolveBrand(setting, backendId) {
+ }
+ /** 各品牌的开屏标题词（大字重解字距见 `splashFonts.withTagline`）。 */
+ export const BRAND_SPLASH_WORDS = Object.freeze({
+-    deepseek: Object.freeze({ top: 'DEEPSEEK', bottom: 'HARNESS', plain: 'DeepSeek Harness' }),
++    deepseek: Object.freeze({ top: 'HYPERAI', bottom: 'HARNESS', plain: 'HyperAI Harness' }),
+     claude: Object.freeze({ top: 'CLAUDE', bottom: 'CODE', plain: 'Claude Code' }),
+     codex: Object.freeze({ top: 'CODEX', bottom: 'HARNESS', plain: 'Codex' }),
+ });
++/**
++ * HyperAI palette for the patched default (`dsh` backend) look.
++ *
++ * The product brand colour is one value, `#FF6096`. The splash title, the
++ * wordmark and the welcome tagline all use it unchanged, so light and dark
++ * terminals show the same brand pink instead of deriving theme gradients (the
++ * earlier pink -> near-white ladder read as an unintended purple/pink ramp on
++ * light themes). No other brand accent is introduced here.
++ */
++export const HYPERAI_PALETTE = Object.freeze({
++    accent: Object.freeze({ r: 255, g: 96, b: 150 }),
++    accentShimmer: Object.freeze({ r: 255, g: 96, b: 150 }),
++    tagline: Object.freeze({ r: 255, g: 96, b: 150 }),
++    title: Object.freeze({
++        base: Object.freeze({ r: 255, g: 96, b: 150 }),
++        start: Object.freeze({ r: 255, g: 96, b: 150 }),
++        mid: Object.freeze({ r: 255, g: 96, b: 150 }),
++        end: Object.freeze({ r: 255, g: 96, b: 150 }),
++        flash: Object.freeze({ r: 255, g: 96, b: 150 }),
++    }),
++});
+ /** claude 品牌按终端深浅落的两套内置主题（theme.ts 注册：墨黑 / 暖纸张，
+  *  共用同一套陶土橙强调色——切明暗不丢品牌识别）。 */
+ export const CLAUDE_BRAND_THEMES = Object.freeze({
+@@ -97,14 +118,14 @@ export function brandThemeFor(brand, themeName) {
+ /** 开屏欢迎语（品牌档；deepseek 沿用 i18n 的 `logo-tagline`）。英文两行以
+  *  `\n` 分隔，渲染层按行拆开居中。 */
+ export const BRAND_TAGLINE = Object.freeze({
+-    deepseek: Object.freeze({ zh: '', en: '' }),
++    deepseek: Object.freeze({ zh: 'HyperAI Harness', en: 'HyperAI Harness' }),
+     codex: Object.freeze({ zh: '用 Codex 构建一切', en: 'Build anything with Codex' }),
+     claude: Object.freeze({ zh: '创造精彩，守护关键。', en: "Create what's exciting.\nMaintain what's essential." }),
+ });
+ /** `/settings` 里 `dsh-tui.brand` 的选项（结构与 `SPLASH_FONT_OPTIONS` 同形）。 */
+ export const BRAND_SETTING_OPTIONS = [
+     { value: 'auto', label: 'Follow backend (default)', descriptions: { zh: '跟随后端（默认）' } },
+-    { value: 'deepseek', label: 'DeepSeek (mist blue)', descriptions: { zh: 'DeepSeek（雾蓝）' } },
++    { value: 'deepseek', label: 'HyperAI Harness (default)', descriptions: { zh: 'HyperAI Harness（默认）' } },
+     { value: 'claude', label: 'Claude Code (orange)', descriptions: { zh: 'Claude Code（橙）' } },
+     { value: 'codex', label: 'Codex (lavender)', descriptions: { zh: 'Codex（薰衣草紫）' } },
+ ];
+diff --git a/lib/types/commands.js b/lib/types/commands.js
+index 0806732..d3181df 100644
+--- a/lib/types/commands.js
++++ b/lib/types/commands.js
+@@ -84,8 +84,9 @@ export const LOCAL_COMMANDS = [
+     { name: 'hooks', description: 'Show hooks status' },
+     { name: 'mcp', description: 'Show MCP status' },
+     { name: 'skills', description: 'List available skills' },
++    { name: 'skills-update', description: 'Check for HyperAI Skills updates and install them' },
+     { name: 'plugin', description: 'Show plugin diagnostics, and the plugins this profile added' },
+-    { name: 'update', description: 'Update dsh-tui and restart' },
++    { name: 'update', description: 'HyperAI: quit and run hyperai update to upgrade' },
+     // Skills are discovered through the DSH registry and added at runtime.
+     // A local entry of the same name would win the collision filter.
+     // Misc / not applicable on this leaf
+diff --git a/lib/types/components/LogoV2.js b/lib/types/components/LogoV2.js
+index ed2f7f3..b906173 100644
+--- a/lib/types/components/LogoV2.js
++++ b/lib/types/components/LogoV2.js
+@@ -8,7 +8,7 @@ import { dirname, join } from 'node:path';
+ import { fileURLToPath } from 'node:url';
+ import { Box, Text, useAnimationFrame, useTerminalImages, useTerminalSize } from '../ui.js';
+ import { getTheme, isLightThemeActive } from '../theme.js';
+-import { BRAND_SPLASH_WORDS, BRAND_TAGLINE } from '../branding.js';
++import { BRAND_SPLASH_WORDS, BRAND_TAGLINE, HYPERAI_PALETTE } from '../branding.js';
+ import { useTheme } from './design-system/ThemeProvider.js';
+ import { interpolateColor, parseRGB } from './Spinner/spinnerUtils.js';
+ import { paintedWidth, renderBigText } from './bigfont.js';
+@@ -163,11 +163,17 @@ export function LogoV2({ model = '', effort, cwd = '', skipIntro = false, intro,
+     /** 终端真底色（Sixel 不透明衬底；见渲染处的注释）。 */
+     const theme = getTheme(themeName);
+     const { columns } = useTerminalSize();
+-    const wordmarkRGB = parseRGB(theme.accent) ?? BRAND;
+-    const wordmarkShimmerRGB = parseRGB(theme.accentShimmer) ?? ICE;
+-    const taglineRGB = parseRGB(theme.activity) ?? ICE;
++    // hyperai-tui: the patched default brand owns the accent family, so the
++    // wordmark/tagline use the product brand colour instead of the theme accent.
++    const hyperaiLook = brand === 'deepseek';
++    const wordmarkRGB = hyperaiLook ? HYPERAI_PALETTE.accent : parseRGB(theme.accent) ?? BRAND;
++    const wordmarkShimmerRGB = hyperaiLook ? HYPERAI_PALETTE.accentShimmer : parseRGB(theme.accentShimmer) ?? ICE;
++    const taglineRGB = hyperaiLook ? HYPERAI_PALETTE.tagline : parseRGB(theme.activity) ?? ICE;
+     // 按天轮换的大字字体：同一天内恒定、隔天换一款；`fontId`（设置项）可 pin 住一款。
+-    const [dailyFont] = React.useState(() => pickSplashFont());
++    // hyperai-tui: the upstream daily rotation can select stencil/classic/dot
++    // fonts (interior cutouts look hollow). The brand keeps the base solid
++    // pixel font; an explicit `/settings` font choice still wins below.
++    const [dailyFont] = React.useState(() => brand === 'deepseek' ? splashFontById('bold') : pickSplashFont());
+     const font = fontId === undefined ? dailyFont : splashFontById(fontId);
+     // 品牌词（`branding.ts`）：claude 内核换 `CLAUDE`/`CODE`、codex 内核换
+     // `CODEX`/`HARNESS`——字身不变、**两行同字距**（用户点名「间隙一致」：
+@@ -181,7 +187,9 @@ export function LogoV2({ model = '', effort, cwd = '', skipIntro = false, intro,
+     const [dailyEgg] = React.useState(() => (egg === undefined ? pickSplashEgg() : egg));
+     const titleFont = resolveSplashTitleFont(font, brand, dailyEgg);
+     // 窄终端阶梯：鲸鱼 + 大字 → 纯大字 → 纯鲸鱼 → 一行纯文字（阈值随字体字身宽度变）。
+-    const splash = resolveSplashLayout(columns, { whale, font: titleFont });
++    // hyperai-tui: the splash is the pixel wordmark only — no logo, whale,
++    // mascot or image placeholder is rendered in any arrangement.
++    const splash = resolveSplashLayout(columns, { whale: false, font: titleFont });
+     /**
+      * 上下排布（落地页）时立绘与词标**不共行**，宽轴那套「谁挤掉谁」的判定不适用：
+      * 立绘只看自己放不放得下（盒宽）。照并排阈值走会在 55–96 列这一大段把立绘判掉，
+@@ -191,7 +199,7 @@ export function LogoV2({ model = '', effort, cwd = '', skipIntro = false, intro,
+     const stacked = arrangement === 'column';
+     const { showWhale, showBigTitle, showPlainTitle } = stacked
+         ? {
+-            showWhale: whale && columns >= WHALE_BOX_WIDTH,
++            showWhale: false,
+             showBigTitle: splash.showBigTitle,
+             showPlainTitle: !splash.showBigTitle,
+         }
+@@ -393,7 +401,9 @@ export function LogoV2({ model = '', effort, cwd = '', skipIntro = false, intro,
+     // 品牌大字色阶（跨两行三档，从左上到右下走完）：claude 陶土橙、codex 薰衣草
+     // 紫；深底从亮档起步奔最亮收，浅底反向从深化档起步（浅底上"亮"是加深）。
+     // deepseek 不在表内——沿用主题 wordmark/tagline/PALE 的蓝白阶。
+-    const brandLadder = brand === 'claude'
++    const brandLadder = brand === 'deepseek'
++        ? HYPERAI_PALETTE.title
++        : brand === 'claude'
+         ? (brandPaper
+             ? { base: EMBER, start: EMBER, mid: EMBER_LIGHT, end: EMBER_BRIGHT, flash: EMBER_PAPER_FLASH }
+             : { base: EMBER_LIGHT, start: EMBER_LIGHT, mid: EMBER_BRIGHT, end: EMBER_PALE, flash: EMBER_FLASH })
+@@ -415,19 +425,22 @@ export function LogoV2({ model = '', effort, cwd = '', skipIntro = false, intro,
+     // 上到右下走完色阶。起点两轮提亮（用户反馈"还是暗"）：深底直接从亮档
+     // #E68A69 起步 → #EFA97E → 奶油橙 #FBD6B0（官方正色 #D77757 明度中等、
+     // 压深底发闷，只留给浅底当起点）；浅底 #D77757 → #E68A69 → #EFA97E。
+-    const titleFrom = titleFont.palette?.from
++    // hyperai-tui: the brand title is one solid colour. Font palettes and the
++    // bevel font's derived shading must not turn it into a gradient in another
++    // brand hue, so the deepseek default bypasses every other colour source.
++    const titleFrom = hyperaiLook ? HYPERAI_PALETTE.title.base : titleFont.palette?.from
+         ?? bevelShade?.from
+         ?? brandLadder?.start
+         ?? wordmarkRGB;
+-    const titleTopTo = titleFont.palette?.to
++    const titleTopTo = hyperaiLook ? HYPERAI_PALETTE.title.base : titleFont.palette?.to
+         ?? bevelShade?.to
+         ?? brandLadder?.mid
+         ?? taglineRGB;
+-    const titleBottomFrom = titleFont.palette?.from
++    const titleBottomFrom = hyperaiLook ? HYPERAI_PALETTE.title.base : titleFont.palette?.from
+         ?? bevelShade?.from
+         ?? brandLadder?.mid
+         ?? taglineRGB;
+-    const titleBottomTo = titleFont.palette?.to
++    const titleBottomTo = hyperaiLook ? HYPERAI_PALETTE.title.base : titleFont.palette?.to
+         ?? bevelShade?.to
+         ?? brandLadder?.end
+         ?? PALE;
+@@ -436,7 +449,10 @@ export function LogoV2({ model = '', effort, cwd = '', skipIntro = false, intro,
+     // 标题）两行左缘对齐。deepseek 档维持求解器的 bottomIndent（等宽契约），
+     // 例外是声明了固定字距的字体（shadow——等宽契约在 10 列字身上最紧只能
+     // 解出 5/7 字距，字间空得能走人）：它两行同字距，两种形态都按半差居中。
+-    const uniformBrand = brand !== 'deepseek';
++    // hyperai-tui: HYPERAI and HARNESS have different ink widths in the pixel
++    // fonts, so center the narrower word under the wider one (launchpad only;
++    // the chat header keeps left alignment).
++    const uniformBrand = true;
+     const fixedKerning = !uniformBrand && titleFont.uniformKerning !== undefined;
+     const centeredTitle = (uniformBrand && align === 'center') || fixedKerning;
+     const topInk = paintedWidth(titleFont, top, topKerning);
+@@ -477,7 +493,7 @@ export function LogoV2({ model = '', effort, cwd = '', skipIntro = false, intro,
+                                 setHeartSeq(0);
+                                 setHeartKey(k => k + 1);
+                             }
+-                        }, children: _jsx(Box, { width: WHALE_BOX_WIDTH, flexDirection: "column", alignItems: "center", children: brand === 'deepseek' && mascotSkin !== undefined ? (_jsx(SplashMascot, { skin: mascotSkin, active: !whaleFrozen && whaleIdle, imageBox: imageBox })) : portraitMode ? (_jsx(Box, { width: WHALE_BOX_WIDTH, height: textColumnRows, flexDirection: "row", justifyContent: "center", alignItems: "center", children: maidImageActive ? (_jsx(MaidPortrait, { source: maidHappy ? (portraits?.happy ?? maidSource) : maidSource, maxColumns: WHALE_BOX_WIDTH, maxRows: textColumnRows, presentation: "transcript" })) : (claudeArt ? _jsx(ClaudeGirlArt, { width: WHALE_BOX_WIDTH }) : _jsx(WhaleGirlArt, { width: WHALE_BOX_WIDTH })) })) : (_jsx(WhaleArt, { frameIndex: frameIndex, pose: settled && whaleIdle && !whaleFrozen ? (idlePose ?? RESTING_POSE) : undefined, width: WHALE_BOX_WIDTH })) }) })), (showBigTitle || showPlainTitle) && (_jsxs(Box, { flexDirection: "column", flexShrink: 1, children: [chrome !== 'minimal' && (_jsxs(Text, { wrap: "truncate-end", children: [sweep('✦ dsh-TUI', t, wordmarkRGB, wordmarkShimmerRGB, 60), _jsx(Text, { dimColor: true, children: '  v' + VERSION })] })), showBigTitle ? (_jsxs(_Fragment, { children: [bigDeepSeek.map((row, index) => (_jsx(Text, { wrap: "truncate-end", children: row.replace(/\s+$/u, '') }, `ds-${index}`))), _jsx(Box, { height: 1 }), bigHarness.map((row, index) => (_jsx(Text, { wrap: "truncate-end", children: row.replace(/\s+$/u, '') }, `h-${index}`)))] })) : (showPlainTitle && (_jsx(Text, { color: "accent", bold: true, wrap: "truncate-end", children: words.plain }))), chrome !== 'minimal' && (_jsxs(_Fragment, { children: [_jsxs(Text, { wrap: "truncate-end", children: [model, effort !== undefined && _jsx(Text, { dimColor: true, children: ' · ' + capitalize(effort) + ' effort' })] }), _jsx(Text, { dimColor: true, wrap: "truncate-end", children: cwd }), _jsxs(Text, { wrap: "truncate-end", children: [_jsx(Text, { dimColor: true, children: tr('logo-tip-prefix') }), getLang() === 'zh' ? randomTip.zh : randomTip.en, _jsx(Text, { dimColor: true, children: ' · /tips ' + tr('logo-tip-more') })] })] })), chrome !== 'minimal' && driftLine != null && (_jsxs(Text, { color: "warning", wrap: "wrap", children: ["\u26A0", ' ', tOr(`logo-drift-${driftLine.kind}`, `The dsh engine (${driftLine.versions.join(' / ')}) does not match the validated ${UPSTREAM_VALIDATED_VERSION}; reinstall via npm i -g @deepseek-ai/dsh@${UPSTREAM_VALIDATED_VERSION}.`, {
++                        }, children: _jsx(Box, { width: WHALE_BOX_WIDTH, flexDirection: "column", alignItems: "center", children: brand === 'deepseek' && mascotSkin !== undefined ? (_jsx(SplashMascot, { skin: mascotSkin, active: !whaleFrozen && whaleIdle, imageBox: imageBox })) : portraitMode ? (_jsx(Box, { width: WHALE_BOX_WIDTH, height: textColumnRows, flexDirection: "row", justifyContent: "center", alignItems: "center", children: maidImageActive ? (_jsx(MaidPortrait, { source: maidHappy ? (portraits?.happy ?? maidSource) : maidSource, maxColumns: WHALE_BOX_WIDTH, maxRows: textColumnRows, presentation: "transcript" })) : (claudeArt ? _jsx(ClaudeGirlArt, { width: WHALE_BOX_WIDTH }) : _jsx(WhaleGirlArt, { width: WHALE_BOX_WIDTH })) })) : (_jsx(WhaleArt, { frameIndex: frameIndex, pose: settled && whaleIdle && !whaleFrozen ? (idlePose ?? RESTING_POSE) : undefined, width: WHALE_BOX_WIDTH })) }) })), (showBigTitle || showPlainTitle) && (_jsxs(Box, { flexDirection: "column", flexShrink: 1, children: [chrome !== 'minimal' && (_jsxs(Text, { wrap: "truncate-end", children: [sweep('✦ hyperai-tui', t, wordmarkRGB, wordmarkShimmerRGB, 60), _jsx(Text, { dimColor: true, children: '  v0.2.0-beta.2.1' })] })), showBigTitle ? (_jsxs(_Fragment, { children: [bigDeepSeek.map((row, index) => (_jsx(Text, { wrap: "truncate-end", children: row.replace(/\s+$/u, '') }, `ds-${index}`))), _jsx(Box, { height: 1 }), bigHarness.map((row, index) => (_jsx(Text, { wrap: "truncate-end", children: row.replace(/\s+$/u, '') }, `h-${index}`)))] })) : (showPlainTitle && (_jsx(Text, { bold: true, wrap: "truncate-end", children: sweep(words.plain, t, HYPERAI_PALETTE.accent, HYPERAI_PALETTE.accent, 60) }))), chrome !== 'minimal' && (_jsxs(_Fragment, { children: [_jsxs(Text, { wrap: "truncate-end", children: [model, effort !== undefined && _jsx(Text, { dimColor: true, children: ' · ' + capitalize(effort) + ' effort' })] }), _jsx(Text, { dimColor: true, wrap: "truncate-end", children: cwd }), _jsxs(Text, { wrap: "truncate-end", children: [_jsx(Text, { dimColor: true, children: tr('logo-tip-prefix') }), getLang() === 'zh' ? randomTip.zh : randomTip.en, _jsx(Text, { dimColor: true, children: ' · /tips ' + tr('logo-tip-more') })] })] })), chrome !== 'minimal' && driftLine != null && (_jsxs(Text, { color: "warning", wrap: "wrap", children: ["\u26A0", ' ', tOr(`logo-drift-${driftLine.kind}`, `The dsh engine (${driftLine.versions.join(' / ')}) does not match the validated ${UPSTREAM_VALIDATED_VERSION}; reinstall via npm i -g @deepseek-ai/dsh@${UPSTREAM_VALIDATED_VERSION}.`, {
+                                         installed: driftLine.versions.join(' / '),
+                                         validated: UPSTREAM_VALIDATED_VERSION,
+                                         primary: UPSTREAM_VALIDATED_VERSION,
+diff --git a/lib/types/components/launchpadLayout.js b/lib/types/components/launchpadLayout.js
+index 660f031..9ce3346 100644
+--- a/lib/types/components/launchpadLayout.js
++++ b/lib/types/components/launchpadLayout.js
+@@ -111,7 +111,9 @@ export function resolveLaunchpadLayout(columns, rows, options) {
+     const titleWidth = Math.max(bigTextWidth(font, font.tagline.top, font.tagline.topKerning) + font.tagline.topKerning, bigTextWidth(font, font.tagline.bottom, font.tagline.bottomKerning) + font.tagline.bottomKerning);
+     const showBigTitle = columns >= titleWidth;
+     const artBox = WHALE_BOX_WIDTH;
+-    const wantsArt = options.whale || options.whaleGirl === true;
++    // hyperai-tui: the splash never renders art, so the launchpad budget must
++    // not reserve rows for it (the wordmark is the whole hero).
++    const wantsArt = false;
+     // 上下排布：立绘只看自己放不放得下，不再和词标抢同一行的宽度。
+     const showWhale = wantsArt && columns >= artBox;
+     const showPlainTitle = !showBigTitle && !showWhale;
+diff --git a/lib/types/components/splashEggs.js b/lib/types/components/splashEggs.js
+index 03e9f34..42bdb27 100644
+--- a/lib/types/components/splashEggs.js
++++ b/lib/types/components/splashEggs.js
+@@ -34,7 +34,7 @@ export function pickSplashEgg(now = new Date()) {
+     return SPLASH_EGGS.find(egg => egg.month === month && egg.day === day) ?? null;
+ }
+ /** 求 star 标语指向的仓库。 */
+-export const SPLASH_STAR_URL = 'https://github.com/ccch1mneyyy/dsh-TUI';
++export const SPLASH_STAR_URL = 'https://github.com/hyperai/hyperai-harness';
+ /** 链接显示文本（比裸 URL 短，整行还能按鲸鱼居中）。 */
+ const SPLASH_STAR_LABEL = 'Star';
+ /** 剥掉 OSC 8 包裹序列（量可见宽度用）。 */
+diff --git a/lib/types/components/splashFonts.js b/lib/types/components/splashFonts.js
+index 78b5e4d..cd0a17e 100644
+--- a/lib/types/components/splashFonts.js
++++ b/lib/types/components/splashFonts.js
+@@ -303,10 +303,11 @@ export function withTagline(font, top, bottom, options) {
+ }
+ /** 品牌与节日换词后的实际标题，供布局预算与 Logo 渲染共同使用。 */
+ export function resolveSplashTitleFont(font, brand = 'deepseek', egg = null) {
+-    if (brand === 'deepseek' && egg === null)
+-        return font;
++    // hyperai-tui: every brand — including the dsh default — takes its splash
++    // words from BRAND_SPLASH_WORDS instead of the font table's built-in
++    // DEEPSEEK/HARNESS pair.
+     const words = BRAND_SPLASH_WORDS[brand];
+-    return withTagline(font, brand === 'deepseek' ? font.tagline.top : words.top, egg?.bottom ?? words.bottom, brand === 'deepseek' ? undefined : { uniform: true });
++    return withTagline(font, words.top, egg?.bottom ?? words.bottom, { uniform: true });
+ }
+ /** 半立体的配色不再静态写死：LogoV2 按主题 accent 派生亮/暗两档（金属受光），
+  * 蓝主题出蓝金属、橙主题出橙金属——静态灰阶在任何主题下都像没上色。 */
+@@ -364,7 +365,7 @@ export function splashFontIdOf(setting) {
+  * 就自动出现在面板里，不漏项。标签的 en 侧取 `labelEn`、zh 侧取 `label`。
+  */
+ export const SPLASH_FONT_OPTIONS = [
+-    { value: SPLASH_FONT_DAILY, label: 'Daily rotation (default)', descriptions: { zh: '按天轮换（默认）' } },
++    { value: SPLASH_FONT_DAILY, label: 'HyperAI fixed solid (upstream compatibility)', descriptions: { zh: 'HyperAI 固定实心字标（上游兼容）' } },
+     ...SPLASH_FONTS.map(font => ({ value: font.id, label: font.labelEn, descriptions: { zh: font.label } })),
+ ];
+ /** 找不到 id 时退回基准款（设置项写错不该让开屏挂掉）。 */
+diff --git a/lib/types/dsh-adapter/plugin.js b/lib/types/dsh-adapter/plugin.js
+index 71e32df..4f233d0 100644
+--- a/lib/types/dsh-adapter/plugin.js
++++ b/lib/types/dsh-adapter/plugin.js
+@@ -2229,7 +2229,7 @@ export async function apply(ctx, runtimeConfig, configOwner = ctx, runtimeOption
+      * two answer different questions, and an install that already knows its
+      * workspace may still never have configured a key.
+      */
+-    const onboardingOnBoot = dshBoot && noResume && shouldOfferOnboarding();
++    const onboardingOnBoot = false; // hyperai-tui: upstream onboarding is DeepSeek-branded; the profile leaves provider/model setup to native /provider and /model
+     // 品牌镜像初值（branding.ts）：首帧渲染前铺好，避免 Claude 后端先画一屏
+     // 蓝再变橙。Chat 里的 effect 会在品牌解析变化时跟进更新这个镜像。
+     setActiveBrand(resolveBrand(config.brand, backendChoice));
+diff --git a/lib/types/hyperaiSkills.js b/lib/types/hyperaiSkills.js
+new file mode 100644
+index 0000000..91487c8
+--- /dev/null
++++ b/lib/types/hyperaiSkills.js
+@@ -0,0 +1,313 @@
++/**
++ * HyperAI skills updater bridge for the TUI.
++ *
++ * The TUI owns presentation and user choice; the profile's
++ * `scripts/skills-update.mjs` owns remote scanning, SHA pinning, download,
++ * install, backups and rollback. This module only:
++ *
++ * - runs the profile CLI asynchronously (never in the first-frame path),
++ * - shows a non-blocking inline notice + the existing notification toast,
++ * - opens the existing managed dialog for install / details / later,
++ * - calls `update --yes` only after the person confirmed in that dialog, and
++ * - pins the install to the exact SHA shown by check.
++ *
++ * It is copied into the patched dsh-tui package by
++ * `apps/tui/scripts/build-patch.mjs`; no upstream dependency is added.
++ */
++import React from 'react'
++import { spawn } from 'node:child_process'
++import { existsSync } from 'node:fs'
++import { homedir } from 'node:os'
++import { join } from 'node:path'
++import { getLang } from './i18n.js'
++import { checkForUpdate, updateNoticeText } from './hyperaiUpdate.js'
++import { resolveDshProfileName } from './update.js'
++import {
++  checkingText, choices, confirmMessage, currentText, detailOptions, dialogTitle, errorText, errorTitle,
++  fingerprint, laterText, normalizeCheck, noticeText, resultText,
++} from './hyperaiSkillsCore.js'
++
++const AUTO_DELAY_MS = 1500
++const CHECK_TIMEOUT_MS = 45_000
++const INSTALL_TIMEOUT_MS = 180_000
++
++/** Current UI language (`zh` / `en`). Resolved at call time, so `/lang` works. */
++function lang() {
++  return getLang() === 'zh' ? 'zh' : 'en'
++}
++
++/** Locate the installed updater for this profile; undefined when unavailable. */
++export function resolveUpdaterContext(env = process.env, argv = process.argv) {
++  let profile = resolveDshProfileName(argv)
++  profile ??= env.HYPERAI_PROFILE ?? 'hyperai'
++  profile ??= 'hyperai'
++  const dshHome = env.HYPERAI_DSH_HOME || (env.HYPERAI_HOME === undefined ? join(homedir(), '.hyperai', 'dsh') : join(env.HYPERAI_HOME, 'dsh'))
++  const script = join(dshHome, 'profiles', profile, 'scripts', 'skills-update.mjs')
++  return {
++    profile,
++    dshHome,
++    script,
++    available: profile === 'hyperai' && existsSync(script),
++    // Test-only injection: never persisted and never used by default launches.
++    testRef: env.HYPERAI_SKILLS_TUI_REF || undefined,
++    testSource: env.HYPERAI_SKILLS_TUI_SOURCE || undefined,
++    disabled: env.HYPERAI_SKILLS_TUI_DISABLE === '1' || env.HYPERAI_SKILLS_TUI_AUTO === '0',
++  }
++}
++
++/** Run the profile CLI and collect a bounded stdout/stderr. */
++function runUpdater(context, args, timeoutMs) {
++  return new Promise(resolve => {
++    let stdout = ''
++    let stderr = ''
++    let timedOut = false
++    let stdoutTruncated = false
++    const MAX_STDOUT = 8_000_000
++    const child = spawn(process.execPath, [context.script, ...args], {
++      env: { ...process.env },
++      stdio: ['ignore', 'pipe', 'pipe'],
++    })
++    const timer = setTimeout(() => {
++      timedOut = true
++      child.kill('SIGTERM')
++    }, timeoutMs)
++    child.stdout?.setEncoding('utf8')
++    child.stderr?.setEncoding('utf8')
++    child.stdout?.on('data', chunk => {
++      if (stdout.length + chunk.length > MAX_STDOUT) {
++        stdoutTruncated = true
++        child.kill('SIGTERM')
++        return
++      }
++      stdout += chunk
++    })
++    child.stderr?.on('data', chunk => {
++      if (stderr.length < 200_000) stderr += chunk
++    })
++    child.on('error', error => {
++      clearTimeout(timer)
++      resolve({ code: -1, stdout, stderr: `${stderr}\n${error instanceof Error ? error.message : String(error)}`, timedOut })
++    })
++    child.on('close', code => {
++      clearTimeout(timer)
++      resolve({ code: code ?? -1, stdout, stderr, timedOut, stdoutTruncated })
++    })
++  })
++}
++
++/** Parse the CLI's single JSON document, tolerating a leading warning line. */
++function parseJson(text) {
++  const trimmed = text.trim()
++  if (trimmed === '') throw new Error('empty response')
++  try {
++    return JSON.parse(trimmed)
++  } catch {
++    const start = trimmed.lastIndexOf('\n{')
++    if (start >= 0) return JSON.parse(trimmed.slice(start + 1))
++    throw new Error('response was not JSON')
++  }
++}
++
++/** Run check through the profile CLI. `resolvedRef` pins a re-check. */
++async function check(context, { manual, resolvedRef } = {}) {
++  const args = ['check', '--json', manual ? '--manual' : '--auto', '--dsh-home', context.dshHome, '--profile', context.profile, '--timeout', '30000']
++  if (resolvedRef !== undefined) args.push('--ref', resolvedRef)
++  else if (context.testRef !== undefined) args.push('--ref', context.testRef)
++  if (context.testSource !== undefined) args.push('--source', context.testSource)
++  const result = await runUpdater(context, args, CHECK_TIMEOUT_MS)
++  if (result.timedOut) throw new Error('check timed out')
++  if (result.stdoutTruncated) throw new Error('check response was too large; retry after reducing the Skills update batch')
++  if (result.code !== 0 && result.code !== 2) throw new Error(result.stderr.trim() || `check exited ${result.code}`)
++  return normalizeCheck(parseJson(result.stdout))
++}
++
++/** Remember a dismissed batch in the profile state (not the TUI state dir). */
++async function dismiss(context, checked) {
++  if (checked.resolvedRef === '') return
++  const args = ['dismiss', '--json', '--ref', checked.resolvedRef, '--dsh-home', context.dshHome, '--profile', context.profile]
++  for (const item of checked.updates) args.push('--skill', item.name)
++  const result = await runUpdater(context, args, 15_000)
++  if (result.code !== 0) throw new Error(result.stderr.trim() || `dismiss exited ${result.code}`)
++}
++
++/** Install exactly the checked SHA; never resolves a branch again. */
++async function install(context, checked) {
++  if (!/^[0-9a-f]{40}$/u.test(checked.resolvedRef)) throw new Error('the update check did not return a pinned commit SHA')
++  const args = ['update', '--json', '--yes', '--ref', checked.resolvedRef, '--dsh-home', context.dshHome, '--profile', context.profile, '--timeout', '30000']
++  if (context.testSource !== undefined) args.push('--source', context.testSource)
++  const result = await runUpdater(context, args, INSTALL_TIMEOUT_MS)
++  if (result.timedOut) throw new Error('install timed out')
++  if (result.code !== 0) throw new Error(result.stderr.trim() || `update exited ${result.code}`)
++  return parseJson(result.stdout)
++}
++
++/**
++ * React hook used by the chat screen.
++ * @param {{channel: object, dialogs: {ask: Function}}} input
++ */
++export function useSkillsUpdate({ channel, dialogs }) {
++  const contextRef = React.useRef(undefined)
++  if (contextRef.current === undefined) contextRef.current = resolveUpdaterContext()
++  const context = contextRef.current
++  const [notice, setNotice] = React.useState(null)
++  const [updateNotice, setUpdateNotice] = React.useState(null)
++  const notifiedRef = React.useRef(null)
++  const busyRef = React.useRef(false)
++  const aliveRef = React.useRef(true)
++  React.useEffect(() => () => { aliveRef.current = false }, [])
++
++  const notify = React.useCallback((text, options) => {
++    try {
++      channel.notify(text, options)
++    } catch { /* the notification surface is best-effort */ }
++  }, [channel])
++
++  /**
++   * Persistent result dialog. The toast surface is intentionally transient and
++   * is easy to miss on an embedded terminal (Orca) especially after a slow
++   * network check; a manual action must leave a visible result until dismissed.
++   */
++  const showInfo = React.useCallback(async (title, message) => {
++    try {
++      await dialogs.ask({
++        kind: 'confirm',
++        title,
++        message: message === '' ? undefined : ` · ${message}`,
++        confirmLabel: lang() === 'zh' ? '确定' : 'OK',
++        cancelLabel: lang() === 'zh' ? '关闭' : 'Close',
++      }, undefined, 300_000)
++    } catch {
++      notify(message, { color: 'warning', timeoutMs: 10_000 })
++    }
++  }, [dialogs, notify])
++
++  const present = React.useCallback(async checked => {
++    let current = checked
++    while (aliveRef.current) {
++      const choice = await dialogs.ask({
++        kind: 'select',
++        title: dialogTitle(current, lang()),
++        options: choices(current, lang()),
++      }, undefined, 120_000)
++      if (choice === undefined || choice === 'later') {
++        if (choice === 'later') {
++          try { await dismiss(context, current) } catch { /* session hint still suppresses */ }
++          notifiedRef.current = fingerprint(current)
++          setNotice(null)
++          notify(laterText(lang()), { timeoutMs: 4000 })
++        }
++        return
++      }
++      if (choice === 'details') {
++        let detail = 'details'
++        while (detail === 'details' && aliveRef.current) {
++          const picked = await dialogs.ask({
++            kind: 'select',
++            title: lang() === 'zh' ? 'HyperAI Skills 更新详情' : 'HyperAI Skills update details',
++            options: detailOptions(current, lang()),
++          }, undefined, 120_000)
++          if (picked === 'back') detail = 'back'
++          else if (picked === undefined) return
++        }
++        continue
++      }
++      if (choice === 'install') {
++        const confirmed = await dialogs.ask({
++          kind: 'confirm',
++          title: lang() === 'zh' ? '确认安装 HyperAI Skills？' : 'Install HyperAI Skills?',
++          message: confirmMessage(current, lang()),
++          confirmLabel: lang() === 'zh' ? '安装' : 'Install',
++          cancelLabel: lang() === 'zh' ? '取消' : 'Cancel',
++        }, undefined, 120_000)
++        if (confirmed !== true) continue
++        // Re-check the exact pinned SHA: a changed plan must be shown and
++        // confirmed again, never installed silently.
++        notify(lang() === 'zh' ? '正在安装 HyperAI Skills…' : 'Installing HyperAI Skills…', { timeoutMs: 4000 })
++        try {
++          const fresh = await check(context, { manual: true, resolvedRef: current.resolvedRef })
++          if (!fresh.changes) {
++            setNotice(null)
++            notify(currentText(lang()), { color: 'success' })
++            return
++          }
++          if (fingerprint(fresh) !== fingerprint(current)) {
++            setNotice(noticeText(fresh, lang()))
++            notify(lang() === 'zh' ? '更新计划已变化，请重新确认' : 'The update plan changed; please confirm again', { color: 'warning', timeoutMs: 6000 })
++            current = fresh
++            continue
++          }
++          const result = await install(context, current)
++          setNotice(null)
++          notifiedRef.current = null
++          const failed = Array.isArray(result.failed) && result.failed.length > 0
++          await showInfo(failed ? (lang() === 'zh' ? 'HyperAI Skills 安装失败' : 'HyperAI Skills install failed') : (lang() === 'zh' ? 'HyperAI Skills 安装完成' : 'HyperAI Skills installed'), resultText(result, lang()))
++          return
++        } catch (error) {
++          await showInfo(errorTitle(lang()), errorText(error, lang()))
++          return
++        }
++      }
++    }
++  }, [context, dialogs, notify, showInfo])
++
++  const open = React.useCallback(async () => {
++    if (!context.available) {
++      await showInfo(lang() === 'zh' ? 'HyperAI Skills 不可用' : 'HyperAI Skills unavailable', lang() === 'zh' ? '此 Profile 未安装 HyperAI Skills 更新器' : 'This profile has no HyperAI Skills updater installed')
++      return
++    }
++    if (busyRef.current) return
++    busyRef.current = true
++    try {
++      // Persistent while the network check runs: Orca/embedded terminals can
++      // make a short toast disappear before the 30s git timeout returns.
++      setNotice(checkingText(lang()))
++      notify(checkingText(lang()), { timeoutMs: 2500 })
++      const checked = await check(context, { manual: true })
++      if (!checked.changes) {
++        setNotice(null)
++        await showInfo(currentText(lang()), checked.resolvedRef === ''
++          ? ''
++          : (lang() === 'zh' ? `来源 ${checked.resolvedRef.slice(0, 8)}` : `Source ${checked.resolvedRef.slice(0, 8)}`))
++        return
++      }
++      setNotice(noticeText(checked, lang()))
++      await present(checked)
++    } catch (error) {
++      setNotice(null)
++      await showInfo(errorTitle(lang()), errorText(error, lang()))
++    } finally {
++      busyRef.current = false
++    }
++  }, [context, notify, present, showInfo])
++
++  React.useEffect(() => {
++    if (!context.available || context.disabled) return undefined
++    let cancelled = false
++    const timer = setTimeout(() => {
++      void check(context, { manual: false }).then(checked => {
++        if (cancelled || !checked.changes || checked.dismissed || checked.skipped) return
++        const key = fingerprint(checked)
++        if (notifiedRef.current === key) return
++        notifiedRef.current = key
++        setNotice(noticeText(checked, lang()))
++        notify(noticeText(checked, lang()), { timeoutMs: 12_000 })
++      }).catch(() => { /* automatic checks fail silently; chat stays usable */ })
++    }, AUTO_DELAY_MS)
++    return () => { cancelled = true; clearTimeout(timer) }
++  }, [context, notify])
++
++  React.useEffect(() => {
++    let alive = true
++    const timer = setTimeout(() => {
++      void checkForUpdate().then(result => {
++        if (!alive || result === undefined) return
++        const message = updateNoticeText(result.latest)
++        setUpdateNotice(message)
++        try { channel.notify(message, { color: 'info', timeoutMs: 60_000 }) } catch { /* notification is best-effort */ }
++      }).catch(() => {})
++    }, 1500)
++    return () => { alive = false; clearTimeout(timer) }
++  }, [channel])
++
++  return { notice: updateNotice ?? notice, open }
++}
+diff --git a/lib/types/hyperaiSkillsCore.js b/lib/types/hyperaiSkillsCore.js
+new file mode 100644
+index 0000000..a05f30d
+--- /dev/null
++++ b/lib/types/hyperaiSkillsCore.js
+@@ -0,0 +1,142 @@
++/**
++ * Pure formatting/validation for the HyperAI skills-update TUI bridge.
++ *
++ * Kept dependency-free (no React, no child_process) so the prompt copy, the
++ * plan fingerprint and the SHA-pinning comparison can be unit-tested offline.
++ * `hyperaiSkills.js` is the thin React/spawn layer on top.
++ */
++
++/** Normalize the compact `skills-update check --json` payload. */
++export function normalizeCheck(raw) {
++  if (raw === null || typeof raw !== 'object') throw new Error('skills-update returned no object')
++  const source = raw.source !== null && typeof raw.source === 'object' ? raw.source : {}
++  const updates = Array.isArray(raw.updates)
++    ? raw.updates
++      .filter(item => item !== null && typeof item === 'object' && typeof item.name === 'string')
++      .map(item => ({
++        name: item.name,
++        action: item.action === 'update' ? 'update' : 'add',
++        version: typeof item.version === 'string' ? item.version : undefined,
++        description: typeof item.description === 'string' ? item.description : undefined,
++        files: typeof item.files === 'number' ? item.files : 0,
++        bytes: typeof item.bytes === 'number' ? item.bytes : 0,
++        digest: typeof item.digest === 'string' ? item.digest : '',
++      }))
++    : []
++  return {
++    resolvedRef: typeof source.resolvedRef === 'string' ? source.resolvedRef : '',
++    requestedRef: typeof source.requestedRef === 'string' ? source.requestedRef : 'master',
++    channel: source.channel === 'stable' ? 'stable' : 'prerelease',
++    changes: raw.changes === true || updates.length > 0,
++    count: updates.length,
++    updates,
++    dismissed: raw.dismissed === true,
++    skipped: raw.skipped === true,
++    skippedReason: typeof raw.skippedReason === 'string' ? raw.skippedReason : undefined,
++  }
++}
++
++/** Stable identity of one checked batch: the SHA plus the shown content. */
++export function fingerprint(check) {
++  const normalized = normalizeCheck(check)
++  const items = normalized.updates
++    .map(item => `${item.action}:${item.name}:${item.digest}`)
++    .sort()
++    .join('|')
++  return `${normalized.resolvedRef}|${items}`
++}
++
++/** Localized one-line summary shown in the transcript hint and notification. */
++export function noticeText(check, lang = 'zh') {
++  const { count, resolvedRef } = normalizeCheck(check)
++  const suffix = resolvedRef === '' ? '' : ` · ${resolvedRef.slice(0, 8)}`
++  return lang === 'zh'
++    ? `HyperAI Skills 有 ${count} 项可安装更新 · 输入 /skills-update${suffix}`
++    : `HyperAI Skills: ${count} update${count === 1 ? '' : 's'} available · run /skills-update${suffix}`
++}
++
++/** Per-item one-line label, e.g. `+ ppt-generation 新增 · v1.1.0`. */
++export function itemLine(item, lang = 'zh') {
++  const action = item.action === 'update' ? (lang === 'zh' ? '更新' : 'update') : (lang === 'zh' ? '新增' : 'new')
++  const version = item.version === undefined ? '' : ` · v${item.version}`
++  const mark = item.action === 'update' ? '↑' : '+'
++  return `${mark} ${item.name}  ${action}${version}`
++}
++
++/** Dialog title for the plan. */
++export function dialogTitle(check, lang = 'zh') {
++  const { count } = normalizeCheck(check)
++  return lang === 'zh' ? `HyperAI Skills · ${count} 项可安装` : `HyperAI Skills · ${count} available`
++}
++
++/** Top-level dialog choices. */
++export function choices(check, lang = 'zh') {
++  const { count, updates } = normalizeCheck(check)
++  const names = updates.map(item => item.name).join(', ')
++  return [
++    { id: 'install', label: lang === 'zh' ? `安装更新（${count} 项）` : `Install updates (${count})`, description: names },
++    { id: 'details', label: lang === 'zh' ? '查看详情' : 'View details' },
++    { id: 'later', label: lang === 'zh' ? '稍后再说' : 'Later' },
++  ]
++}
++
++/** Detail rows; `back` returns to the choices dialog. */
++export function detailOptions(check, lang = 'zh') {
++  const { updates } = normalizeCheck(check)
++  return [
++    ...updates.map(item => ({
++      id: `item:${item.name}`,
++      label: itemLine(item, lang),
++      description: item.description ?? `${item.files} files · ${item.bytes} B`,
++    })),
++    { id: 'back', label: lang === 'zh' ? '返回' : 'Back' },
++  ]
++}
++
++/** Message inside the final install confirmation. */
++export function confirmMessage(check, lang = 'zh') {
++  const { updates } = normalizeCheck(check)
++  const rows = updates.map(item => itemLine(item, lang)).join('\n')
++  return lang === 'zh'
++    ? `\n${rows}\n\n将下载并安装这些 Skill；安装前会备份旧版本。`
++    : `\n${rows}\n\nThese skills will be downloaded and installed; old versions are backed up first.`
++}
++
++/** Text after a successful install/update. */
++export function resultText(result, lang = 'zh') {
++  const installed = Array.isArray(result?.installed) ? result.installed : []
++  const updated = Array.isArray(result?.updated) ? result.updated : []
++  const failed = Array.isArray(result?.failed) ? result.failed : []
++  const parts = []
++  if (installed.length > 0) parts.push(lang === 'zh' ? `已安装 ${installed.join(', ')}` : `Installed ${installed.join(', ')}`)
++  if (updated.length > 0) parts.push(lang === 'zh' ? `已更新 ${updated.join(', ')}` : `Updated ${updated.join(', ')}`)
++  if (failed.length > 0) parts.push(lang === 'zh' ? `失败：${failed.map(item => item.name).join(', ')}` : `Failed: ${failed.map(item => item.name).join(', ')}`)
++  return parts.join(lang === 'zh' ? '；' : '; ') || (lang === 'zh' ? '安装完成' : 'Update finished')
++}
++
++/** Short, user-facing error line (never a stack trace or a token). */
++export function errorText(error, lang = 'zh') {
++  const detail = typeof error === 'string' ? error : error instanceof Error ? error.message : String(error)
++  const cleaned = detail.replace(/\s+/gu, ' ').trim().slice(0, 180)
++  return lang === 'zh' ? `HyperAI Skills 检查失败：${cleaned}` : `HyperAI Skills check failed: ${cleaned}`
++}
++
++/** Text for a dismissed batch. */
++export function laterText(lang = 'zh') {
++  return lang === 'zh' ? '已稍后再说；本会话不再提示这批更新' : 'Later; this batch will not be shown again this session'
++}
++
++/** Text while a manual check is running (kept visible, not a 2.5s toast). */
++export function checkingText(lang = 'zh') {
++  return lang === 'zh' ? '正在检查 HyperAI Skills…' : 'Checking HyperAI Skills…'
++}
++
++/** Title for a manual-check failure dialog. */
++export function errorTitle(lang = 'zh') {
++  return lang === 'zh' ? 'HyperAI Skills 检查失败' : 'HyperAI Skills check failed'
++}
++
++/** Text after a manual check with no pending updates. */
++export function currentText(lang = 'zh') {
++  return lang === 'zh' ? 'HyperAI Skills 已是最新' : 'HyperAI Skills is up to date'
++}
+diff --git a/lib/types/hyperaiUpdate.js b/lib/types/hyperaiUpdate.js
+new file mode 100644
+index 0000000..ba71da7
+--- /dev/null
++++ b/lib/types/hyperaiUpdate.js
+@@ -0,0 +1,129 @@
++/**
++ * HyperAI release check (GitHub Releases, never npm and never the upstream
++ * repository). The TUI calls this in the background; a cached answer is used
++ * for 24 hours, and every failure is silent. `hyperai update` in the generated
++ * launcher owns the actual upgrade.
++ */
++import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
++import { homedir } from 'node:os'
++import { dirname, join } from 'node:path'
++
++/** Single source of truth for the release repository. */
++export const UPDATE_REPO = 'hyperai/hyperai-harness'
++const CACHE_MS = 24 * 60 * 60 * 1000
++
++/** Parse a semver string (with prerelease) into comparable parts. */
++export function parseSemver(text) {
++  const match = /^v?(\d+)\.(\d+)\.(\d+)(?:-([0-9A-Za-z.-]+))?(?:\+[0-9A-Za-z.-]+)?$/u.exec(String(text).trim())
++  if (!match) return undefined
++  return {
++    major: Number(match[1]), minor: Number(match[2]), patch: Number(match[3]),
++    prerelease: match[4] === undefined ? [] : match[4].split('.'),
++  }
++}
++
++/** Semver comparison including prerelease ordering. */
++export function compareVersions(a, b) {
++  const left = parseSemver(a)
++  const right = parseSemver(b)
++  if (left === undefined || right === undefined) throw new Error(`invalid version: ${left === undefined ? a : b}`)
++  for (const key of ['major', 'minor', 'patch']) {
++    if (left[key] !== right[key]) return left[key] < right[key] ? -1 : 1
++  }
++  if (left.prerelease.length === 0 && right.prerelease.length === 0) return 0
++  if (left.prerelease.length === 0) return 1
++  if (right.prerelease.length === 0) return -1
++  for (let index = 0; index < Math.max(left.prerelease.length, right.prerelease.length); index++) {
++    const l = left.prerelease[index]
++    const r = right.prerelease[index]
++    if (l === undefined) return -1
++    if (r === undefined) return 1
++    if (l === r) continue
++    const ln = /^\d+$/u.test(l)
++    const rn = /^\d+$/u.test(r)
++    if (ln && rn) return Number(l) < Number(r) ? -1 : 1
++    if (ln) return -1
++    if (rn) return 1
++    return l < r ? -1 : 1
++  }
++  return 0
++}
++
++/** Cache location: all mutable HyperAI state lives under HYPERAI_HOME. */
++export function updateCachePath(env = process.env) {
++  const home = env.HYPERAI_HOME || join(homedir(), '.hyperai')
++  return join(home, 'update-check.json')
++}
++
++/** Current installed product version (the TUI package carries it). */
++export function currentVersion() {
++  try {
++    const url = new URL('../../package.json', import.meta.url)
++    return JSON.parse(readFileSync(url, 'utf8')).version
++  } catch {
++    return undefined
++  }
++}
++
++/** Release API base; HYPERAI_UPDATE_BASE_URL is test-only. */
++export function releasesUrl(env = process.env) {
++  const base = (env.HYPERAI_UPDATE_BASE_URL || 'https://api.github.com').replace(/\/+$/u, '')
++  return `${base}/repos/${UPDATE_REPO}/releases?per_page=100`
++}
++
++/** Pick the highest complete Release (draft excluded, both assets required). */
++export function pickLatestRelease(releases) {
++  let best
++  for (const release of Array.isArray(releases) ? releases : []) {
++    if (release?.draft === true) continue
++    const tag = typeof release.tag_name === 'string' ? release.tag_name : ''
++    if (!tag.startsWith('v')) continue
++    const version = tag.slice(1)
++    const parsed = parseSemver(version)
++    if (parsed === undefined) continue
++    const assets = Array.isArray(release.assets) ? release.assets : []
++    const tarball = assets.find(asset => asset?.name === `hyperai-harness-${version}.tar.gz`)
++    const checksum = assets.find(asset => asset?.name === `hyperai-harness-${version}.tar.gz.sha256`)
++    if (tarball?.browser_download_url === undefined || checksum?.browser_download_url === undefined) continue
++    if (best === undefined || compareVersions(version, best.version) > 0) {
++      best = { version, tarball: tarball.browser_download_url, checksum: checksum.browser_download_url, tag }
++    }
++  }
++  return best
++}
++
++/**
++ * Background check with a 24-hour cache. Returns the latest version only when it
++ * is newer than the installed one; all network/shape failures return undefined.
++ */
++export async function checkForUpdate({ env = process.env, now = Date.now(), fetchImpl = fetch } = {}) {
++  if (env.HYPERAI_UPDATE_CHECK === 'off') return undefined
++  const current = currentVersion()
++  if (current === undefined) return undefined
++  const cachePath = updateCachePath(env)
++  let cached
++  try { cached = JSON.parse(readFileSync(cachePath, 'utf8')) } catch { cached = undefined }
++  if (cached?.checkedAt !== undefined && now - cached.checkedAt < CACHE_MS) {
++    return typeof cached.latest === 'string' && compareVersions(cached.latest, current) > 0
++      ? { current, latest: cached.latest }
++      : undefined
++  }
++  try {
++    const response = await fetchImpl(releasesUrl(env), { headers: { accept: 'application/vnd.github+json', 'user-agent': 'hyperai-harness' } })
++    if (!response.ok) throw new Error(`release check ${response.status}`)
++    const latest = pickLatestRelease(await response.json())
++    if (latest === undefined) throw new Error('no complete release')
++    const payload = { checkedAt: now, latest: latest.version }
++    try { mkdirSync(dirname(cachePath), { recursive: true }); writeFileSync(cachePath, `${JSON.stringify(payload)}\n`) } catch { /* cache is best-effort */ }
++    return compareVersions(latest.version, current) > 0 ? { current, latest: latest.version } : undefined
++  } catch {
++    // Never surface network/rate-limit/shape failures; retry after the TTL.
++    try { mkdirSync(dirname(cachePath), { recursive: true }); writeFileSync(cachePath, `${JSON.stringify({ checkedAt: now, latest: undefined })}\n`) } catch { /* best-effort */ }
++    return undefined
++  }
++}
++
++/** One-line, non-blocking notice shown in the TUI. */
++export function updateNoticeText(latest) {
++  return `HyperAI Harness 有新版本 ${latest}，退出后运行 hyperai update 升级`
++}
+diff --git a/lib/types/i18n.js b/lib/types/i18n.js
+index d7db9d3..ae0cba4 100644
+--- a/lib/types/i18n.js
++++ b/lib/types/i18n.js
+@@ -253,7 +253,7 @@ const dict = {
+     'subagent-status-failed': { zh: '失败', en: 'failed' },
+     'subagent-status-unknown': { zh: '状态未知', en: 'status unknown' },
+     'subagent-task-fallback': { zh: '{{kind}} 任务', en: '{{kind}} task' },
+-    'task-complete-notification': { zh: 'dsh-TUI · 任务已完成', en: 'dsh-TUI · Task complete' },
++    'task-complete-notification': { zh: 'hyperai-tui · 任务已完成', en: 'hyperai-tui · Task complete' },
+     'subagent-background': { zh: '后台', en: 'background' },
+     'subagent-interrupt-failed': { zh: '无法停止子代理 {{id}}（已结束或被拒绝）', en: 'Could not stop subagent {{id}} (already finished or refused)' },
+     'agent-preset-switched': { zh: 'Agent preset 已切换：{{preset}}', en: 'Agent preset switched: {{preset}}' },
+@@ -896,7 +896,7 @@ const dict = {
+     // ── channel/upstream-retry.ts — 上游断链自动重试 ──────────────────────
+     'upstream-retry-enabled': { zh: '已为当前渠道 {{routes}} 启用上游断链自动重试（最多重试 5 次；cordis.yml upstreamRetry: false 可关闭）', en: 'Upstream auto-retry enabled for {{routes}} (the route in use) — up to 5 retries per request (opt out with upstreamRetry: false in cordis.yml)' },
+     // ── components/LogoV2.tsx ───────────────────────────────────────────
+-    'logo-tagline': { zh: '探索未至之境！', en: 'Explore the uncharted!' },
++    'logo-tagline': { zh: 'HyperAI Harness', en: 'HyperAI Harness' },
+     // Star easter egg (bottom welcome line on ~1/20 of mounts, see
+     // components/splashEggs.ts): the sentence is split around the repo
+     // hyperlink — lead + link + tail — so both halves are translatable and
+@@ -905,10 +905,10 @@ const dict = {
+     // URL, and lead+URL+tail has to fit an 80-column terminal without wrapping.
+     // 开屏求 star 彩蛋（splashEggs.ts + LogoV2）：平时是 logo-tagline，跨里程碑
+     // 时换成"标题 + 数字 + 求星"三行，标题先出、其余两行每秒跟一行。
+-    'logo-star-title': { zh: '鲸鱼娘好像在等一颗小星星…… ☆', en: 'The whale girl seems to be waiting for a little star… ☆' },
+-    'logo-star-caught': { zh: '鲸鱼娘捡到一颗小星星啦 ✨', en: 'The whale girl caught a little star ✨' },
++    'logo-star-title': { zh: 'HyperAI Harness 好像在等一颗小星星…… ☆', en: 'HyperAI Harness seems to be waiting for a little star… ☆' },
++    'logo-star-caught': { zh: 'HyperAI Harness 捡到一颗小星星啦 ✨', en: 'HyperAI Harness caught a little star ✨' },
+     'logo-star-stats': { zh: '已陪你 {{hours}} 小时 · 第 {{launches}} 次打开', en: '{{hours}}h together · launch #{{launches}}' },
+-    'logo-star-ask': { zh: '喜欢 dshTUI 的话，顺手点亮一颗 {{star}}？（点这一行或 {{key}} 一键支持）', en: 'If you like dsh-TUI, would you light a {{star}}? (click this line or {{key}})' },
++    'logo-star-ask': { zh: '喜欢 hyperai-tui 的话，顺手点亮一颗 {{star}}？（点这一行或 {{key}} 一键支持', en: 'If you like hyperai-tui, would you light a {{star}}? (click this line or {{key}})' },
+     'cmd-desc-star': { zh: '给这个项目点个 star（用 gh 一键）' },
+     'star-ok': { zh: '已 star，谢谢！', en: 'Starred — thank you!' },
+     'star-no-gh': {
+@@ -928,21 +928,21 @@ const dict = {
+     // 一行**（48 列内不折行），所以排版与作者写的断句完全一致。
+     'star-modal-title-hours': { zh: '🐳 已经陪你 {{hours}} 小时了！', en: '🐳 {{hours}} hours together!' },
+     'star-modal-title-launches': { zh: '🐳 已经陪你 {{launches}} 次启动了！', en: '🐳 {{launches}} launches together!' },
+-    'star-modal-body-1': { zh: '不知不觉，dshTUI 已经陪你走了这么久啦。', en: 'Before you noticed, dsh-TUI had already come this far with you.' },
++    'star-modal-body-1': { zh: '不知不觉，HyperAI Harness 已经陪你走了这么久啦。', en: 'Before you noticed, HyperAI Harness had already come this far with you.' },
+     'star-modal-body-2': { zh: '如果它有让你的 DSH 更好用一点、', en: 'If it made your DSH a little more usable,' },
+     'star-modal-body-3': { zh: '更顺手一点，或者只是让你开心了一点——', en: 'a little smoother — or just made you smile —' },
+-    'star-modal-body-4': { zh: '那就送鲸鱼娘一颗小小的 Star 吧 ⭐', en: 'treat the whale girl to a tiny Star ⭐' },
++    'star-modal-body-4': { zh: '那就送 HyperAI Harness 一颗小小的 Star 吧 ⭐', en: 'treat HyperAI Harness to a tiny Star ⭐' },
+     'star-modal-body-5': { zh: '每一颗 Star，都会变成我们继续折腾', en: 'Every Star becomes fuel for us to keep tinkering' },
+-    'star-modal-body-6': { zh: '和把 dshTUI 做得更好的动力！', en: 'and to keep making dsh-TUI better!' },
++    'star-modal-body-6': { zh: '和把 HyperAI Harness 做得更好的动力！', en: 'and to keep making HyperAI Harness better!' },
+     'star-modal-star': { zh: '投喂一颗 Star ⭐', en: 'Feed a Star ⭐' },
+     'star-modal-open': { zh: '在浏览器中打开 GitHub', en: 'Open GitHub in the browser' },
+     'star-modal-working': { zh: '正在点 star…', en: 'Starring…' },
+     'star-modal-hint': { zh: '↑↓ 选择 · **Enter** 确认 · **Esc** 下次一定 (´;ω;`)', en: '↑↓ choose · **Enter** confirm · **Esc** next time (´;ω;`)' },
+     // star 成功后的庆祝态（星光 + 鲸鱼喷水），几秒后卡片自己收场。
+     'star-modal-thanks-title': { zh: '🌟 收到 Star 啦！', en: '🌟 Star received!' },
+-    'star-modal-thanks-1': { zh: '鲸鱼娘成功接住了一颗小星星 ~', en: 'The whale girl caught a little star ~' },
++    'star-modal-thanks-1': { zh: 'HyperAI Harness 成功接住了一颗小星星 ~', en: 'HyperAI Harness caught a little star ~' },
+     'star-modal-thanks-2': { zh: '谢谢你的支持！', en: 'Thank you for your support!' },
+-    'star-modal-thanks-3': { zh: '这颗 Star 会变成 dshTUI 继续成长的动力。', en: 'This Star becomes fuel for dsh-TUI to keep growing.' },
++    'star-modal-thanks-3': { zh: '这颗 Star 会变成 HyperAI Harness 继续成长的动力。', en: 'This Star becomes fuel for HyperAI Harness to keep growing.' },
+     'star-modal-thanks-4': { zh: '希望以后，它也能继续陪你走很久。', en: 'May it keep you company for a long time to come.' },
+     'star-modal-thanks-hint': { zh: '**Enter** / **Esc** 关闭', en: '**Enter** / **Esc** to close' },
+     'coupon-modal-title': { zh: '鲸鱼券', en: 'Whale coupon' },
+@@ -1154,7 +1154,7 @@ const dict = {
+     'tips-hint': { zh: '↑/↓ 滚动 · Esc 关闭', en: '↑/↓ scroll · Esc to close' },
+     // ── components/TurnInterruptedRow.tsx ────────────────────────────────
+     'interrupted-by-user': { zh: '已打断 ', en: 'Interrupted ' },
+-    'interrupted-ask-next': { zh: '· 接下来想让 DeepSeek 做什么？', en: '· What should DeepSeek do instead?' },
++    'interrupted-ask-next': { zh: '· 接下来想让 HyperAI 做什么？', en: '· What should HyperAI do instead?' },
+     'interrupted-ask-backend': { zh: '· 接下来想让 {{name}} 做什么？', en: '· What should {{name}} do instead?' },
+     // ── components/MessageList.tsx ──────────────────────────────────────
+     'load-earlier': { zh: ' ↑ 加载更早消息（会话日志完整，/export 导出全文） ', en: ' ↑ load earlier messages (full session log; /export for full text) ' },
+@@ -1596,7 +1596,7 @@ const dict = {
+     'thinking-title': { zh: '思考过程显示', en: 'Thinking display' },
+     'thinking-subtitle': { zh: '只控制思考过程是否显示，不改变模型的思考行为。', en: 'Only controls whether reasoning is shown; it does not change model behavior.' },
+     'thinking-enabled': { zh: '显示', en: 'Shown' },
+-    'thinking-enabled-desc': { zh: '在对话中显示 DeepSeek 的思考过程', en: "Show DeepSeek's reasoning in the conversation" },
++    'thinking-enabled-desc': { zh: '在对话中显示 HyperAI 的思考过程', en: "Show HyperAI's reasoning in the conversation" },
+     'thinking-disabled': { zh: '隐藏', en: 'Hidden' },
+     'thinking-disabled-desc': { zh: '隐藏思考过程；模型仍会照常思考', en: 'Hide reasoning; the model will still think as usual' },
+     'thinking-label': { zh: '思考', en: 'Thinking' },
+@@ -2404,7 +2404,7 @@ const dict = {
+     // 这三个 label 键只给**随包内置**的后端（manifest 的 `inTree: true` /
+     // `label.kind: 'key'`）。插件后端的名字是外部字面量：原样渲染、不进本字典、
+     // 不过 t()（P0 D2，见 components/KernelPicker.tsx）。
+-    'kernel-label-dsh': { zh: 'DeepSeek Harness', en: 'DeepSeek Harness' },
++    'kernel-label-dsh': { zh: 'HyperAI Harness', en: 'HyperAI Harness' },
+     'kernel-label-claude': { zh: 'Claude Agent', en: 'Claude Agent' },
+     'kernel-label-codex': { zh: 'Codex', en: 'Codex' },
+     'kernel-login-in-session': { zh: '未登录', en: 'Not signed in' },
+@@ -2587,14 +2587,14 @@ const dict = {
+         en: 'Could not resume the last session — opened the session list',
+     },
+     'launchpad-first-run': {
+-        zh: '第一次用 dsh-TUI？花一分钟跑一遍引导，把 API Key、语言、主题、模型一次配好。',
+-        en: 'New to dsh-TUI? One minute of setup wires up your API key, language, theme and model.',
++        zh: '第一次用 hyperai-tui？花一分钟跑一遍引导，把 API Key、语言、主题、模型一次配好。',
++        en: 'New to hyperai-tui? One minute of setup wires up your API key, language, theme and model.',
+     },
+     // （launchpad-cwd-prefix 已删：2026-10 落地页改版删掉了底部工作目录行。）
+     // （launchpad-handoff 已删：第五版起落地页回车直接发送（channel.submit），
+     //  没有草稿要交接，那句"已放进输入框"的提示反而是假的。）
+     // ── screens/Onboarding.tsx（首次引导：四步把常用配置配好）────────────────
+-    'onboarding-title': { zh: '欢迎使用 dsh-TUI', en: 'Welcome to dsh-TUI' },
++    'onboarding-title': { zh: '欢迎使用 hyperai-tui', en: 'Welcome to hyperai-tui' },
+     'onboarding-step-progress': { zh: '第 {{n}} / {{total}} 步', en: 'Step {{n}} of {{total}}' },
+     'onboarding-step-apikey-title': { zh: 'API Key 与连通性', en: 'API key and connectivity' },
+     'onboarding-step-apikey-desc': {
+@@ -2628,7 +2628,7 @@ const dict = {
+     'onboarding-key-howto-env': { zh: '设置一个环境变量再重启：', en: 'Set an environment variable and restart:' },
+     'onboarding-key-howto-config': { zh: '或写进 dsh 的配置里：', en: 'Or put it in the dsh config:' },
+     'onboarding-key-retry': { zh: '重新检查', en: 'Check again' },
+-    'onboarding-conn-running': { zh: '正在连接 DeepSeek…', en: 'Connecting to DeepSeek…' },
++    'onboarding-conn-running': { zh: '正在连接 HyperAI…', en: 'Connecting to HyperAI…' },
+     'onboarding-conn-ok': { zh: '连通正常', en: 'Connected' },
+     'onboarding-conn-models': { zh: '{{count}} 个可用模型', en: '{{count}} models available' },
+     'onboarding-conn-balance': { zh: '余额 {{amount}}', en: 'Balance {{amount}}' },
+diff --git a/lib/types/screens/Chat.js b/lib/types/screens/Chat.js
+index 050c07c..a48e9f6 100644
+--- a/lib/types/screens/Chat.js
++++ b/lib/types/screens/Chat.js
+@@ -24,6 +24,7 @@ import { execFileNoThrow } from '../utils/execFileNoThrow.js';
+ import { cleanBlockLines, cleanRenderText, cleanScalarText } from '../dsh-adapter/sanitize.js';
+ import { readModelRecents, recordModelUse } from '../modelRecents.js';
+ import { WORKING_GATE_NOTICES } from '../commands.js';
++import { useSkillsUpdate } from '../hyperaiSkills.js';
+ import { TuiDialogStore } from '../dsh-adapter/dialogs.js';
+ import { TuiStatusStore } from '../dsh-adapter/status.js';
+ import { ActivityStore, useActivity } from '../dsh-adapter/activity-store.js';
+@@ -361,6 +362,8 @@ export function Chat({ channel, questionStore, approvalStore, extensionDialogs,
+     // extensions row share one inert store that never holds a dialog.
+     const dialogs = extensionDialogs ?? (fallbackDialogStore ??= new TuiDialogStore());
+     const dialogSnapshot = React.useSyncExternalStore(listener => dialogs.subscribe(listener), () => dialogs.getSnapshot());
++    // hyperai-tui: asynchronous HyperAI Skills update hint + explicit install flow.
++    const skillsUpdate = useSkillsUpdate({ channel, dialogs });
+     const coupon = React.useSyncExternalStore(bonusNotices?.subscribe ?? noCouponSubscription, bonusNotices?.getSnapshot ?? noCouponSnapshot);
+     // Plugin status contributions: text keys join into one line; bounded rich
+     // views keep their own rows immediately above the prompt.
+@@ -2117,7 +2120,7 @@ export function Chat({ channel, questionStore, approvalStore, extensionDialogs,
+     const titlePrefix = channel.working
+         ? (TITLE_SPINNER_FRAMES[titleFrame] ?? '✦')
+         : '✦';
+-    useTerminalTitle(`${titlePrefix} 🐋 ${channel.sessionTitle}`);
++    useTerminalTitle(`HyperAI Harness · ${channel.sessionTitle}${channel.working ? ' · working' : ''}`);
+     const handleWorkspaceResult = (result) => {
+         workspaceFlowAbortRef.current = null;
+         if (result.kind === 'target') {
+@@ -2918,6 +2921,12 @@ export function Chat({ channel, questionStore, approvalStore, extensionDialogs,
+                     });
+                 return true;
+             }
++            case 'skills-update': {
++                setHelpOpen(false);
++                setLaunchpadOpen(false);
++                void skillsUpdate.open();
++                return true;
++            }
+             case 'skills': {
+                 // issue #204: 列出当前 agent 的完整技能目录（名称 + 来源 + 简述），
+                 // Enter 把可直调技能以 `/name ` 填回输入行（completion-only 分发的
+@@ -3727,16 +3736,11 @@ export function Chat({ channel, questionStore, approvalStore, extensionDialogs,
+             }
+             case 'update':
+                 setHelpOpen(false);
+-                if (onUpdate === undefined) {
+-                    channel.notify(t('update-unavailable'), { color: 'warning' });
+-                }
+-                else if (channel.working) {
+-                    channel.notify(t(WORKING_GATE_NOTICES.update), { color: 'warning' });
+-                }
+-                else {
+-                    channel.notify(t('update-starting'));
+-                    onUpdate();
+-                }
++                channel.pushLocal('/update', [
++                    getLang() === 'zh'
++                        ? 'HyperAI Harness 不通过 /update 升级；请使用 HyperAI Profile 安装器/发布流程。'
++                        : 'HyperAI Harness does not upgrade through /update; use the HyperAI profile installer/release flow.',
++                ]);
+                 return true;
+             case 'reload': {
+                 // pi-style soft reload: re-read the persisted preference files
+@@ -6285,7 +6289,8 @@ export function Chat({ channel, questionStore, approvalStore, extensionDialogs,
+                                         // inflating the reading next to a real upload number). An
+                                         // automatic compaction mid-turn badges THIS line too — it is
+                                         // the spinner slot whenever real activity data exists.
+-                                        suffix: `${lastUploadTokens > 0 ? ` · ↑ ${formatTokens(lastUploadTokens)}` : ''} · ↓ ${formatTokens(Math.round(channel.responseChars / 4))} tokens${compactionBadge === undefined ? '' : ` · ${compactionBadge}`}` }) })) : (_jsx(WorkingSpinner, { mode: channel.spinnerMode, hasActiveTools: channel.activeToolCount > 0, responseLengthRef: responseLengthRef, uploadTokensRef: uploadTokensRef, loadingStartTimeRef: loadingStartTimeRef, totalPausedMsRef: totalPausedMsRef, pauseStartTimeRef: pauseStartTimeRef, thinkingStatus: thinkingStatus, suffix: compactionBadge }))), !channel.working && channel.compaction !== undefined && (_jsx(CompactionStatusRow, { compaction: channel.compaction, activityPreset: activitySlot ? channel.activityFrames : undefined })), !(sidePanel.split && sidePanel.enabledPanelIds.includes('todo')) && (_jsx(GoalTodoPanel, { channel: channel, collapsed: todoCollapsed, onToggle: () => setTodoCollapsed(previous => !previous) })), recap !== null && recap.auto && !recap.expanded && (_jsx(AutoRecapRow, { summary: recap.summary, streaming: !recap.done, onExpand: () => setRecap(prev => (prev ? { ...prev, expanded: true } : prev)), onDismiss: () => closeRecap() })), balance !== null && (_jsx(BalanceReportRow, { result: balance.result, refreshing: balance.refreshing, tokens: channel.tokens, model: channel.modelDisplay ?? channel.model, provider: channel.provider, mainCost: channel.mainCost, subagentCost: channel.subagentCost, onRefresh: runBalance, onDismiss: () => setBalance(null) })), statusEntries.length > 0 && (_jsx(Text, { dimColor: true, wrap: "truncate", children: statusEntries.map(entry => entry.text).join(' · ') })), activePreview === null && statusViews.map(view => (_jsx(PluginStatusViewBoundary, { viewKey: view.key, onError: (key, error) => statusContributions.reportViewError(key, error), children: _jsx(Box, { flexDirection: "column", flexShrink: 0, maxHeight: view.maxRows, overflow: "hidden", children: _jsx(Box, { flexDirection: "column", flexShrink: 0, children: React.createElement(view.component, {
++                                        suffix: `${lastUploadTokens > 0 ? ` · ↑ ${formatTokens(lastUploadTokens)}` : ''} · ↓ ${formatTokens(Math.round(channel.responseChars / 4))} tokens${compactionBadge === undefined ? '' : ` · ${compactionBadge}`}` }) })) : (_jsx(WorkingSpinner, { mode: channel.spinnerMode, hasActiveTools: channel.activeToolCount > 0, responseLengthRef: responseLengthRef, uploadTokensRef: uploadTokensRef, loadingStartTimeRef: loadingStartTimeRef, totalPausedMsRef: totalPausedMsRef, pauseStartTimeRef: pauseStartTimeRef, thinkingStatus: thinkingStatus, suffix: compactionBadge }))), !channel.working && channel.compaction !== undefined && (_jsx(CompactionStatusRow, { compaction: channel.compaction, activityPreset: activitySlot ? channel.activityFrames : undefined })), !(sidePanel.split && sidePanel.enabledPanelIds.includes('todo')) && (_jsx(GoalTodoPanel, { channel: channel, collapsed: todoCollapsed, onToggle: () => setTodoCollapsed(previous => !previous) })), recap !== null && recap.auto && !recap.expanded && (_jsx(AutoRecapRow, { summary: recap.summary, streaming: !recap.done, onExpand: () => setRecap(prev => (prev ? { ...prev, expanded: true } : prev)), onDismiss: () => closeRecap() })), balance !== null && (_jsx(BalanceReportRow, { result: balance.result, refreshing: balance.refreshing, tokens: channel.tokens, model: channel.modelDisplay ?? channel.model, provider: channel.provider, mainCost: channel.mainCost, subagentCost: channel.subagentCost, onRefresh: runBalance, onDismiss: () => setBalance(null) })), statusEntries.length > 0 && (_jsx(Text, { dimColor: true, wrap: "truncate", children: statusEntries.map(entry => entry.text).join(' · ') })),
++                                    skillsUpdate.notice !== null && (_jsx(Box, { onClick: () => { void skillsUpdate.open(); }, children: _jsx(Text, { color: "warning", wrap: "truncate", children: skillsUpdate.notice }) })), activePreview === null && statusViews.map(view => (_jsx(PluginStatusViewBoundary, { viewKey: view.key, onError: (key, error) => statusContributions.reportViewError(key, error), children: _jsx(Box, { flexDirection: "column", flexShrink: 0, maxHeight: view.maxRows, overflow: "hidden", children: _jsx(Box, { flexDirection: "column", flexShrink: 0, children: React.createElement(view.component, {
+                                             React,
+                                             ui: STATUS_VIEW_UI,
+                                         }) }) }) }, `${view.key}:${view.registrationId}`))), _jsxs(Box, { flexDirection: "column", flexShrink: 0, children: [approvalPanelNode !== null ? (approvalPanelNode) : dialogSnapshot !== null ? (_jsx(ExtensionDialog, { dialog: dialogSnapshot, onDecide: value => dialogs.decide(dialogSnapshot.key, value), onCancel: () => dialogs.cancel(dialogSnapshot.key) }, dialogSnapshot.key)) : overlay.kind === 'tips' ? (_jsx(Box, { flexDirection: "column", marginTop: 1, children: _jsx(TipsPanel, { onClose: () => dispatchOverlay({ type: 'close-if', kind: 'tips' }) }) })) : recap !== null && (!recap.auto || recap.expanded) ? (_jsx(Box, { flexDirection: "column", marginTop: 1, children: _jsx(RecapPanel, { summary: recap.summary, title: recap.title, error: recap.error, streaming: !recap.done, titleApplied: recap.titleApplied, onClose: () => {
+diff --git a/lib/types/screens/Launchpad.js b/lib/types/screens/Launchpad.js
+index d8a8835..8311c92 100644
+--- a/lib/types/screens/Launchpad.js
++++ b/lib/types/screens/Launchpad.js
+@@ -479,7 +479,11 @@ onKernelPick, cwd, branch, tuiVersion, onFocusChange, onAction, onQueryChange, o
+     // （kernelSubtitle），读不到就只画名字，绝不编造。**登录状态不进铭牌**：
+     // 铭牌只报「有哪些内核、各自什么版本」，未登录在选择器里看（切换时才需要，
+     // noteKey 在那边走副标题），右下角保持只有名字与版号的干净两列。
+-    const tuiPart = tuiVersion === undefined || tuiVersion === '' ? undefined : `dsh-tui v${tuiVersion}`;
++    // Keep the product version readable in narrow terminals; the full
++    // product+upstream pair is used only when there is room for it.
++    const tuiPart = tuiVersion === undefined || tuiVersion === ''
++        ? undefined
++        : (columns < 72 ? `hyperai v0.2.0-beta.2.1` : `hyperai-tui v0.2.0-beta.2.1 · dsh-tui v${tuiVersion}`);
+     // 名字用**短品牌名**（option.shortLabel，来自 manifest：DSH / Claude，与启动页
+     // 「内核 · DSH」那个 chip 同源）：这一格与左下角的 `工作目录:分支` 共用底边，
+     // 全名（DeepSeek Harness · … = 40 列）在窄终端里会把左边的目录铭牌挤掉。
+@@ -498,7 +502,9 @@ onKernelPick, cwd, branch, tuiVersion, onFocusChange, onAction, onQueryChange, o
+     // 源（同一份 `useSyncExternalStore` 订阅），预算与渲染不会各看各的。
+     const mascotSkin = useSplashMascotSkin(companionSkin);
+     const mascotBox = useSplashMascotBox(mascotSkin, (brand ?? 'deepseek') === 'deepseek' && (whale || whaleGirl));
+-    const [dailyFont] = React.useState(() => pickSplashFont());
++    // hyperai-tui: mirror LogoV2 — the launchpad must not land on a hollow
++    // daily font (stencil/classic) for the brand.
++    const [dailyFont] = React.useState(() => brand === 'deepseek' ? splashFontById('bold') : pickSplashFont());
+     const [dailyEgg] = React.useState(() => egg === undefined ? pickSplashEgg() : egg);
+     const font = fontId === undefined ? dailyFont : splashFontById(fontId);
+     const titleFont = resolveSplashTitleFont(font, brand, dailyEgg);
+@@ -512,7 +518,7 @@ onKernelPick, cwd, branch, tuiVersion, onFocusChange, onAction, onQueryChange, o
+         font: titleFont,
+         artRows,
+         // 右下角铭牌自身行数：第一行（目录 + TUI 版号）+ 一行一个内核（第八版）。
+-        cornerRows: 1 + kernelRows.length,
++        cornerRows: (columns < 110 ? 2 : 1) + kernelRows.length,
+     });
+     // Tips 自动轮换（第七版，用户要「呼吸感」）：约 10s 一换，与点击/焦点+Enter
+     // 的手动切换**并存**——手动切换改 tipIndex，本 effect 以 tipIndex 为依赖，
+@@ -832,10 +838,10 @@ onKernelPick, cwd, branch, tuiVersion, onFocusChange, onAction, onQueryChange, o
+                                     onFocusChange(-1);
+                             } }, actions[index].id))) })), (layout.showTip || rowNotice !== undefined) && (_jsx(Box, { flexShrink: 0, alignSelf: "center", marginTop: layout.tipGapRows, ...(rowNotice === undefined && !firstRun
+                             ? { onClick: (event) => { event.stopImmediatePropagation(); rotateTip(); } }
+-                            : {}), children: rowNotice === undefined ? (_jsxs(_Fragment, { children: [_jsxs(Text, { color: "warning", children: ["\u25CF ", t('launchpad-tip-prefix')] }), _jsx(Text, { color: focusIndex === TIPS_FOCUS ? 'suggestion' : undefined, bold: focusIndex === TIPS_FOCUS, dimColor: focusIndex !== TIPS_FOCUS, children: firstRun ? t('launchpad-first-run') : t(TIP_KEYS[tipIndex]) })] })) : (_jsxs(Text, { color: rowNotice.color ?? 'warning', children: ["\u25CF ", rowNotice.text] })) }))] }), layout.showCorners && (_jsxs(Box, { flexShrink: 0, flexDirection: "column", children: [_jsxs(Box, { flexShrink: 0, flexDirection: "row", justifyContent: "space-between", height: 1, children: [cornerLeft !== '' && onOpenWorkspace !== undefined ? (_jsx(CornerChip, { label: cornerLeft, focused: focusIndex === CWD_CORNER_FOCUS, onActivate: onOpenWorkspace, onHover: () => onFocusChange(CWD_CORNER_FOCUS), onHoverLeave: () => {
++                            : {}), children: rowNotice === undefined ? (_jsxs(_Fragment, { children: [_jsxs(Text, { color: "warning", children: ["\u25CF ", t('launchpad-tip-prefix')] }), _jsx(Text, { color: focusIndex === TIPS_FOCUS ? 'suggestion' : undefined, bold: focusIndex === TIPS_FOCUS, dimColor: focusIndex !== TIPS_FOCUS, children: firstRun ? t('launchpad-first-run') : t(TIP_KEYS[tipIndex]) })] })) : (_jsxs(Text, { color: rowNotice.color ?? 'warning', children: ["\u25CF ", rowNotice.text] })) }))] }), layout.showCorners && (_jsxs(Box, { flexShrink: 0, flexDirection: "column", children: [_jsxs(Box, { flexShrink: 0, flexDirection: columns < 110 ? "column" : "row", justifyContent: columns < 110 ? "flex-start" : "space-between", height: columns < 110 ? 2 : 1, children: [cornerLeft !== '' && onOpenWorkspace !== undefined ? (_jsx(CornerChip, { label: cornerLeft, focused: focusIndex === CWD_CORNER_FOCUS, onActivate: onOpenWorkspace, onHover: () => onFocusChange(CWD_CORNER_FOCUS), onHoverLeave: () => {
+                                     if (focusIndex === CWD_CORNER_FOCUS)
+                                         onFocusChange(-1);
+-                                } })) : (_jsx(Text, { dimColor: true, wrap: "truncate-middle", children: cornerLeft })), _jsx(Text, { dimColor: true, wrap: "truncate-middle", children: tuiPart ?? '' })] }), kernelRows.length > 0 && (_jsx(KernelCorner, { rows: kernelRows, focused: focusIndex === KERNEL_CORNER_FOCUS, onActivate: onKernelPick, onHover: () => onFocusChange(KERNEL_CORNER_FOCUS), onHoverLeave: () => {
++                                } })) : (_jsx(Text, { dimColor: true, wrap: "truncate-middle", flexShrink: 1, minWidth: 0, children: cornerLeft })), _jsx(Text, { dimColor: true, wrap: "truncate-middle", flexShrink: 0, children: tuiPart ?? '' })] }), kernelRows.length > 0 && (_jsx(KernelCorner, { rows: kernelRows, focused: focusIndex === KERNEL_CORNER_FOCUS, onActivate: onKernelPick, onHover: () => onFocusChange(KERNEL_CORNER_FOCUS), onHoverLeave: () => {
+                             if (focusIndex === KERNEL_CORNER_FOCUS)
+                                 onFocusChange(-1);
+                         } }))] }))] }));
+diff --git a/lib/types/settings/definitions.js b/lib/types/settings/definitions.js
+index 2e18b2d..9c349de 100644
+--- a/lib/types/settings/definitions.js
++++ b/lib/types/settings/definitions.js
+@@ -2,11 +2,11 @@ import { SPLASH_FONT_OPTIONS } from '../components/splashFonts.js';
+ import { BRAND_SETTING_OPTIONS } from '../branding.js';
+ export const SETTING_DEFINITIONS = {
+     'brand': {
+-        label: 'Brand look',
+-        descriptions: { zh: '品牌外观' },
++        label: 'HyperAI look (upstream compatibility)',
++        descriptions: { zh: 'HyperAI 外观（上游兼容）' },
+         group: 'splash',
+-        hint: 'Brand look of the splash and theme. Follow backend (default) switches with the active kernel — Claude boots orange (CLAUDE CODE title, Claude girl), Codex boots lavender (CODEX title, "Build anything with Codex"); the other values pin one look. Applies immediately.',
+-        hintDescriptions: { zh: '开屏与主题的品牌外观。跟随后端（默认）随当前内核自动切——Claude 后端整套换橙（CLAUDE CODE 大标题、Claude 娘立绘），Codex 后端整套换薰衣草紫（CODEX 大标题、"Build anything with Codex" 标语）；选固定档则锁定一种外观。立即生效。' },
++        hint: 'HyperAI uses the fixed HyperAI Harness palette and text-only wordmark. This upstream brand selector is retained only for compatibility; it does not reintroduce the upstream logo or mascot.',
++        hintDescriptions: { zh: 'HyperAI 固定使用 HyperAI Harness 品牌色和纯文字字标。此项仅为上游兼容保留，不会重新引入上游 Logo 或吉祥物。' },
+         kind: 'select',
+         options: BRAND_SETTING_OPTIONS,
+     },
+@@ -39,8 +39,8 @@ export const SETTING_DEFINITIONS = {
+         ],
+     },
+     'companion.skin': {
+-        label: 'Companion skin',
+-        descriptions: { zh: '宠物皮肤' },
++        label: 'Companion skin (not used by HyperAI)',
++        descriptions: { zh: '宠物皮肤（HyperAI 不使用）' },
+         group: 'splash',
+         hint: 'DeepSeek brand: whale allows the maid portrait; deepy/whaleGirl replace it. Claude uses its own art; Codex uses its own raster portrait or maid character-art fallback. Look of the companion panel pet (the panel is enabled by default and can be changed in sidePanel.panels): deepy (default, the deepy whale kit), whale (the same layered pixel whale as the splash) or whaleGirl (the user-provided whale-girl sticker pack, 22 animations). Applies immediately.',
+         hintDescriptions: { zh: 'DeepSeek 品牌：whale 才能用女仆娘立绘；deepy/whaleGirl 会替换它。Claude 使用自己的图案；Codex 优先显示自己的真图，不可用时回落女仆娘字符画。伙伴面板里宠物的外形（面板默认启用，可在 sidePanel.panels 中调整）：deepy（默认，deepy 小鲸鱼素材包）、whale（与开屏同款的分层像素鲸鱼）或 whaleGirl（用户提供的鲸娘表情包，22 个动画）。立即生效。' },
+@@ -300,11 +300,11 @@ export const SETTING_DEFINITIONS = {
+         kind: 'boolean',
+     },
+     'splashFont': {
+-        label: 'Splash font',
+-        descriptions: { zh: '开屏大字字体' },
++        label: 'Splash font (HyperAI fixed solid)',
++        descriptions: { zh: '开屏大字字体（HyperAI 固定实心；上游兼容）' },
+         group: 'splash',
+-        hint: 'Big-text face on the header splash. Daily rotates by local date (default); pick a face to pin that one. Applies immediately.',
+-        hintDescriptions: { zh: '开屏头部的大字字面。按天轮换（默认）随本地日期换款；选某一款即固定那一款。立即生效。' },
++        hint: 'Upstream splash font setting. HyperAI always starts from the solid bold face (daily hollow rotation is bypassed); an explicit face remains available for upstream compatibility.',
++        hintDescriptions: { zh: 'HyperAI 固定使用实心上游字标；按天轮换已禁用。此下拉仅为上游兼容保留，选择不会改变 HyperAI 的开屏品牌字标。' },
+         kind: 'select',
+         options: SPLASH_FONT_OPTIONS,
+     },
+@@ -507,24 +507,24 @@ export const SETTING_DEFINITIONS = {
+         kind: 'boolean',
+     },
+     'whale': {
+-        label: 'Header art',
+-        descriptions: { zh: '标题图形 logo' },
++        label: 'Header art (not used by HyperAI)',
++        descriptions: { zh: '标题图形（HyperAI 不使用）' },
+         group: 'splash',
+-        hint: 'Header art. DeepSeek follows Companion skin and the maid toggle; Claude uses its own art; Codex uses its own raster portrait or maid character-art fallback. Off leaves a text-only header.',
+-        hintDescriptions: { zh: '标题图形：DeepSeek 品牌随宠物皮肤与女仆娘开关，Claude 使用自己的图案；Codex 优先显示自己的真图，不可用时回落女仆娘字符画。关闭则只留文字标题。' },
++        hint: 'HyperAI renders a text-only pixel wordmark; upstream header art is disabled by the profile patch. This setting is retained only for upstream compatibility.',
++        hintDescriptions: { zh: 'HyperAI 只渲染文字像素字标；上游标题图形已由 Profile patch 关闭。此设置仅为上游兼容保留。' },
+         kind: 'boolean',
+     },
+     'whaleGirl': {
+-        label: 'Maid portrait',
+-        descriptions: { zh: '女仆娘立绘' },
++        label: 'Maid portrait (not used by HyperAI)',
++        descriptions: { zh: '女仆娘立绘（HyperAI 不使用）' },
+         group: 'splash',
+         hint: 'DeepSeek brand: choose whale in Companion skin, then enable this toggle. Claude uses its own art; Codex uses its own raster portrait or maid character-art fallback. Swaps the pixel whale for the author-designed maid portrait, preferring the real raster (Kitty/Sixel) with character-art fallback.',
+         hintDescriptions: { zh: 'DeepSeek 品牌：选 whale 皮肤并开启本项。Claude 使用自己的图案；Codex 优先显示自己的真图，不可用时回落女仆娘字符画。把像素鲸鱼换成项目作者绘制的女仆娘立绘，优先用终端图像协议（Kitty/Sixel）渲染真图，不支持时回落字符画。' },
+         kind: 'boolean',
+     },
+     'whaleIdle': {
+-        label: 'Welcome whale idle',
+-        descriptions: { zh: '鲸鱼娘闲置动画（欢迎期）' },
++        label: 'Welcome animation (not used by HyperAI)',
++        descriptions: { zh: '欢迎动画（HyperAI 不使用）' },
+         group: 'splash',
+         hint: 'Welcome-phase idle behaviors: after the intro the whale flutters its fins, thumps its tail, and dozes off when idle; clicking wakes a dozing whale and pops a heart. The first agent turn freezes it to the static standard frame.',
+         hintDescriptions: { zh: '欢迎期闲置行为：开屏后鲸鱼娘摆鱼鳍、偶尔拍尾巴，空闲会睡着冒 Z；点击唤醒睡着的鲸鱼娘并冒爱心。开始第一个任务后定格为静态标准帧。' },
+@@ -543,7 +543,7 @@ export const SETTING_DEFINITIONS = {
+  * render on the root under "general". */
+ export const SETTING_GROUPS = [
+     { id: 'appearance', mode: 'inline', title: 'Appearance', descriptions: { zh: '外观与布局' } },
+-    { id: 'splash', mode: 'inline', title: 'Splash', descriptions: { zh: '开屏与吉祥物' } },
++    { id: 'splash', mode: 'inline', title: 'Splash / 开屏', descriptions: { zh: '开屏与字标' } },
+     { id: 'conversation', mode: 'inline', title: 'Conversation', descriptions: { zh: '对话与输入' } },
+     { id: 'rendering', mode: 'inline', title: 'Rendering', descriptions: { zh: '图表与图片' } },
+     { id: 'math', mode: 'page', title: 'Formula', descriptions: { zh: '公式设置' } },
+diff --git a/lib/types/tips.js b/lib/types/tips.js
+index f6d3e1c..fa86ce0 100644
+--- a/lib/types/tips.js
++++ b/lib/types/tips.js
+@@ -722,12 +722,6 @@ export const TIPS = [
+         zh: '有文本选区时，滚轮平移选区而非滚动列表',
+         en: 'With a text selection, the wheel translates the selection, not the list',
+     },
+-    {
+-        id: 'disp-whale',
+-        group: 'display',
+-        zh: '首屏鲸鱼动画（终端 ≥64 列才显示）',
+-        en: 'The whale intro shows on terminals ≥64 columns',
+-    },
+     {
+         id: 'disp-context-legend',
+         group: 'display',
+@@ -752,12 +746,6 @@ export const TIPS = [
+         zh: '回复里的 ```mermaid 代码块直接画成字符图，/settings 里可关',
+         en: '```mermaid fences in replies are drawn as character diagrams; toggle in /settings',
+     },
+-    {
+-        id: 'disp-whale-click',
+-        group: 'display',
+-        zh: '开始第一个任务前点鲸鱼冒爱心、唤醒睡着的它；闲置动作可在 /settings 关',
+-        en: 'Before your first task, click the whale for hearts and to wake it; idle moves toggle in /settings',
+-    },
+     {
+         id: 'disp-smooth',
+         group: 'display',
+diff --git a/lib/types/update.js b/lib/types/update.js
+index 8efb701..08ca30d 100644
+--- a/lib/types/update.js
++++ b/lib/types/update.js
+@@ -219,6 +219,16 @@ export function installedTuiVersion() {
+             if (parsed !== null && typeof parsed === 'object' && !Array.isArray(parsed)) {
+                 const packageJson = parsed;
+                 const version = packageJson.version;
++                // hyperai-tui: package.json.version is the HyperAI release
++                // (0.2.0-beta.2.1); the dsh-tui version is recorded in
++                // hyperai.upstreamVersion. Every caller of this function means
++                // the upstream TUI package — the dsh-tui half of the version
++                // plate, the version-drift warning and /update target checks —
++                // so it must keep returning the upstream version.
++                const upstream = packageJson.hyperai?.upstreamVersion;
++                if (packageJson.name === PACKAGE_NAME && typeof upstream === 'string' && valid(upstream) !== null) {
++                    return upstream;
++                }
+                 if (packageJson.name === PACKAGE_NAME && typeof version === 'string' && valid(version) !== null) {
+                     return version;
+                 }
+@@ -875,6 +885,9 @@ export async function downloadAndReplaceStandaloneBinary(downloadUrl, onProgress
+  * upgrading to yesterday's version.
+  */
+ export async function resolveTuiUpdateTarget() {
++    // hyperai-tui: the upstream updater replaces the branded package with the
++    // unbranded one, so the hyperai profile installer owns version bumps.
++    return { kind: 'unknown' };
+     const current = installedTuiVersion();
+     const currentVersion = current === undefined ? null : valid(current);
+     if (currentVersion === null)
+@@ -919,6 +932,10 @@ export async function resolveTuiUpdateTarget() {
+  * or blocks the interactive TUI.
+  */
+ export async function checkForTuiUpdate() {
++    // hyperai-tui: the branded package is versioned by the HyperAI profile
++    // installer. Never contact npm/GitHub for an upstream self-update; both the
++    // chat launchpad and the adapter's background notice call this function.
++    return undefined;
+     // Callers start this during the first render; the first `fetch()` loads
+     // undici synchronously, so yield first and let that cost land after the frame.
+     await new Promise(resolve => setImmediate(resolve));
+diff --git a/lib/types/utils/paths.js b/lib/types/utils/paths.js
+index cdef174..74fbd84 100644
+--- a/lib/types/utils/paths.js
++++ b/lib/types/utils/paths.js
+@@ -15,8 +15,12 @@ import { join } from 'node:path';
+ export function homeDir() {
+     return homedir() || process.env.USERPROFILE || process.env.HOME || '';
+ }
+-/** Data directory all preferences/history live in (`~/.dsh-tui`). */
+-export const DATA_DIR = join(homeDir(), '.dsh-tui');
++/**
++ * hyperai-tui: all UI state lives inside HyperAI's own directory, never in
++ * ~/.dsh-tui* (which belongs to DeepSeek Harness). HYPERAI_TUI_DIR is set by
++ * the generated launcher; the fallback keeps direct runs isolated too.
++ */
++export const DATA_DIR = process.env.HYPERAI_TUI_DIR || join(homeDir(), '.hyperai', 'tui');
+ /**
+  * Where one backend keeps its own files: `<dataRoot>/backends/<id>`, keyed by
+  * the backend's declared id (the `x-dsh-tui` Backend entry's `spec.id` field).

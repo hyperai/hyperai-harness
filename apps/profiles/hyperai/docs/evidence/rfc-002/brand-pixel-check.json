@@ -1,0 +1,24 @@
+{
+  "macos": {
+    "imageSize": [
+      1080,
+      720
+    ],
+    "pinkPixelsFullFrame": 40176,
+    "pinkPixelsSplashRegion": 21699,
+    "splashRegion": "top 36% of the frame",
+    "splashColorsOtherThanPinkOrBackground": 0,
+    "method": "pyte replay of the PTY stream rendered at 1080x720; exact #FF6096 pixel count"
+  },
+  "ubuntu": {
+    "imageSize": [
+      1080,
+      720
+    ],
+    "pinkPixelsFullFrame": 40176,
+    "pinkPixelsSplashRegion": 21699,
+    "splashRegion": "top 36% of the frame",
+    "splashColorsOtherThanPinkOrBackground": 0,
+    "method": "pyte replay of the PTY stream rendered at 1080x720; exact #FF6096 pixel count"
+  }
+}

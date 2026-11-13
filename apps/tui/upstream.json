@@ -1,0 +1,13 @@
+{
+  "$comment": "RFC-002: the pinned upstream TUI tarball this distribution is built from. The tarball itself is NOT committed (18 MB, and the repository is public); this record pins the exact bytes so any offline copy can be proven to be the same input. scripts/build-package.mjs verifies --upstream against every field before it unpacks anything.",
+  "package": "@deepseek-harness-tui/dsh-tui",
+  "version": "0.16.1",
+  "tarballName": "deepseek-harness-tui-dsh-tui-0.16.1.tgz",
+  "sizeBytes": 18473587,
+  "sha256": "2144b317d0c25ae4d2688f1ef2c73bc2c95e121085ac5977d00407dcd2b1336e",
+  "integrity": "sha512-xk8Nviy55RvLnAdjYj04DekUu6D1Pc0kEa5R+2EXoL3H/h6ZEzv8L0bxtSTrWxtNdXd4ufOXMu4TQ7HjrpYhbg==",
+  "repository": "https://github.com/ccch1mneyyy/dsh-TUI",
+  "license": "MIT",
+  "fileCount": null,
+  "notes": "fileCount is recorded by the first successful build into dist/build-report.json; the builder asserts the product file set equals this tarball's file set plus the documented additions."
+}
